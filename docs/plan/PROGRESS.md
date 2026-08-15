@@ -9,8 +9,28 @@ Next task: stage boundary, open PR into dev
 - [x] S0.1 repo, workspaces, tooling (commit ae53e2a)
 - [x] S0.2 package skeletons for core, cli, action (commit 5c78bb9)
 - [x] S0.3 CI running typecheck, lint, test (commit 14831b2)
-- [x] S0.4 fixtures/ledger boots with one seeded defect (commit backfilled below)
+- [x] S0.4 fixtures/ledger boots with one seeded defect (commit dd4b3f7)
 - Exit criterion: `pnpm test` green in GitHub Actions, and `fixtures/ledger` serves an endpoint that leaks a record across owners
+- Exit criterion, local half: verified 2026-08-15. `GET /api/invoices/INV-1001` as actor `outsider` (org-2) returned HTTP 200 with `org_id: org-1`, `total_cents`, and `notes`. Boot took 1.09s.
+- Exit criterion, CI half: pending the first workflow run on the pull request.
+
+### S0 summary
+
+Built: pnpm workspace with three package skeletons and a fixture app, TypeScript
+strict with `noUncheckedIndexedAccess`, ESLint with both import boundaries enforced,
+Prettier, Vitest, and a CI workflow running typecheck, lint, format, test, and build.
+15 tests pass, none of which touch the network.
+
+Deferred: defects D2 through D7 and negative control N2, which need the checks that
+consume them. `spec/ledger.spec.yaml`, which needs the M1 schema to validate against.
+The `bin` entry for `qai` and every command, flag, and exit code, all owned by M8.
+
+Surprises worth recording:
+
+- typescript-eslint 8.x refuses to load against TypeScript 7. TypeScript is pinned to 6.x until that is resolved upstream.
+- The model boundary and the package direction rules share one ESLint rule key, so a later config block replaces an earlier one outright instead of merging. Every scope now restates every group that applies to it, and the test reads the config ESLint resolves for a path rather than the shape of the config file.
+- Prettier reflowed the entire imported plan on its first run. `docs/plan/` is now in `.prettierignore`.
+- The fixture needs no runtime dependencies at all. `node:http` with Node's TypeScript stripping covers it, which is also why it boots in about a second.
 
 ## S1. Spec and contracts (M1)
 
