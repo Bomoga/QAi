@@ -12,7 +12,7 @@ Next task: stage boundary, open PR into dev
 - [x] S0.4 fixtures/ledger boots with one seeded defect (commit dd4b3f7)
 - Exit criterion: `pnpm test` green in GitHub Actions, and `fixtures/ledger` serves an endpoint that leaks a record across owners
 - Exit criterion, local half: verified 2026-08-15. `GET /api/invoices/INV-1001` as actor `outsider` (org-2) returned HTTP 200 with `org_id: org-1`, `total_cents`, and `notes`. Boot took 1.09s.
-- Exit criterion, CI half: pending the first workflow run on the pull request.
+- Exit criterion, CI half: verified 2026-08-15. Run 31887004814 on PR #1, job "typecheck, lint, test", succeeded in 30s. Every step green: Install, Typecheck, Lint, Format, Test, Build.
 
 ### S0 summary
 
@@ -90,6 +90,11 @@ Surprises worth recording:
 - S0.4: the ledger has no runtime dependencies. It is `node:http` and nothing else, which also keeps its boot time inside the three second requirement (measured 1.09s).
 - S0.4: the ledger runs under Node's TypeScript stripping, so its imports carry explicit `.ts` extensions and its tsconfig sets `allowImportingTsExtensions`.
 - The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
+
+## Known issues, not blocking
+
+- CI emits one warning annotation: the v4 actions target Node.js 20 and are being forced onto a newer runtime. Bump `actions/checkout` and `actions/setup-node` to v5 when convenient. It does not affect the result.
+- `origin/main` does not exist. Only `dev` and the stage branch are pushed. Create `main` before the first release.
 
 ## Blocked
 
