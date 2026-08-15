@@ -1,14 +1,14 @@
 # Progress
 
-Updated: 2026-08-15T09:13:00Z
+Updated: 2026-08-15T09:15:00Z
 Current stage: S0
-Next task: S0.3
+Next task: S0.4
 
 ## S0. Skeleton
 
 - [x] S0.1 repo, workspaces, tooling (commit ae53e2a)
-- [x] S0.2 package skeletons for core, cli, action (commit backfilled below)
-- [ ] S0.3 CI running typecheck, lint, test
+- [x] S0.2 package skeletons for core, cli, action (commit 5c78bb9)
+- [x] S0.3 CI running typecheck, lint, test (commit backfilled below)
 - [ ] S0.4 fixtures/ledger boots with one seeded defect
 - Exit criterion: `pnpm test` green in GitHub Actions, and `fixtures/ledger` serves an endpoint that leaks a record across owners
 
@@ -63,6 +63,8 @@ Next task: S0.3
 - S0.2: `@qai/cli` has no `bin` entry yet. The command surface, flags, and exit codes belong to M8 and land in S6; `npx qai` should not resolve until it does something.
 - S0.2: all three package index files export nothing. The public API of core is assembled by later modules, and a surface reaching past `src/index.ts` is reaching into private code.
 - S0.2: `ignoreDeprecations: "6.0"` is set in `tsconfig.base.json` only because tsup's dts build injects the deprecated `baseUrl`. Drop it when tsup stops.
+- S0.3: CI runs typecheck, lint, format:check, test, build on push to main or dev and on PRs into them. Feature branch pushes are covered by the PR event, not by a second push trigger.
+- S0.3: the workflow's green run cannot be demonstrated until the branch is pushed. That evidence belongs to the S0 exit criterion at the stage boundary.
 - The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
 
 ## Blocked
