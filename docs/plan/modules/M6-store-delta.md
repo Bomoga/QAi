@@ -1,0 +1,101 @@
+# M6: Run Store and Delta
+
+**Status:** not started
+**Owns:** `packages/core/src/store/`, `packages/core/src/diff/run-run.ts`
+**Depends on:** M1, M7 (RunResult assembly)
+**Depended on by:** M8
+**Read alongside:** `03-CONTRACTS.md`
+
+## Purpose
+
+Persist runs and compare them. The delta is the feature an engineer returns for weekly, because the real pain is not the first read of a generated application, it is the fifth regeneration.
+
+## Inputs
+
+- Completed `RunResult` objects and their Evidence records.
+- Two run identifiers to compare, or the implicit pair of latest and previous.
+
+## Outputs
+
+- Rows in `.qai/runs.db`.
+- `RunDelta`, a structured comparison.
+
+## Public API
+
+```ts
+export function openStore(dir: string): Store;
+export interface Store {
+  saveRun(result: RunResult, evidence: Evidence[]): void;
+  getRun(runId: string): RunResult | null;
+  listRuns(opts?: { limit?: number; target?: string }): RunSummary[];
+  pruneEvidence(policy: PrunePolicy): PruneReport;
+}
+export function diffRuns(a: RunResult, b: RunResult): RunDelta;
+```
+
+## Implementation notes
+
+**Storage.** SQLite via `better-sqlite3`, one file at `.qai/runs.db`, synchronous API. Schema versioned with a `schema_version` table and forward-only migrations. Evidence bodies live as files under `.qai/evidence/` with the database holding references; blobs in SQLite make the file unwieldy and the directory ungreppable.
+
+`.qai/` is git ignored by the `init` command.
+
+**Stable check identity is the load-bearing requirement.** `checkId` is a content hash over requirement id, rule or criterion id, actor id, resource, and action. It must not include timestamps, run ids, ordering, or response content. Without this the delta degrades into noise, so test identity stability explicitly and separately.
+
+**RunDelta shape:**
+
+```jsonc
+{
+  "from": "RUN-...", "to": "RUN-...",
+  "comparable": true,
+  "specChanged": false,
+  "requirements": {
+    "regressed": [{ "requirementId": "REQ-014", "from": "verified", "to": "failed", "checkIds": ["CHK-a91f2c"] }],
+    "fixed": [], "stillFailing": [], "newlyUnverified": []
+  },
+  "structural": {
+    "endpointsAdded": ["POST /api/export"],
+    "endpointsRemoved": [],
+    "fieldsAdded": [{ "entity": "Invoice", "field": "internal_notes" }],
+    "accessLoosened": [{ "endpoint": "GET /api/invoices/:id", "detail": "now reachable unauthenticated" }]
+  }
+}
+```
+
+**Access loosening is the headline of the delta** and deserves its own detection path rather than falling out of a generic diff. It fires when an endpoint's `authRequired` moves from `true` to `false` or `"unknown"`, or when a deny-rule check moves from `pass` to `fail`. This is the exact silent-divergence case the product exists to catch.
+
+**Spec changes affect comparability.** If `spec.hash` differs between runs, set `specChanged: true` and restrict the comparison to requirement ids present in both, listing added and removed requirement ids separately. Never present a delta across differing specs as though the application changed.
+
+**Retention.** Default: keep the last twenty runs and the evidence for the last five. Prune on write. Report what was pruned rather than doing it silently.
+
+## Tasks
+
+1. **M6.1** Implement the SQLite schema, migrations, and `schema_version` handling.
+2. **M6.2** Implement `saveRun` and evidence file writing with referential integrity.
+3. **M6.3** Implement stable `checkId` hashing, with a dedicated test proving identity survives response changes, reordering, and re-runs.
+4. **M6.4** Implement `diffRuns` for requirement verdict transitions.
+5. **M6.5** Implement structural delta including the dedicated access loosening detection.
+6. **M6.6** Implement comparability handling for differing spec hashes.
+7. **M6.7** Implement retention and pruning with a reported summary.
+8. **M6.8** Integration test: run against the defective fixture, run against the fixed fixture, assert the delta reports fixes; then reverse the order and assert it reports regressions.
+
+## Definition of Done
+
+```
+pnpm --filter @qai/core test -- store delta
+pnpm --filter @qai/cli exec qai diff --last 2
+```
+
+- The same check against an unchanged target yields an identical `checkId` across runs.
+- A deliberate regeneration of the fixture app that removes an authorization guard produces an `accessLoosened` entry.
+- Comparing runs with different spec hashes sets `specChanged` and does not present removed requirements as fixed.
+
+## Do Not
+
+- Do not put evidence bodies in SQLite.
+- Do not include volatile data in `checkId`.
+- Do not silently prune. Report it.
+- Do not add a query layer beyond what `diff` and `list` need. This is not an analytics store.
+
+## Open questions
+
+- None blocking.
