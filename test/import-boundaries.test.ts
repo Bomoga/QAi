@@ -1,0 +1,99 @@
+import { ESLint } from 'eslint';
+import { describe, expect, it } from 'vitest';
+
+import {
+  CLI_FORBIDDEN_PATTERNS,
+  CORE_FORBIDDEN_PATTERNS,
+  LLM_BOUNDARY_DIR,
+  LLM_BOUNDARY_RULE,
+  LLM_CLIENT_PATTERNS,
+} from '../eslint.config.js';
+
+/**
+ * Hard rule R1 requires a test asserting the model boundary rule is configured, and
+ * 02-ARCHITECTURE.md requires the package dependency direction to be lint enforced.
+ * Both are asserted against the config ESLint actually resolves for a path, not
+ * against the shape of the config file, so a reordering that silently drops a rule
+ * fails here rather than passing review.
+ */
+
+const eslint = new ESLint();
+
+interface RestrictedPattern {
+  group: string[];
+}
+
+function isRestrictedPattern(value: unknown): value is RestrictedPattern {
+  if (typeof value !== 'object' || value === null) return false;
+  const group = (value as { group?: unknown }).group;
+  return Array.isArray(group) && group.every((item) => typeof item === 'string');
+}
+
+/** Every module specifier the resolved config forbids for this file path. */
+async function forbiddenSpecifiersFor(filePath: string): Promise<string[]> {
+  const resolved: unknown = await eslint.calculateConfigForFile(filePath);
+  if (typeof resolved !== 'object' || resolved === null) return [];
+
+  const rules = (resolved as { rules?: Record<string, unknown> }).rules ?? {};
+  const entry = rules[LLM_BOUNDARY_RULE];
+  if (!Array.isArray(entry)) return [];
+
+  const options = entry[1];
+  if (typeof options !== 'object' || options === null) return [];
+
+  const patterns = (options as { patterns?: unknown }).patterns;
+  if (!Array.isArray(patterns)) return [];
+
+  return patterns.filter(isRestrictedPattern).flatMap((pattern) => pattern.group);
+}
+
+describe('the model boundary', () => {
+  it('forbids model clients in core outside the llm directory', async () => {
+    const forbidden = await forbiddenSpecifiersFor('packages/core/src/checks/access/verdict.ts');
+    for (const pattern of LLM_CLIENT_PATTERNS) {
+      expect(forbidden).toContain(pattern);
+    }
+  });
+
+  it('forbids model clients in cli and action', async () => {
+    const cli = await forbiddenSpecifiersFor('packages/cli/src/index.ts');
+    const action = await forbiddenSpecifiersFor('packages/action/src/index.ts');
+    expect(cli).toContain('openai');
+    expect(action).toContain('openai');
+  });
+
+  it('permits model clients only inside the llm directory', async () => {
+    const forbidden = await forbiddenSpecifiersFor(`${LLM_BOUNDARY_DIR}extract.ts`);
+    for (const pattern of LLM_CLIENT_PATTERNS) {
+      expect(forbidden).not.toContain(pattern);
+    }
+  });
+});
+
+describe('the package dependency direction', () => {
+  it('stops core importing cli or action, including from the llm directory', async () => {
+    const core = await forbiddenSpecifiersFor('packages/core/src/index.ts');
+    const llm = await forbiddenSpecifiersFor(`${LLM_BOUNDARY_DIR}extract.ts`);
+    for (const pattern of CORE_FORBIDDEN_PATTERNS) {
+      expect(core).toContain(pattern);
+      expect(llm).toContain(pattern);
+    }
+  });
+
+  it('stops cli importing action', async () => {
+    const cli = await forbiddenSpecifiersFor('packages/cli/src/index.ts');
+    for (const pattern of CLI_FORBIDDEN_PATTERNS) {
+      expect(cli).toContain(pattern);
+    }
+  });
+
+  it('leaves cli free to import core', async () => {
+    const cli = await forbiddenSpecifiersFor('packages/cli/src/index.ts');
+    expect(cli).not.toContain('@qai/core');
+  });
+
+  it('leaves action free to import cli', async () => {
+    const action = await forbiddenSpecifiersFor('packages/action/src/index.ts');
+    expect(action).not.toContain('@qai/cli');
+  });
+});

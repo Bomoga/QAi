@@ -20,6 +20,10 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
 
+    // tsup's declaration build injects `baseUrl`, which TS 6 deprecates. Our own
+    // configs never set it. Remove this once tsup stops injecting it.
+    "ignoreDeprecations": "6.0",
+
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true

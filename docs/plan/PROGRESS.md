@@ -1,13 +1,13 @@
 # Progress
 
-Updated: 2026-08-15T09:09:00Z
+Updated: 2026-08-15T09:13:00Z
 Current stage: S0
-Next task: S0.2
+Next task: S0.3
 
 ## S0. Skeleton
 
-- [x] S0.1 repo, workspaces, tooling (commit backfilled below)
-- [ ] S0.2 package skeletons for core, cli, action
+- [x] S0.1 repo, workspaces, tooling (commit ae53e2a)
+- [x] S0.2 package skeletons for core, cli, action (commit backfilled below)
 - [ ] S0.3 CI running typecheck, lint, test
 - [ ] S0.4 fixtures/ledger boots with one seeded defect
 - Exit criterion: `pnpm test` green in GitHub Actions, and `fixtures/ledger` serves an endpoint that leaks a record across owners
@@ -60,6 +60,10 @@ Next task: S0.2
 - TypeScript is pinned to the 6.x line. typescript-eslint 8.x refuses to load against TS 7.0; unpin once it supports TS >= 7.1 (typescript-eslint issue 10940).
 - `docs/plan/` is in `.prettierignore`. Prettier reflowed the imported plan on first run; the plan is source of truth and tooling must not rewrite it.
 - The R1 model boundary was verified by probe, not just by config reading: an `openai` import outside `packages/core/src/llm/` errors, the same import inside it passes.
+- S0.2: `@qai/cli` has no `bin` entry yet. The command surface, flags, and exit codes belong to M8 and land in S6; `npx qai` should not resolve until it does something.
+- S0.2: all three package index files export nothing. The public API of core is assembled by later modules, and a surface reaching past `src/index.ts` is reaching into private code.
+- S0.2: `ignoreDeprecations: "6.0"` is set in `tsconfig.base.json` only because tsup's dts build injects the deprecated `baseUrl`. Drop it when tsup stops.
+- The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
 
 ## Blocked
 
