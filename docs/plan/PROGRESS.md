@@ -1,15 +1,15 @@
 # Progress
 
-Updated: 2026-08-15T09:15:00Z
+Updated: 2026-08-15T09:18:00Z
 Current stage: S0
-Next task: S0.4
+Next task: stage boundary, open PR into dev
 
 ## S0. Skeleton
 
 - [x] S0.1 repo, workspaces, tooling (commit ae53e2a)
 - [x] S0.2 package skeletons for core, cli, action (commit 5c78bb9)
-- [x] S0.3 CI running typecheck, lint, test (commit backfilled below)
-- [ ] S0.4 fixtures/ledger boots with one seeded defect
+- [x] S0.3 CI running typecheck, lint, test (commit 14831b2)
+- [x] S0.4 fixtures/ledger boots with one seeded defect (commit backfilled below)
 - Exit criterion: `pnpm test` green in GitHub Actions, and `fixtures/ledger` serves an endpoint that leaks a record across owners
 
 ## S1. Spec and contracts (M1)
@@ -65,6 +65,10 @@ Next task: S0.4
 - S0.2: `ignoreDeprecations: "6.0"` is set in `tsconfig.base.json` only because tsup's dts build injects the deprecated `baseUrl`. Drop it when tsup stops.
 - S0.3: CI runs typecheck, lint, format:check, test, build on push to main or dev and on PRs into them. Feature branch pushes are covered by the PR event, not by a second push trigger.
 - S0.3: the workflow's green run cannot be demonstrated until the branch is pushed. That evidence belongs to the S0 exit criterion at the stage boundary.
+- S0.4: only D1 is implemented. D2 through D7 and the two negative controls beyond N1 land with the stages that build the checks consuming them. D1 alone is what the S0 exit criterion asks for.
+- S0.4: `spec/ledger.spec.yaml` does not exist yet. 06-TESTING.md lists it as a fixture requirement, but there is no schema to validate it against until M1, so writing it now would produce a file nothing can check.
+- S0.4: the ledger has no runtime dependencies. It is `node:http` and nothing else, which also keeps its boot time inside the three second requirement (measured 1.09s).
+- S0.4: the ledger runs under Node's TypeScript stripping, so its imports carry explicit `.ts` extensions and its tsconfig sets `allowImportingTsExtensions`.
 - The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
 
 ## Blocked

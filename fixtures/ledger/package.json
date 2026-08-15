@@ -1,0 +1,11 @@
+{
+  "name": "ledger",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deliberately defective invoicing application, used as the integration target.",
+  "scripts": {
+    "dev": "node --experimental-strip-types src/index.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
