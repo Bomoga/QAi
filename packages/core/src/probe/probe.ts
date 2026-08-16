@@ -55,7 +55,12 @@ export async function probe(ctx: ProbeContext, opts: ProbeOptions): Promise<Obse
   if (sourceRoot !== undefined) {
     const registry = createAdapterRegistry(opts.adapters ?? defaultAdapters());
     const result = await registry.scan(resolve(cwd, sourceRoot));
-    source = result.scan;
+
+    // A source root nothing recognized is not a source reading. Counting it as one
+    // would report `hybrid` for a run whose source half contributed nothing, and then
+    // treat every crawled endpoint as a disagreement with a side that never spoke.
+    if (result.applied.length > 0) source = result.scan;
+    else notes.push(...result.scan.notes);
   } else {
     notes.push({
       level: 'info',

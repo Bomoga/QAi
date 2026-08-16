@@ -198,6 +198,26 @@ describe('degrading to one half', () => {
     expect(note?.level).toBe('warn');
   });
 
+  it('does not call a source root nothing recognized a source reading', async () => {
+    write('src/server.ts', 'export const add = (a: number, b: number) => a + b;\n');
+
+    const { session } = site({ '/': '' });
+    const { ctx } = context(session);
+
+    const observation = await probe(ctx, {
+      deps: DEPS,
+      cwd: root,
+      sourceRoot: '.',
+      baseUrl: BASE,
+    });
+
+    expect(observation.mode).toBe('blackbox');
+    expect(observation.endpoints[0]).toMatchObject({ origin: 'blackbox', confidence: 'low' });
+    expect(observation.notes.map((note) => note.message)).toContain(
+      'No source adapter recognized the source root, so endpoints and entities can only come from the black box crawl.',
+    );
+  });
+
   it('reads the target from the config when the options do not override it', async () => {
     const { session, sent } = site({ '/api/invoices': '' });
     const { ctx } = context(session, { baseUrl: BASE });
