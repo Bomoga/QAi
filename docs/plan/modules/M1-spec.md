@@ -1,6 +1,6 @@
 # M1: Spec Schema and Loader
 
-**Status:** not started
+**Status:** complete
 **Owns:** `packages/core/src/contracts/`, `packages/core/src/spec/`
 **Depends on:** nothing
 **Depended on by:** M2, M3, M4, M5, M6, M7, M8, M9
@@ -94,3 +94,18 @@ pnpm --filter @qai/core exec tsx scripts/validate-fixture-spec.ts
 ## Open questions
 
 - Q4 from `07-DECISIONS.md`: the exact condition subset. Proposal above; implement it and flag anything the fixture spec cannot express.
+  **Answered by use at M1.8.** The proposed grammar expressed every access rule in `fixtures/ledger/spec/ledger.spec.yaml`, four conditions across eight rules. Nothing needed disjunction, ordering comparison, or negation of a whole condition. Rules carrying no condition are unconditional denials where a condition would say nothing. Q4 can be marked resolved in `07-DECISIONS.md` by a human.
+
+### Raised during implementation, needs a human decision
+
+- **The Definition of Done command names `tsx`, which is not an approved dependency.** `04-CONVENTIONS.md` lists the permitted dependencies and `tsx` is not among them, so adding it needs approval. The repository already runs TypeScript directly through Node's type stripping, which is how `fixtures/ledger` boots. Implemented as `pnpm --filter @qai/core validate:fixture`, which runs `node --experimental-strip-types scripts/validate-fixture-spec.ts`. Smallest correction: change the command in this file. Alternative: approve `tsx` as a dev dependency.
+
+- **`loadSpec` returns one more field than this document's Public API states.** Parsed condition ASTs come back in `conditions: ReadonlyMap<string, ConditionAst>`, keyed by the now-assigned access rule id. The alternative was attaching the AST to the access rule, which would add a field to the Spec contract in `03-CONTRACTS.md` and is a stop condition. Widening a module return by one field is the smaller correction. Smallest fix: update the Public API block here to `{ spec; hash; diagnostics; conditions }`.
+
+- **Canonicalization excludes hand-written identifiers, not only derived ones.** This document says "exclude derived identifiers". Naming a rule does not change what it asserts, so a spec that gained explicit ids during review should still compare against runs taken before it. Confirm, or narrow the exclusion to derived ids only.
+
+- **Three unions appear in `03-CONTRACTS.md` examples but are never stated as closed sets.** Implemented closed: `ObservationNote.level` as info/warn/error, `actorVisibility` values as untested/visible/refused/error, structural entry `kind` as entity/endpoint/field. Only `untested` appears in the document. If M4 or M7 needs a value outside these, that is a contract change.
+
+- **Merging judgment calls not covered here.** A `specVersion` mismatch across merged files is an error, since they are different contract versions. A differing `name` is a warning and the first file's name is used. Confirm both.
+
+- **The S1 exit criterion in `05-BUILD-ORDER.md` needs a command this module does not own.** It reads `qai validate spec/ledger.spec.yaml` prints a structured summary and exits 0; a malformed spec exits 2 naming file, path, and reason. The command surface belongs to M8 and lands in S6. The behavior exists and is demonstrated through `scripts/validate-fixture-spec.ts`, but the criterion as written cannot be met until the CLI exists. Smallest correction: either restate the S1 criterion against the loader, or move `qai validate` alone into S1 and accept that M1 and M8 both land there.
