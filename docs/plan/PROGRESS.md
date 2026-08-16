@@ -73,6 +73,24 @@ Surprises worth recording:
 - [x] M2.6 seed and reset execution with the disposability gate (commit d752a75)
 - [x] M2.7 startup capability report (commit backfilled below)
 - Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
+- Exit criterion: **met**, verified 2026-08-16 via `packages/core/scripts/capture-two-actors.ts` against a live ledger. Two actors resolved, one request each, four files written, `request.headers.authorization` and `response.body.notes` redacted in both. No token and no sensitive field reached disk; `INV-1001` and `org-1` were retained.
+
+### S2 summary
+
+Built: `qai.config.yaml` resolution, credential resolution from named environment
+variables, an undici request layer with injected clock and ids, evidence capture with
+redaction at the point of capture, actor sessions for all four auth kinds, the fixture
+disposability gate, and the startup capability report. 343 tests pass, 329 in core.
+
+Deferred: nothing from M2. `createTargetContext` is synchronous where the module
+declares a Promise, which is recorded rather than papered over.
+
+Surprises worth recording:
+
+- The stage demonstration found two faults the unit tests had passed over. Evidence recorded the caller's headers rather than the ones actually sent, so records showed no authorization header at all. And `createTargetContext` built a writer it never handed to the sessions, so a run printed evidence ids and bodyRef paths for files that were never written. Both looked correct in isolation and only failed when run end to end.
+- Writing the M2.5 session tests found a leak in M2.4: a target echoing a credential back in its response body had it written unredacted, because the always-redacted names were matched in header position only.
+- With `shell: true` a kill does not reach the command, reliably not on Windows, so a timeout waited out the full command. One test held the suite at 11.3s before that was fixed.
+- The proposed config has no way to supply `actor.org_id`, which the condition grammar compares against. Added as `actors[].attributes` and flagged.
 
 ## S3. Access checks (M3)
 
