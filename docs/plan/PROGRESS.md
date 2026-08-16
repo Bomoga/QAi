@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T00:35:00Z
-Current stage: S4
-Next task: stage boundary, S4 exit criterion
+Updated: 2026-08-17T01:05:00Z
+Current stage: S4 complete, awaiting review
+Next task: S5, behavioral checks (M5)
 
 ## S0. Skeleton
 
@@ -133,10 +133,45 @@ Surprises worth recording:
 - [x] M4.6 endpoint identity normalization (commit 5117842)
 - [x] M4.7 source and black box merge with confidence (commit b82ae56)
 - [x] M4.8 diffSpecObservation and severity rules (commit 9298e61)
-- [x] M4.9 integration test over D5 and D6 (commits 7d8ea01 and the one backfilled below)
+- [x] M4.9 integration test over D5 and D6 (commits 7d8ea01 and 8e717f7)
 - Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
 - **Conflict raised at stage start, decided 2026-08-16: black box origin for the ledger.** M4's adapters target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. The Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" therefore holds with `origin: blackbox` and reduced confidence, not `origin: source`. Adapters are built and tested against synthetic source trees. Rejected: adding a `node:http` adapter, which is outside Q1's list and covers a framework no real user has; and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in 06-TESTING.md. The DoD line should be restated to say black box for this fixture.
-- D5, the undeclared debug endpoint, does not exist in the ledger yet and has to be added before M4.9, the same way D2 and D3 were added during S3.
+- D5, the undeclared debug endpoint, was added to the ledger at M4.9, the same way D2 and D3 were added during S3.
+- Exit criterion: **behavior met, command still M8**. Verified 2026-08-16 via `packages/core/scripts/probe-ledger.ts` against a live ledger, both directions. Defects on: 4 endpoints, every one `origin: blackbox` and `confidence: low` with one evidence id each, `GET /api/debug/state` reported in `observedNotSpecified` at medium, `AuditLog` in `specifiedNotObserved`, exit 1. D5 off: 3 endpoints, no medium finding, exit 0. The source adapters cannot be demonstrated against this fixture and are covered by their own tests, per the decision recorded at the top of this section.
+
+### S4 summary
+
+Built: the probe interfaces and adapter registry, the Next.js App Router adapter, the
+Express adapter with cross-file mount resolution, the read-only black box crawler,
+endpoint identity normalization, the source and black box merge with its confidence
+table, `probe()` itself, `diffSpecObservation` with the module's severity rules, D5 in
+the fixture, and an integration run over D5 and D6. 815 tests pass, 36 files.
+
+Deferred: M4.4, the Prisma schema adapter, stopped on the `@prisma/internals` dependency
+and skipped by decision. The options are written into the M4 Open questions. The visible
+cost is that no entity in any Observation comes from a schema, so `Organization` and
+`User` are reported as specified and not observed alongside `AuditLog`. The integration
+test asserts all three, so the day M4.4 lands someone has to look at that line.
+
+Surprises worth recording:
+
+- The stage demonstration found a false finding four hundred unit tests had passed over,
+  the same pattern as S2. The ledger returns rows under an `invoices` key, so the crawler
+  recorded the envelope as the response shape and the diff then reported every declared
+  Invoice field as missing. M3.6 had already solved that shape for lists; the crawler had
+  not. Running the thing end to end keeps being worth more than another unit test.
+- The demonstration also showed `mode: hybrid` for a run whose source half read nothing,
+  because the config points `sourceRoot` at a fixture no adapter recognizes. A source root
+  that nothing recognized is not a source reading.
+- Four probe tests wrote a synthetic Express file with no `import express`, so detection
+  correctly said no and the source half never ran. Three of them passed anyway. A fixture
+  that does not trip detection tests nothing about the adapter.
+- The M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` does not
+  filter anything. The `--` reaches vitest as a positional and the filters are dropped.
+  Same family as the M1.2 trap.
+- Endpoint identity turned out to be the highest stakes small function in the module.
+  M6 diffs runs on that string, so widening what counts as a record identifier renames
+  every endpoint in every stored run.
 
 ## S5. Behavioral checks (M5)
 
