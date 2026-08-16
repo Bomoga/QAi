@@ -2,6 +2,7 @@ import { ESLint } from 'eslint';
 import { describe, expect, it } from 'vitest';
 
 import {
+  CHECKS_FORBIDDEN_PATTERNS,
   CLI_FORBIDDEN_PATTERNS,
   CORE_FORBIDDEN_PATTERNS,
   LLM_BOUNDARY_DIR,
@@ -67,6 +68,26 @@ describe('the model boundary', () => {
     for (const pattern of LLM_CLIENT_PATTERNS) {
       expect(forbidden).not.toContain(pattern);
     }
+  });
+});
+
+describe('the check boundary', () => {
+  it('stops a check importing from llm/ by path, not only by client name', async () => {
+    const forbidden = await forbiddenSpecifiersFor('packages/core/src/checks/access/verdict.ts');
+    for (const pattern of CHECKS_FORBIDDEN_PATTERNS) {
+      expect(forbidden).toContain(pattern);
+    }
+  });
+
+  it('keeps the model client restriction on checks as well', async () => {
+    const forbidden = await forbiddenSpecifiersFor('packages/core/src/checks/registry.ts');
+    expect(forbidden).toContain('openai');
+    expect(forbidden).toContain('@anthropic-ai/*');
+  });
+
+  it('does not restrict llm/ by path outside checks, since core assembles both', async () => {
+    const forbidden = await forbiddenSpecifiersFor('packages/core/src/index.ts');
+    expect(forbidden).not.toContain('**/llm/**');
   });
 });
 

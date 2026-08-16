@@ -43,12 +43,24 @@ export const CLI_FORBIDDEN_PATTERNS = ['@qai/action', '@qai/action/*'];
 export const CORE_DIRECTION_MESSAGE =
   'core imports nothing from cli or action. If core needs to tell the user something, it returns data.';
 
+/**
+ * M3 Definition of Done: no check imports anything from `packages/core/src/llm/`.
+ * The model client patterns already stop a check reaching a model directly. This stops
+ * the indirect route, a check importing a helper that wraps one, which is how a model
+ * would actually end up in a verdict path.
+ */
+export const CHECKS_FORBIDDEN_PATTERNS = ['**/llm', '**/llm/**'];
+
+export const CHECKS_BOUNDARY_MESSAGE =
+  'Invariant I1: a check may not import from llm/. Verdicts are produced by deterministic assertion, and a check that reaches the model layer at all has left that guarantee behind.';
+
 export const CLI_DIRECTION_MESSAGE =
   'cli does not import action. action is the outer shell and depends on cli, not the reverse.';
 
 const llmGroup = { group: LLM_CLIENT_PATTERNS, message: LLM_BOUNDARY_MESSAGE };
 const coreDirectionGroup = { group: CORE_FORBIDDEN_PATTERNS, message: CORE_DIRECTION_MESSAGE };
 const cliDirectionGroup = { group: CLI_FORBIDDEN_PATTERNS, message: CLI_DIRECTION_MESSAGE };
+const checksBoundaryGroup = { group: CHECKS_FORBIDDEN_PATTERNS, message: CHECKS_BOUNDARY_MESSAGE };
 
 /** @param {{ group: string[], message: string }[]} groups */
 function restrict(groups) {
@@ -73,6 +85,13 @@ export default tseslint.config(
     files: ['packages/core/**/*.ts'],
     rules: {
       [LLM_BOUNDARY_RULE]: restrict([llmGroup, coreDirectionGroup]),
+    },
+  },
+  {
+    // Checks carry the model boundary, the dependency direction, and no llm/ by path.
+    files: ['packages/core/src/checks/**/*.ts'],
+    rules: {
+      [LLM_BOUNDARY_RULE]: restrict([llmGroup, coreDirectionGroup, checksBoundaryGroup]),
     },
   },
   {
