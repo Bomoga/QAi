@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T16:00:00Z
+Updated: 2026-08-16T16:30:00Z
 Current stage: S3
-Next task: M3.3
+Next task: M3.4
 
 ## S0. Skeleton
 
@@ -95,8 +95,8 @@ Surprises worth recording:
 ## S3. Access checks (M3)
 
 - [x] M3.1 CheckResult helpers and the check registry (commit 9e91220)
-- [x] M3.2 rule to plan expansion (commit backfilled below)
-- [ ] M3.3 condition AST evaluation against a candidate record
+- [x] M3.2 rule to plan expansion (commit 5eaaaaf)
+- [x] M3.3 condition AST evaluation against a candidate record (commit backfilled below)
 - [ ] M3.4 deny verdict table
 - [ ] M3.5 allow rule verification
 - [ ] M3.6 list handling per Q5
@@ -132,6 +132,9 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.3 bug worth remembering: attribute lookup read inherited properties, so a condition naming `Invoice.constructor` resolved to the `Object` constructor and was compared as data, returning `false` rather than `unknown`. Own properties only now. A condition should read the target, never the runtime, and the two tests that caught it were written to assert exactly that.
+- M3.3: evaluation is three-valued. What cannot be resolved is `unknown`, never `false`. Treating a missing attribute as a failed match would silently pick the wrong record and then report a confident verdict about it.
+- M3.3: an undecidable condition does not fall through to an arbitrary record. `selectCandidate` returns a reason, and the caller turns that into `inconclusive`, per the module note that testing access control against a record that does not exist proves nothing.
 - M3.2 cross-module edit, needs a PR note: `TargetConfig` gained a `resources` section holding route templates and seeded instances. M2 owns that file. It is here because M3 resolves a resource to a URL and refuses to guess one, and M4, which would discover routes, is S4. When the probe lands, the Observation takes precedence and this becomes the fallback the module already describes.
 - M3.2: a rule that cannot be planned comes back in `unplannable` with a reason from the contract's closed set, not dropped. An unplanned rule that vanished would read as coverage.
 - M3.2: action to method mapping is fixed, read and list to GET, create to POST, update to PATCH, delete to DELETE. Not stated anywhere in the plan; confirm, particularly PATCH over PUT for update.
