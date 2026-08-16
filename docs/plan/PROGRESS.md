@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T18:30:00Z
+Updated: 2026-08-16T19:00:00Z
 Current stage: S3
-Next task: M3.7
+Next task: M3.8
 
 ## S0. Skeleton
 
@@ -99,8 +99,8 @@ Surprises worth recording:
 - [x] M3.3 condition AST evaluation against a candidate record (commit 6d7c324)
 - [x] M3.4 deny verdict table (commit 56a9cf3)
 - [x] M3.5 allow rule verification and the check runner (commit 2545c2b)
-- [x] M3.6 list handling per Q5 (commit backfilled below)
-- [ ] M3.7 mutating rules behind the disposability gate
+- [x] M3.6 list handling per Q5 (commit d73bd1e)
+- [x] M3.7 mutating rules behind the disposability gate (commit backfilled below)
 - [ ] M3.8 severity assignment and finding text
 - [ ] M3.9 integration test over D1, D2, D3, N1, N2
 - Exit criterion: `qai check` against `fixtures/ledger` reports the seeded cross-owner leak as a high severity finding with request and response evidence and exits 1; fixing the fixture app makes it exit 0
@@ -132,6 +132,9 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.7: the runner takes mutation permission as an argument from the M2 gate rather than recomputing disposability itself. One interlock, not two implementations of one. Absent permission means refused, so the safe answer is the default rather than something a caller has to remember to ask for.
+- M3.7: `runAccessChecks` orders by plan, so handing it mutating checks first still runs every read first. A test sorts the plans backwards to prove the ordering does not come from the caller.
+- M3.7: a failed reset stops the remaining mutating checks and reports them inconclusive naming the reset failure. Continuing would run them against a target in an unknown state, and a verdict from that describes nothing.
 - M3.6, Q5 answered by implementation: a deny list rule asserts the absence of foreign rows. Rows must be present and identifiable for a pass. An empty list is inconclusive, since the endpoint scoping correctly and the dataset simply being empty are not distinguishable from outside. A row whose ownership cannot be judged also blocks a pass, because claiming correct scoping on the strength of rows nobody could read is the same mistake in a quieter form.
 - M3.6: row extraction reads a top level array, or the first own property holding an array of objects, which covers `{invoices: []}` and `{data: []}` without guessing at key names. Returning undefined for an unreadable shape is deliberate: not recognizing the shape and the list being empty are different facts and get different verdicts.
 - M3.6 test bug worth remembering: a default parameter swallows an explicitly passed `undefined`, so a test meant to exercise the no-condition path was silently exercising the with-condition path and failing for the right reason by accident. Call the function directly when the point of the test is that an argument is absent.

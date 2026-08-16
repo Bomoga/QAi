@@ -19,6 +19,20 @@ import { assessAllowOutcome, assessDenyOutcome } from './verdict.ts';
 
 export interface AccessRunContext {
   readonly sessions: ReadonlyMap<string, ActorSession>;
+  /**
+   * Absent means mutating checks are not permitted. Supplied by the caller from the
+   * M2 disposability gate rather than recomputed here, so there is one interlock
+   * rather than two implementations of one.
+   */
+  readonly mutation?: MutationPermission;
+}
+
+export interface MutationPermission {
+  readonly allowed: boolean;
+  /** Why not, written for someone who has to change something. Present when refused. */
+  readonly refusal?: string;
+  /** Restores the target between mutating checks. Absent means no reset is possible. */
+  reset?: () => Promise<void>;
 }
 
 /** Actions that act on one record and therefore need one identified first. */
@@ -35,6 +49,21 @@ export async function runAccessCheck(
   plan: AccessCheckPlan,
   context: AccessRunContext,
 ): Promise<CheckResult> {
+  /**
+   * Invariant I7, checked before anything is sent. A mutating check against a target
+   * nobody declared disposable does not run, and reports why rather than passing
+   * quietly. There is no flag that reaches past this.
+   */
+  if (plan.mutates && context.mutation?.allowed !== true) {
+    return inconclusive({
+      identity: plan.identity,
+      title: `Mutating check on ${plan.resource} was not attempted`,
+      detail:
+        context.mutation?.refusal ??
+        'The target is not declared disposable with a reset command, so no check that writes to it was run.',
+    });
+  }
+
   const session = context.sessions.get(plan.actorId);
 
   if (session === undefined) {
@@ -185,6 +214,58 @@ export async function runAccessCheck(
     detail: describeInconclusive(where, assessment.reason, assessment.status),
     evidence,
   });
+}
+
+/**
+ * Runs a batch. Non-mutating checks first, then mutating ones one at a time with a
+ * reset between them.
+ *
+ * The ordering is not a convenience. A mutating check changes what every check after
+ * it observes, so running one in the middle of a batch would make the results that
+ * follow describe a target that no longer matches the one being reported on. Serial
+ * execution with a reset between is what keeps each mutating check answerable on its
+ * own, and a reset that fails stops the remaining mutating checks rather than letting
+ * them run against a target in an unknown state.
+ */
+export async function runAccessChecks(
+  plans: readonly AccessCheckPlan[],
+  context: AccessRunContext,
+): Promise<CheckResult[]> {
+  const results: CheckResult[] = [];
+
+  for (const plan of plans.filter((candidate) => !candidate.mutates)) {
+    results.push(await runAccessCheck(plan, context));
+  }
+
+  const mutating = plans.filter((candidate) => candidate.mutates);
+  let resetFailed: string | undefined;
+
+  for (const [index, plan] of mutating.entries()) {
+    if (resetFailed !== undefined) {
+      results.push(
+        inconclusive({
+          identity: plan.identity,
+          title: `Mutating check on ${plan.resource} was not attempted`,
+          detail: `An earlier reset did not complete, so the target state is unknown and no further mutating check was run: ${resetFailed}`,
+        }),
+      );
+      continue;
+    }
+
+    results.push(await runAccessCheck(plan, context));
+
+    const isLast = index === mutating.length - 1;
+    const reset = context.mutation?.reset;
+    if (isLast || reset === undefined) continue;
+
+    try {
+      await reset();
+    } catch (cause) {
+      resetFailed = cause instanceof Error ? cause.message : 'the reset command failed';
+    }
+  }
+
+  return results;
 }
 
 /** Q5: an empty list and an unreadable one are different facts and read differently. */
