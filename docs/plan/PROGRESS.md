@@ -122,6 +122,9 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- Post-merge fix, branch `fix/entity-field-order`: `sameEntity` in the loader compared entity fields by array position, so two spec files agreeing about an entity but declaring its fields in a different order failed to load as a conflicting redefinition. `hash.ts` already sorted fields before hashing, so the two disagreed with each other: the loader called them different, the hash called them identical. Found by Copilot's review on PR #2. The fixture spec hash is unchanged, `sha256:5a31b527c6c1...`.
+- Worth watching for the same class of bug elsewhere: any place that compares two authored collections should say whether order is meaningful. It is for access rules, since ordinal position derives an identifier. It is not for entity fields, actors, or entities.
+
 - M2.7: `createTargetContext` is synchronous, while the Public API in modules/M2-target.md declares it returning a Promise. Nothing it does is asynchronous: credential resolution reads a passed-in map, and the only filesystem call is an existence check. Flagged for review; making it async to match the signature would be ceremony around nothing.
 - M2.7: the capability report states available capabilities as well as unavailable ones. A reader seeing only warnings cannot tell a clean setup from an unreported gap.
 - M2.6: the disposability gate requires both `disposable: true` and a `resetCommand`, even to seed. Seeding a target that cannot be restored leaves someone with a dirty database and no way back. Not overridable by flag; an interlock the person in a hurry can reach past is not an interlock.

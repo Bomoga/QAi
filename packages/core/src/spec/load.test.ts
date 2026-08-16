@@ -339,6 +339,70 @@ requirements:
     expect(failure.diagnostics.some((d) => d.message.includes('defined differently'))).toBe(true);
   });
 
+  it('accepts the same entity with its fields declared in a different order', () => {
+    write(
+      'a.spec.yaml',
+      `
+specVersion: "0.1"
+name: "App"
+entities:
+  - name: Invoice
+    fields:
+      - name: org_id
+        type: string
+      - name: total_cents
+        type: number
+requirements:
+  - id: REQ-001
+    statement: "s"
+`,
+    );
+    write(
+      'b.spec.yaml',
+      `
+specVersion: "0.1"
+name: "App"
+entities:
+  - name: Invoice
+    fields:
+      - name: total_cents
+        type: number
+      - name: org_id
+        type: string
+requirements:
+  - id: REQ-002
+    statement: "s"
+`,
+    );
+
+    const { spec } = load();
+    expect(spec.entities).toHaveLength(1);
+    expect(spec.entities[0]?.fields.map((field) => field.name)).toEqual(['org_id', 'total_cents']);
+  });
+
+  it('still rejects an entity whose fields differ in more than order', () => {
+    write('a.spec.yaml', BASE);
+    write(
+      'b.spec.yaml',
+      `
+specVersion: "0.1"
+name: "App"
+entities:
+  - name: Invoice
+    fields:
+      - name: org_id
+        type: number
+requirements:
+  - id: REQ-002
+    statement: "s"
+`,
+    );
+
+    expect(loadFailing().diagnostics.some((d) => d.message.includes('defined differently'))).toBe(
+      true,
+    );
+  });
+
   it('rejects a conflicting entity redefinition', () => {
     write('a.spec.yaml', BASE);
     write(
