@@ -15,3 +15,4 @@ export * from './spec/index.ts';
 export * from './target/index.ts';
 export * from './evidence/index.ts';
 export * from './checks/index.ts';
+export * from './probe/index.ts';

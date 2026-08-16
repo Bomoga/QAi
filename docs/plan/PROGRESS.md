@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T20:00:00Z
-Current stage: S3
-Next task: stage boundary, demonstrate the S3 exit criterion
+Updated: 2026-08-16T21:00:00Z
+Current stage: S4
+Next task: M4.2
 
 ## S0. Skeleton
 
@@ -125,7 +125,18 @@ Surprises worth recording:
 
 ## S4. Probe and structural diff (M4)
 
-- [ ] not started
+- [x] M4.1 probe interfaces and adapter registration (commit backfilled below)
+- [ ] M4.2 Next.js App Router adapter
+- [ ] M4.3 Express adapter
+- [ ] M4.4 Prisma schema adapter
+- [ ] M4.5 black box crawler, read-only, budgeted
+- [ ] M4.6 endpoint identity normalization
+- [ ] M4.7 source and black box merge with confidence
+- [ ] M4.8 diffSpecObservation and severity rules
+- [ ] M4.9 integration test over D5 and D6
+- Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
+- **Conflict raised at stage start, needs a decision.** M4's adapters target Next.js, Express, and Prisma. `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. So the Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" cannot hold with `origin: source`; the ledger will be black box probed. Adapters are built and tested against small synthetic source trees instead. Options: accept black box origin for the ledger, add a plain `node:http` adapter (outside Q1's list, needs approval), or rewrite the fixture on a supported framework (contradicts the three second boot requirement in 06-TESTING.md).
+- D5, the undeclared debug endpoint, does not exist in the ledger yet and has to be added before M4.9, the same way D2 and D3 were added during S3.
 
 ## S5. Behavioral checks (M5)
 
@@ -148,6 +159,11 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M4.1: `ProbeMode` was briefly redefined in `probe/types.ts` when the contracts already export it. Typecheck caught the ambiguous re-export. Worth remembering as a category: anything the contracts already name is imported, never restated, and the barrel makes a duplicate a compile error rather than a silent divergence.
+- M4.1: an adapter whose `detect` throws has simply not recognized the root; an adapter whose `scan` throws produces an error note and the other adapters still run. A probe that fails partially produces a partial Observation, per the failure posture in 02-ARCHITECTURE.md.
+- M4.1: more than one adapter recognizing a repository is normal rather than a conflict. A Next.js app with a Prisma schema is two adapters describing different things.
+- M4.1: the probe is not given the spec. Matching happens in the diff, because a probe that knew what it was looking for would find it, and an Observation shaped by the spec cannot support a finding that the two disagree.
 
 - M3.9: D2 and D3 are now implemented in `fixtures/ledger`, so the catalog has D1, D2, D3 and both negative controls. D4 through D7 remain deferred to the stages that build the checks consuming them. Ledger level tests hold D2 and D3 in place the same way they hold D1.
 - M3.9 placement: the integration test lives in the repository root `test/`, not in either package. 02-ARCHITECTURE.md says core depends on nothing here and `fixtures/ledger` likewise, and an integration test inside either one would quietly make that false. The root is the only place legitimately allowed to depend on both.
