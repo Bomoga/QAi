@@ -56,6 +56,13 @@ const NOISE_PATHS = new Set([
 
 const NOISE_PREFIXES = ['/_next/', '/static/', '/assets/', '/.well-known/'];
 
+/**
+ * Field names almost every model carries. They are excluded when deciding whether a
+ * response looks like an entity, because two records agreeing that they have an `id`
+ * is not evidence that they are the same model.
+ */
+const UBIQUITOUS_FIELDS = new Set(['id', 'createdat', 'updatedat', 'deletedat']);
+
 /** Lowercase and strip anything that is not a letter or a digit. */
 export function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/gu, '');
@@ -127,12 +134,21 @@ export function matchEntities(spec: Spec, observation: Observation): EntityMatch
       return { entity: entity.name, observed: endpoint.id, via: 'endpoint', confidence: 'medium' };
     }
 
-    const declared = new Set(entity.fields.map((field) => normalizeName(field.name)));
-    const byFields = observation.endpoints.find((candidate) => {
-      const observedFields = candidate.responseShape?.fields ?? [];
-      const overlap = observedFields.filter((field) => declared.has(normalizeName(field)));
-      return overlap.length >= Math.min(2, declared.size) && declared.size > 0;
-    });
+    const distinctive = new Set(
+      entity.fields
+        .map((field) => normalizeName(field.name))
+        .filter((field) => !UBIQUITOUS_FIELDS.has(field)),
+    );
+
+    const byFields =
+      distinctive.size === 0
+        ? undefined
+        : observation.endpoints.find((candidate) => {
+            const overlap = (candidate.responseShape?.fields ?? []).filter((field) =>
+              distinctive.has(normalizeName(field)),
+            );
+            return overlap.length >= Math.min(2, distinctive.size);
+          });
 
     if (byFields !== undefined) {
       return { entity: entity.name, observed: byFields.id, via: 'fields', confidence: 'low' };

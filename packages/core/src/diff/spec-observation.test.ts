@@ -133,12 +133,26 @@ describe('entity matching', () => {
       SPEC,
       observation({
         endpoints: [
-          endpoint({ path: '/api/records', responseShape: { fields: ['id', 'org_id'] } }),
+          endpoint({
+            path: '/api/records',
+            responseShape: { fields: ['org_id', 'total_cents'] },
+          }),
         ],
       }),
     );
 
     expect(matches[0]).toMatchObject({ via: 'fields', confidence: 'low' });
+  });
+
+  it('does not read a shared id field as evidence of a model', () => {
+    const matches = matchEntities(
+      SPEC,
+      observation({
+        endpoints: [endpoint({ path: '/api/records', responseShape: { fields: ['id'] } })],
+      }),
+    );
+
+    expect(matches[0]).toMatchObject({ entity: 'Invoice', via: 'none' });
   });
 
   it('reports an entity nothing accounts for', () => {

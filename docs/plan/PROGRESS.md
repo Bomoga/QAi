@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T00:10:00Z
+Updated: 2026-08-17T00:35:00Z
 Current stage: S4
-Next task: M4.9
+Next task: stage boundary, S4 exit criterion
 
 ## S0. Skeleton
 
@@ -132,8 +132,8 @@ Surprises worth recording:
 - [x] M4.5 black box crawler, read-only, budgeted (commit 9adc558)
 - [x] M4.6 endpoint identity normalization (commit 5117842)
 - [x] M4.7 source and black box merge with confidence (commit b82ae56)
-- [x] M4.8 diffSpecObservation and severity rules (commit backfilled below)
-- [ ] M4.9 integration test over D5 and D6
+- [x] M4.8 diffSpecObservation and severity rules (commit 9298e61)
+- [x] M4.9 integration test over D5 and D6 (commits 7d8ea01 and the one backfilled below)
 - Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
 - **Conflict raised at stage start, decided 2026-08-16: black box origin for the ledger.** M4's adapters target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. The Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" therefore holds with `origin: blackbox` and reduced confidence, not `origin: source`. Adapters are built and tested against synthetic source trees. Rejected: adding a `node:http` adapter, which is outside Q1's list and covers a framework no real user has; and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in 06-TESTING.md. The DoD line should be restated to say black box for this fixture.
 - D5, the undeclared debug endpoint, does not exist in the ledger yet and has to be added before M4.9, the same way D2 and D3 were added during S3.
@@ -160,6 +160,12 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.9: D5 is now implemented in `fixtures/ledger` behind `LEDGER_DEFECT_D5`, with ledger level tests holding it in both directions. D6 needed nothing: the spec has declared `AuditLog` since M1.8 and the application has never implemented it.
+- M4.9: the ledger now serves a route index at `/`. It is not a defect and is asserted either way. Without something naming the debug route a black box crawl could not reach it at all, and a defect the probe cannot reach would test the diff against an Observation that could never contain it. The blind spot is real and is what the low confidence on a black box only endpoint is for.
+- M4.9: the index names `/api/invoices/{id}`, which the crawler requests as `/api/invoices/%7Bid%7D` because every candidate is resolved through `URL` rather than pasted together. It answers 404 and is correctly not recorded. A test pins both halves of that.
+- M4.9: the probe of the defective ledger records four endpoints, `/`, `/api/debug/state`, `/api/invoices`, and `/health`, each `origin: blackbox` and `confidence: low`, each carrying one evidence id.
+- M4.9 cost of deferring M4.4, asserted rather than hidden: `Organization` and `User` are real in the fixture, serve no route of their own, and therefore appear in `specifiedNotObserved` alongside `AuditLog`. A Prisma adapter would have observed them as models. The test states all three so the day M4.4 lands, the assertion changes and someone has to look at it.
+- M4.9: entity matching by response fields now ignores `id` and the timestamp names. Two records agreeing that they have an `id` is not evidence they are the same model, and without that rule an invoice response matched the `User` entity.
 - M4.8: the contract's `specifiedNotObserved` and `fieldMismatches` entries carry no severity field, while the module states a default severity for both. Adding the field would be a contract change, so the two defaults are exported as constants for whoever turns an entry into a finding. Worth resolving properly when M7 renders these.
 - M4.8: an Observation that saw nothing at all produces no `specifiedNotObserved` entries. A probe that could not reach the target and a target implementing none of the spec are different facts, and reporting the first as the second fills a report with findings about a run that never happened. The RunResult already has `probe-incomplete` for the real case.
 - M4.8: entity matching has three strengths, and they are recorded rather than flattened. An adapter that read the model is high, a route named after the entity is medium, and response fields lining up is low. With M4.4 deferred nothing produces schema entities, so in practice every match is by route or by fields, which is exactly why the confidence is on the record.
