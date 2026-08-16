@@ -104,7 +104,24 @@ Surprises worth recording:
 - [x] M3.8 severity assignment and finding text (commit 8ac6c38)
 - [x] M3.9 integration test over D1, D2, D3, N1, N2 (commit backfilled below)
 - Exit criterion: `qai check` against `fixtures/ledger` reports the seeded cross-owner leak as a high severity finding with request and response evidence and exits 1; fixing the fixture app makes it exit 0
-- Known blockers on the criterion, same shape as S1: `qai check` is M8 and lands in S6, and the module Definition of Done names `pnpm --filter @qai/cli exec qai check`. The fixture also implements only D1, so D2 and D3 have to be added here before M3.9 can cover them.
+- Known blockers on the criterion, same shape as S1: `qai check` is M8 and lands in S6, and the module Definition of Done names `pnpm --filter @qai/cli exec qai check`. The fixture implemented only D1; D2 and D3 were added at M3.9.
+- Exit criterion: **behavior met, command still M8**. Verified 2026-08-16 via `packages/core/scripts/check-ledger.ts` against a live ledger. Defective: 3 fail, 4 pass, exit 1, with the cross-owner leak reported high severity carrying request and response evidence. Fixed: 7 pass, 0 fail, exit 0. The same seven checks run in both, so the runs compare.
+
+### S3 summary
+
+Built: check identity and the registry, rule to plan expansion, three-valued condition
+evaluation, the deny verdict table, allow verification, list scoping per Q5, the
+mutating interlock, severity and finding text, and an integration run over the fixture.
+Defects D2 and D3 were added to `fixtures/ledger`. 549 tests pass, 511 in core.
+
+Deferred: nothing from M3. D4 through D7 stay with the stages that consume them.
+
+Surprises worth recording:
+
+- Attribute lookup read inherited properties, so a condition naming `Invoice.constructor` resolved to the `Object` constructor and compared as data. A condition should read the target, never the runtime.
+- `process.exit` with undici's keep-alive sockets open trips a libuv assertion on Windows and reports a crash code instead of the exit code the run reached. For a tool whose exit code is the product, that is worse than the crash. The pool is closed and `process.exitCode` set instead. `HttpClient` has no teardown method, which M8 will want.
+- A default parameter swallows an explicitly passed `undefined`, so a test meant to exercise an absent argument silently exercised the present one.
+- The integration test cannot live in either package without breaking the architecture rule that both depend on nothing here. It sits at the repository root.
 
 ## S4. Probe and structural diff (M4)
 
