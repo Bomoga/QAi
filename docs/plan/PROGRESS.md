@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T10:50:00Z
+Updated: 2026-08-15T11:10:00Z
 Current stage: S1
-Next task: M1.5
+Next task: M1.6
 
 ## S0. Skeleton
 
@@ -37,8 +37,8 @@ Surprises worth recording:
 - [x] M1.1 scaffold packages/core contracts directory (commit 5310e50)
 - [x] M1.2 SpecSchema and sub-schemas (commit 61198b6)
 - [x] M1.3 ObservationSchema, RunResultSchema, EvidenceSchema (commit 792dcc4)
-- [x] M1.4 condition tokenizer and parser (commit backfilled below)
-- [ ] M1.5 YAML loading, merge, identifier derivation, diagnostics
+- [x] M1.4 condition tokenizer and parser (commit ca8c4d9)
+- [x] M1.5 YAML loading, merge, identifier derivation, diagnostics (commit backfilled below)
 - [ ] M1.6 canonicalization and hashing
 - [ ] M1.7 generate schema/spec.schema.json and assert it matches
 - [ ] M1.8 author fixtures/ledger/spec/ledger.spec.yaml
@@ -84,6 +84,10 @@ Surprises worth recording:
 - zod resolved to 4.x. 04-CONVENTIONS.md approves `zod` without pinning a major.
 - M1.2: `pnpm --filter @qai/core test` was passing by running zero tests. Vitest walked up to the root config, whose include patterns are relative to the repository root, and matched nothing from inside the package. Core now has its own `vitest.config.ts` and its test script dropped `--passWithNoTests`. Worth checking the same trap if cli, action, or ledger ever get a Definition of Done command.
 - M1.2: `allowImportingTsExtensions` moved into `tsconfig.base.json`. Relative imports carry explicit `.ts` extensions repo wide, matching what the ledger already did. Every project sets `noEmit` and is bundled by tsup, so no `.ts` specifier reaches output. The redundant setting in `fixtures/ledger/tsconfig.json` is now a no-op and can be dropped whenever that file is next touched.
+- M1.5 deviation, needs review: parsed condition ASTs are returned in a `conditions` map keyed by access rule id, not attached to the rule. Putting the AST on the rule would add a field to the Spec contract, which is a stop condition. This widens the `loadSpec` return in modules/M1-spec.md from `{ spec, hash, diagnostics }` by one field. Smaller correction than a contract change, but the module file should be updated to match.
+- M1.5: `loadSpec` returns `{ spec, diagnostics, conditions }`. The `hash` field named in the module's public API arrives with M1.6, which owns canonicalization and hashing.
+- M1.5 judgment calls not covered by the plan: a `specVersion` mismatch across merged files is an error, since they are different contract versions. A differing `name` is a warning and the first file's name wins. Neither case is described in modules/M1-spec.md.
+- M1.5: files are glob-resolved then sorted, so merge order, derived identifiers, and diagnostic order do not depend on filesystem ordering. Rule R6.
 - M1.4: the Q4 grammar as implemented has no disjunction, no ordering comparison, and no negation of a whole condition. Only `==`, `!=`, `in`, `not in`, joined by `and`. Check at M1.8 whether the fixture spec needs anything outside that; if it does, Q4 needs a human answer rather than a wider parser.
 - M1.4: two identifiers separated by a dot is the only reference form, so `actor.org.id` is rejected. A bare identifier is rejected too rather than being read as a string, because `Invoice.org_id == admin` is far more likely a mistyped reference than a literal, and guessing would turn an authoring mistake into a silently wrong check.
 - M1.4: `parseCondition` returns errors as values. A malformed condition becomes a load diagnostic naming the file and requirement, rather than an exception unwinding the whole load.

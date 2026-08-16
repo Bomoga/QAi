@@ -21,6 +21,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "fast-glob": "^3.3.3",
+    "yaml": "^2.9.0",
     "zod": "^4.4.3"
   }
 }
