@@ -1,0 +1,25 @@
+{
+  "name": "@qai/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Command parsing, config resolution, terminal output, process exit.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@qai/core": "workspace:*"
+  }
+}

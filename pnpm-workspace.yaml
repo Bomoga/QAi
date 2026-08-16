@@ -1,0 +1,8 @@
+packages:
+  - 'packages/*'
+  - 'fixtures/*'
+
+# esbuild ships a platform binary its install script links into place.
+# It backs tsup and vitest, both of which are tooling only.
+allowBuilds:
+  esbuild: true

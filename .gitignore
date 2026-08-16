@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Run state: SQLite database, evidence, cached runs
+.qai/
+
+.DS_Store
+*.log

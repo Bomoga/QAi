@@ -1,0 +1,101 @@
+# Progress
+
+Updated: 2026-08-15T09:18:00Z
+Current stage: S0
+Next task: stage boundary, open PR into dev
+
+## S0. Skeleton
+
+- [x] S0.1 repo, workspaces, tooling (commit ae53e2a)
+- [x] S0.2 package skeletons for core, cli, action (commit 5c78bb9)
+- [x] S0.3 CI running typecheck, lint, test (commit 14831b2)
+- [x] S0.4 fixtures/ledger boots with one seeded defect (commit dd4b3f7)
+- Exit criterion: `pnpm test` green in GitHub Actions, and `fixtures/ledger` serves an endpoint that leaks a record across owners
+- Exit criterion, local half: verified 2026-08-15. `GET /api/invoices/INV-1001` as actor `outsider` (org-2) returned HTTP 200 with `org_id: org-1`, `total_cents`, and `notes`. Boot took 1.09s.
+- Exit criterion, CI half: verified 2026-08-15. Run 31887004814 on PR #1, job "typecheck, lint, test", succeeded in 30s. Every step green: Install, Typecheck, Lint, Format, Test, Build.
+
+### S0 summary
+
+Built: pnpm workspace with three package skeletons and a fixture app, TypeScript
+strict with `noUncheckedIndexedAccess`, ESLint with both import boundaries enforced,
+Prettier, Vitest, and a CI workflow running typecheck, lint, format, test, and build.
+15 tests pass, none of which touch the network.
+
+Deferred: defects D2 through D7 and negative control N2, which need the checks that
+consume them. `spec/ledger.spec.yaml`, which needs the M1 schema to validate against.
+The `bin` entry for `qai` and every command, flag, and exit code, all owned by M8.
+
+Surprises worth recording:
+
+- typescript-eslint 8.x refuses to load against TypeScript 7. TypeScript is pinned to 6.x until that is resolved upstream.
+- The model boundary and the package direction rules share one ESLint rule key, so a later config block replaces an earlier one outright instead of merging. Every scope now restates every group that applies to it, and the test reads the config ESLint resolves for a path rather than the shape of the config file.
+- Prettier reflowed the entire imported plan on its first run. `docs/plan/` is now in `.prettierignore`.
+- The fixture needs no runtime dependencies at all. `node:http` with Node's TypeScript stripping covers it, which is also why it boots in about a second.
+
+## S1. Spec and contracts (M1)
+
+- [ ] not started
+
+## S2. Target, actors, evidence (M2)
+
+- [ ] not started
+
+## S3. Access checks (M3)
+
+- [ ] not started
+
+## S4. Probe and structural diff (M4)
+
+- [ ] not started
+
+## S5. Behavioral checks (M5)
+
+- [ ] not started
+
+## S6. Report and CI (M7, M8)
+
+- [ ] not started
+
+## S7. Store and delta (M6)
+
+- [ ] not started
+
+## S8. Corpus run
+
+- [ ] not started
+
+## S9. Buffer and demo
+
+- [ ] not started
+
+## Notes carried forward
+
+- S0 has no owning module file. 05-BUILD-ORDER.md points at 06-TESTING.md for fixture app requirements.
+- S0 tasks are derived from the S0 prose in 05-BUILD-ORDER.md, which lists no numbered tasks.
+- Branch is `chore/s0-skeleton`, per the 04-CONVENTIONS.md rule that setup work with no functionality uses `chore/`.
+- `origin` (github.com/Bomoga/QAi) has no branches yet, so bootstrap `git pull` was a no-op.
+- pnpm was absent on this machine; installed 11.21.0 via `npm install -g pnpm` (corepack enable needs admin).
+- Repo-local git identity was set to Adrian Morton <atmorton04@gmail.com>; none was configured.
+- A commit cannot contain its own hash, so each task's hash is backfilled at the top of the next task's commit.
+- TypeScript is pinned to the 6.x line. typescript-eslint 8.x refuses to load against TS 7.0; unpin once it supports TS >= 7.1 (typescript-eslint issue 10940).
+- `docs/plan/` is in `.prettierignore`. Prettier reflowed the imported plan on first run; the plan is source of truth and tooling must not rewrite it.
+- The R1 model boundary was verified by probe, not just by config reading: an `openai` import outside `packages/core/src/llm/` errors, the same import inside it passes.
+- S0.2: `@qai/cli` has no `bin` entry yet. The command surface, flags, and exit codes belong to M8 and land in S6; `npx qai` should not resolve until it does something.
+- S0.2: all three package index files export nothing. The public API of core is assembled by later modules, and a surface reaching past `src/index.ts` is reaching into private code.
+- S0.2: `ignoreDeprecations: "6.0"` is set in `tsconfig.base.json` only because tsup's dts build injects the deprecated `baseUrl`. Drop it when tsup stops.
+- S0.3: CI runs typecheck, lint, format:check, test, build on push to main or dev and on PRs into them. Feature branch pushes are covered by the PR event, not by a second push trigger.
+- S0.3: the workflow's green run cannot be demonstrated until the branch is pushed. That evidence belongs to the S0 exit criterion at the stage boundary.
+- S0.4: only D1 is implemented. D2 through D7 and the two negative controls beyond N1 land with the stages that build the checks consuming them. D1 alone is what the S0 exit criterion asks for.
+- S0.4: `spec/ledger.spec.yaml` does not exist yet. 06-TESTING.md lists it as a fixture requirement, but there is no schema to validate it against until M1, so writing it now would produce a file nothing can check.
+- S0.4: the ledger has no runtime dependencies. It is `node:http` and nothing else, which also keeps its boot time inside the three second requirement (measured 1.09s).
+- S0.4: the ledger runs under Node's TypeScript stripping, so its imports carry explicit `.ts` extensions and its tsconfig sets `allowImportingTsExtensions`.
+- The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
+
+## Known issues, not blocking
+
+- CI emits one warning annotation: the v4 actions target Node.js 20 and are being forced onto a newer runtime. Bump `actions/checkout` and `actions/setup-node` to v5 when convenient. It does not affect the result.
+- `origin/main` does not exist. Only `dev` and the stage branch are pushed. Create `main` before the first release.
+
+## Blocked
+
+- none
