@@ -5,11 +5,11 @@
  * credentials are named rather than held, and the capture point that redacts before
  * anything reaches disk.
  *
- * Present: config resolution, credential resolution, the request layer, actor
- * sessions, and the fixture gate.
- * Pending: the startup capability report.
+ * Complete: config resolution, credential resolution, the request layer, actor
+ * sessions, the fixture gate, and the startup capability report.
  */
 export * from './config.ts';
+export * from './context.ts';
 export * from './credentials.ts';
 export * from './deps.ts';
 export * from './fixtures.ts';

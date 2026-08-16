@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T14:35:00Z
+Updated: 2026-08-15T15:00:00Z
 Current stage: S2
-Next task: M2.7
+Next task: stage boundary, demonstrate the S2 exit criterion
 
 ## S0. Skeleton
 
@@ -70,8 +70,8 @@ Surprises worth recording:
 - [x] M2.3 undici request layer with injected clock and id generator (commit 94f497e)
 - [x] M2.4 evidence capture, redaction, writing (commit 0f06546)
 - [x] M2.5 ActorSession for bearer, cookie, header, none (commit 0c198f5)
-- [x] M2.6 seed and reset execution with the disposability gate (commit backfilled below)
-- [ ] M2.7 startup capability report
+- [x] M2.6 seed and reset execution with the disposability gate (commit d752a75)
+- [x] M2.7 startup capability report (commit backfilled below)
 - Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
 
 ## S3. Access checks (M3)
@@ -104,6 +104,8 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M2.7: `createTargetContext` is synchronous, while the Public API in modules/M2-target.md declares it returning a Promise. Nothing it does is asynchronous: credential resolution reads a passed-in map, and the only filesystem call is an existence check. Flagged for review; making it async to match the signature would be ceremony around nothing.
+- M2.7: the capability report states available capabilities as well as unavailable ones. A reader seeing only warnings cannot tell a clean setup from an unreported gap.
 - M2.6: the disposability gate requires both `disposable: true` and a `resetCommand`, even to seed. Seeding a target that cannot be restored leaves someone with a dirty database and no way back. Not overridable by flag; an interlock the person in a hurry can reach past is not an interlock.
 - M2.6 platform trap: with `shell: true` the child is the shell, and killing it does not take the command with it, reliably not on Windows. A timeout now resolves at the deadline rather than waiting for a close event, with a best effort tree kill (`taskkill /t /f` on Windows, SIGKILL elsewhere). Before the fix one test took 10.5s and the suite took 11.3s; it is back to 1.5s.
 - M2.5 found a real leak in M2.4, worth remembering: redaction matched `authorization` and `cookie` only in header position, so a target that echoed the credential back in its response body had it written to disk unredacted. The always-redacted names now apply to body field names too. Over-redacting a body field innocently named `cookie` is visible in the `redactions` list; under-redacting is a leak nobody notices.
