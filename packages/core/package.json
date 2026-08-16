@@ -18,7 +18,8 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate:schema": "node --experimental-strip-types scripts/generate-schema.ts"
   },
   "dependencies": {
     "fast-glob": "^3.3.3",

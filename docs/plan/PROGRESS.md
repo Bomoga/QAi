@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T11:25:00Z
+Updated: 2026-08-15T11:40:00Z
 Current stage: S1
-Next task: M1.7
+Next task: M1.8
 
 ## S0. Skeleton
 
@@ -39,8 +39,8 @@ Surprises worth recording:
 - [x] M1.3 ObservationSchema, RunResultSchema, EvidenceSchema (commit 792dcc4)
 - [x] M1.4 condition tokenizer and parser (commit ca8c4d9)
 - [x] M1.5 YAML loading, merge, identifier derivation, diagnostics (commit 9f7bd65)
-- [x] M1.6 canonicalization and hashing (commit backfilled below)
-- [ ] M1.7 generate schema/spec.schema.json and assert it matches
+- [x] M1.6 canonicalization and hashing (commit 5b11678)
+- [x] M1.7 generate schema/spec.schema.json and assert it matches (commit backfilled below)
 - [ ] M1.8 author fixtures/ledger/spec/ledger.spec.yaml
 - Exit criterion: `qai validate spec/ledger.spec.yaml` prints a structured summary and exits 0; a malformed spec exits 2 naming file, path, and reason
 
@@ -84,6 +84,10 @@ Surprises worth recording:
 - zod resolved to 4.x. 04-CONVENTIONS.md approves `zod` without pinning a major.
 - M1.2: `pnpm --filter @qai/core test` was passing by running zero tests. Vitest walked up to the root config, whose include patterns are relative to the repository root, and matched nothing from inside the package. Core now has its own `vitest.config.ts` and its test script dropped `--passWithNoTests`. Worth checking the same trap if cli, action, or ledger ever get a Definition of Done command.
 - M1.2: `allowImportingTsExtensions` moved into `tsconfig.base.json`. Relative imports carry explicit `.ts` extensions repo wide, matching what the ledger already did. Every project sets `noEmit` and is bundled by tsup, so no `.ts` specifier reaches output. The redundant setting in `fixtures/ledger/tsconfig.json` is now a no-op and can be dropped whenever that file is next touched.
+- M1.7: `schema/` is in `.prettierignore`. The generated file is asserted byte for byte, and `pnpm format` rewrote it, failing the test for a reason nobody could act on.
+- M1.7: regenerate with `pnpm --filter @qai/core generate:schema`. The drift guard was confirmed to fire: editing the committed file makes the suite fail, restoring it makes the suite pass.
+- M1.7: core's tsconfig dropped `rootDir` and `outDir` and now includes `scripts/`. It typechecks only, tsup owns the build, and pinning rootDir to `src` rejected the generator.
+- M1.7: the generator runs under `node --experimental-strip-types`, not `tsx`. Still open whether the M1 Definition of Done command should be corrected to match; see the note above.
 - M1.6 judgment call: access rule and acceptance criterion order is kept in the canonical form, while actors, entities, and requirements are sorted. Ordinal position determines a derived identifier, so swapping two rules renames them, and a renamed check is a different check to M6 even when the assertions are unchanged. Sorting rules would have hidden that.
 - M1.6: hand-written rule and criterion ids are excluded from the hash entirely, not just derived ones. Naming a rule is not changing what it asserts. 05-BUILD-ORDER.md says only "exclude derived identifiers", so this is slightly wider; flagged for review.
 - M1.5 deviation, needs review: parsed condition ASTs are returned in a `conditions` map keyed by access rule id, not attached to the rule. Putting the AST on the rule would add a field to the Spec contract, which is a stop condition. This widens the `loadSpec` return in modules/M1-spec.md from `{ spec, hash, diagnostics }` by one field. Smaller correction than a contract change, but the module file should be updated to match.

@@ -6,3 +6,7 @@ pnpm-lock.yaml
 
 # The plan is the source of truth. Tooling does not get to rewrite it.
 docs/plan/
+
+# Generated from the Zod schema and asserted byte for byte in a test.
+# Reformatting it here would make that test fail for a reason nobody can act on.
+schema/
