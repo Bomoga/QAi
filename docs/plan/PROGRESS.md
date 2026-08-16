@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T09:18:00Z
-Current stage: S0
-Next task: stage boundary, open PR into dev
+Updated: 2026-08-15T10:05:00Z
+Current stage: S1
+Next task: M1.2
 
 ## S0. Skeleton
 
@@ -34,7 +34,15 @@ Surprises worth recording:
 
 ## S1. Spec and contracts (M1)
 
-- [ ] not started
+- [x] M1.1 scaffold packages/core contracts directory (commit backfilled below)
+- [ ] M1.2 SpecSchema and sub-schemas
+- [ ] M1.3 ObservationSchema, RunResultSchema, EvidenceSchema
+- [ ] M1.4 condition tokenizer and parser
+- [ ] M1.5 YAML loading, merge, identifier derivation, diagnostics
+- [ ] M1.6 canonicalization and hashing
+- [ ] M1.7 generate schema/spec.schema.json and assert it matches
+- [ ] M1.8 author fixtures/ledger/spec/ledger.spec.yaml
+- Exit criterion: `qai validate spec/ledger.spec.yaml` prints a structured summary and exits 0; a malformed spec exits 2 naming file, path, and reason
 
 ## S2. Target, actors, evidence (M2)
 
@@ -69,6 +77,11 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M1.1 conflict, plan vs code: the task says scaffold `packages/core` with tsup, vitest, and a strict tsconfig, but S0.2 already did all three. Reduced to what was actually missing: the `contracts/` directory, `zod`, and a package level `test` script so the module's Definition of Done command resolves.
+- M1 Definition of Done runs `pnpm --filter @qai/core exec tsx scripts/validate-fixture-spec.ts`, but `tsx` is not in the approved dependency list in 04-CONVENTIONS.md. The repo already runs TypeScript directly through Node's type stripping for the ledger. Decide at M1.5 or M1.8: add `tsx` with approval, or correct the plan to use `node --experimental-strip-types`.
+- Q4 is listed unresolved in 07-DECISIONS.md and blocks M1, but `modules/M1-spec.md` supplies the full grammar and instructs implementing the proposal while flagging anything the fixture spec cannot express. Treated as directed rather than as a stop. Any gap found at M1.8 goes in the M1 Open questions section.
+- zod resolved to 4.x. 04-CONVENTIONS.md approves `zod` without pinning a major.
 
 - S0 has no owning module file. 05-BUILD-ORDER.md points at 06-TESTING.md for fixture app requirements.
 - S0 tasks are derived from the S0 prose in 05-BUILD-ORDER.md, which lists no numbered tasks.
