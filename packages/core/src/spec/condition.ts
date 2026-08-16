@@ -87,13 +87,19 @@ const IDENT_START = /[A-Za-z_]/;
 const IDENT_PART = /[A-Za-z0-9_]/;
 const DIGIT = /[0-9]/;
 
+/**
+ * Fields are declared and assigned rather than written as constructor parameter
+ * properties. Node's type stripping refuses parameter properties, and core has to
+ * run under plain `node` for the scripts in `scripts/` to work without a loader.
+ */
 class TokenizeFailure extends Error {
-  constructor(
-    override readonly message: string,
-    readonly offendingText: string,
-    readonly offset: number,
-  ) {
+  readonly offendingText: string;
+  readonly offset: number;
+
+  constructor(message: string, offendingText: string, offset: number) {
     super(message);
+    this.offendingText = offendingText;
+    this.offset = offset;
   }
 }
 
@@ -195,22 +201,25 @@ function tokenize(input: string): Token[] {
 }
 
 class ParseFailure extends Error {
-  constructor(
-    override readonly message: string,
-    readonly offendingText: string,
-    readonly offset: number,
-  ) {
+  readonly offendingText: string;
+  readonly offset: number;
+
+  constructor(message: string, offendingText: string, offset: number) {
     super(message);
+    this.offendingText = offendingText;
+    this.offset = offset;
   }
 }
 
 class Parser {
   private position = 0;
+  private readonly tokens: readonly Token[];
+  private readonly source: string;
 
-  constructor(
-    private readonly tokens: readonly Token[],
-    private readonly source: string,
-  ) {}
+  constructor(tokens: readonly Token[], source: string) {
+    this.tokens = tokens;
+    this.source = source;
+  }
 
   parseCondition(): ConditionAst {
     const comparisons: ComparisonNode[] = [this.parseComparison()];

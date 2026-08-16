@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T11:40:00Z
+Updated: 2026-08-15T12:00:00Z
 Current stage: S1
-Next task: M1.8
+Next task: stage boundary, S1 exit criterion needs the `qai validate` command from M8
 
 ## S0. Skeleton
 
@@ -40,8 +40,8 @@ Surprises worth recording:
 - [x] M1.4 condition tokenizer and parser (commit ca8c4d9)
 - [x] M1.5 YAML loading, merge, identifier derivation, diagnostics (commit 9f7bd65)
 - [x] M1.6 canonicalization and hashing (commit 5b11678)
-- [x] M1.7 generate schema/spec.schema.json and assert it matches (commit backfilled below)
-- [ ] M1.8 author fixtures/ledger/spec/ledger.spec.yaml
+- [x] M1.7 generate schema/spec.schema.json and assert it matches (commit 29d3808)
+- [x] M1.8 author fixtures/ledger/spec/ledger.spec.yaml (commit backfilled below)
 - Exit criterion: `qai validate spec/ledger.spec.yaml` prints a structured summary and exits 0; a malformed spec exits 2 naming file, path, and reason
 
 ## S2. Target, actors, evidence (M2)
@@ -84,6 +84,9 @@ Surprises worth recording:
 - zod resolved to 4.x. 04-CONVENTIONS.md approves `zod` without pinning a major.
 - M1.2: `pnpm --filter @qai/core test` was passing by running zero tests. Vitest walked up to the root config, whose include patterns are relative to the repository root, and matched nothing from inside the package. Core now has its own `vitest.config.ts` and its test script dropped `--passWithNoTests`. Worth checking the same trap if cli, action, or ledger ever get a Definition of Done command.
 - M1.2: `allowImportingTsExtensions` moved into `tsconfig.base.json`. Relative imports carry explicit `.ts` extensions repo wide, matching what the ledger already did. Every project sets `noEmit` and is bundled by tsup, so no `.ts` specifier reaches output. The redundant setting in `fixtures/ledger/tsconfig.json` is now a no-op and can be dropped whenever that file is next touched.
+- M1.8: Q4 answered by use. The proposed grammar expressed every access rule the fixture spec needed, 4 conditions across 8 rules. Nothing required disjunction, ordering comparison, or negation. The rules that carry no condition are unconditional denials, for example anonymous update, where a condition would add nothing.
+- M1.8: 15 requirements, 3 actors, 4 entities, 8 access rules, 14 acceptance criteria, 4 parsed conditions, 1 warning (REQ-007, the intended D7 coverage gap). Hash `sha256:5a31b527c6c1...`.
+- M1.8: `condition.ts` no longer uses TypeScript parameter properties. Node's strip-only mode refuses them, which broke `scripts/validate-fixture-spec.ts`. Vitest and tsup use esbuild and accepted them, so the suite was green while the script could not run at all. Worth remembering: passing tests do not prove core runs under plain `node`.
 - M1.7: `schema/` is in `.prettierignore`. The generated file is asserted byte for byte, and `pnpm format` rewrote it, failing the test for a reason nobody could act on.
 - M1.7: regenerate with `pnpm --filter @qai/core generate:schema`. The drift guard was confirmed to fire: editing the committed file makes the suite fail, restoring it makes the suite pass.
 - M1.7: core's tsconfig dropped `rootDir` and `outDir` and now includes `scripts/`. It typechecks only, tsup owns the build, and pinning rootDir to `src` rejected the generator.

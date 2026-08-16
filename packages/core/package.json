@@ -19,7 +19,8 @@
     "build": "tsup",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "generate:schema": "node --experimental-strip-types scripts/generate-schema.ts"
+    "generate:schema": "node --experimental-strip-types scripts/generate-schema.ts",
+    "validate:fixture": "node --experimental-strip-types scripts/validate-fixture-spec.ts"
   },
   "dependencies": {
     "fast-glob": "^3.3.3",
