@@ -129,7 +129,23 @@ function contentType(headers: Readonly<Record<string, string>>): string {
   return headers['content-type'] ?? '';
 }
 
-/** Field names a JSON body exposes, for the diff to compare against the spec. */
+function keysOf(value: unknown): string[] {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return [];
+  return Object.keys(value).sort();
+}
+
+/**
+ * Field names a JSON body exposes, for the diff to compare against the spec.
+ *
+ * An enveloped list is unwrapped, so `{invoices: [...]}` reports the fields of an
+ * invoice rather than the single field `invoices`. M3.6 hit the same shape and reads it
+ * the same way. Recording the envelope instead produced a field mismatch claiming that
+ * every declared field was missing, which is a finding about the wrapper rather than
+ * about the application.
+ *
+ * An envelope holding an empty list reports nothing. Not seeing a record and a record
+ * having no fields are different facts.
+ */
 export function fieldsIn(body: string): string[] {
   let parsed: unknown;
   try {
@@ -138,10 +154,13 @@ export function fieldsIn(body: string): string[] {
     return [];
   }
 
-  const record = Array.isArray(parsed) ? parsed[0] : parsed;
-  if (typeof record !== 'object' || record === null || Array.isArray(record)) return [];
+  if (Array.isArray(parsed)) return keysOf(parsed[0]);
+  if (typeof parsed !== 'object' || parsed === null) return [];
 
-  return Object.keys(record).sort();
+  const wrapped = Object.values(parsed).find((value) => Array.isArray(value));
+  if (Array.isArray(wrapped)) return keysOf(wrapped[0]);
+
+  return keysOf(parsed);
 }
 
 /** Same-origin paths named by string values in a JSON body, so an API index is followed. */

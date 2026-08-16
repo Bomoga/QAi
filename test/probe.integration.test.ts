@@ -160,11 +160,22 @@ describe('probing the ledger', () => {
     }
   });
 
-  it('records the fields the invoice list exposed', async () => {
+  it('reads the invoice fields through the list envelope', async () => {
     const { observation } = await probeLedger(DEFECTS_ON);
     const list = observation.endpoints.find((endpoint) => endpoint.path === '/api/invoices');
 
-    expect(list?.responseShape?.fields).toEqual(['invoices']);
+    // The ledger returns rows under an `invoices` key rather than as a bare array,
+    // deliberately, since D2 exists to catch anything that only understands top level
+    // arrays. Recording `invoices` as the response shape produced a field mismatch
+    // claiming every declared field was missing.
+    expect(list?.responseShape?.fields).toEqual(['id', 'notes', 'org_id', 'total_cents']);
+  });
+
+  it('reports no field mismatch for the entity the ledger serves correctly', async () => {
+    const { observation } = await probeLedger(DEFECTS_ON);
+    const findings = diffSpecObservation(spec, observation);
+
+    expect(findings.fieldMismatches).toEqual([]);
   });
 
   it('issues nothing but GET and HEAD', async () => {

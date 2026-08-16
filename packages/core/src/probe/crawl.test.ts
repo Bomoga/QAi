@@ -133,6 +133,18 @@ describe('response fields', () => {
     expect(fieldsIn('[{"id":"INV-1","total_cents":10}]')).toEqual(['id', 'total_cents']);
   });
 
+  it('reads through an envelope to the record inside it', () => {
+    expect(fieldsIn('{"invoices":[{"id":"INV-1","org_id":"org-1"}]}')).toEqual(['id', 'org_id']);
+  });
+
+  it('reads nothing from an envelope holding an empty list', () => {
+    expect(fieldsIn('{"invoices":[]}')).toEqual([]);
+  });
+
+  it('reads the object itself when nothing looks like an envelope', () => {
+    expect(fieldsIn('{"status":"ok","uptime":12}')).toEqual(['status', 'uptime']);
+  });
+
   it('reads nothing from a body it cannot parse', () => {
     expect(fieldsIn('<html></html>')).toEqual([]);
   });
