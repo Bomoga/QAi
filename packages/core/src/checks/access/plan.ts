@@ -47,6 +47,11 @@ export interface AccessCheckPlan extends CheckPlan {
   readonly condition?: ConditionAst;
   /** Records the check may act on. Narrowed to a foreign one by M3.3 at run time. */
   readonly candidates: readonly ResourceInstance[];
+  /**
+   * Field names the spec declares for this resource. A verdict asks whether any of
+   * them came back, so they are resolved once here rather than per response.
+   */
+  readonly resourceFields: readonly string[];
 }
 
 export interface UnplannableRule {
@@ -162,6 +167,10 @@ export function planAccessChecks(
 
       const candidates = instancesFor(rule.resource, context);
       const condition = rule.id === undefined ? undefined : conditions.get(rule.id);
+      const resourceFields =
+        spec.entities
+          .find((entity) => entity.name.toLowerCase() === rule.resource.toLowerCase())
+          ?.fields.map((field) => field.name) ?? [];
 
       plans.push({
         identity: identityFor(rule, requirement.id, route.method, route.path),
@@ -182,6 +191,7 @@ export function planAccessChecks(
         pathTemplate: route.path,
         ...(condition === undefined ? {} : { condition }),
         candidates,
+        resourceFields,
       });
     }
   }

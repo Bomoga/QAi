@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T17:00:00Z
+Updated: 2026-08-16T18:00:00Z
 Current stage: S3
-Next task: M3.5
+Next task: M3.6
 
 ## S0. Skeleton
 
@@ -97,8 +97,8 @@ Surprises worth recording:
 - [x] M3.1 CheckResult helpers and the check registry (commit 9e91220)
 - [x] M3.2 rule to plan expansion (commit 5eaaaaf)
 - [x] M3.3 condition AST evaluation against a candidate record (commit 6d7c324)
-- [x] M3.4 deny verdict table (commit backfilled below)
-- [ ] M3.5 allow rule verification
+- [x] M3.4 deny verdict table (commit 56a9cf3)
+- [x] M3.5 allow rule verification and the check runner (commit backfilled below)
 - [ ] M3.6 list handling per Q5
 - [ ] M3.7 mutating rules behind the disposability gate
 - [ ] M3.8 severity assignment and finding text
@@ -132,6 +132,10 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.5 design not given by the plan, needs review: the module states the allow case in prose, not a table, so the assessment was designed here. 2xx is a pass whatever the body, since the assertion is only that the actor was let through and a 204 on a permitted update is a success with nothing to return. 401, 403, and 404 fail. 5xx and any other status are inconclusive, because a finding on an allow rule claims a legitimate user is being refused and the tool cannot tell a malformed request of its own making from a broken target.
+- M3.5: the runner sends nothing when no suitable record can be identified. Requesting an id that was never seeded returns a 404 that looks exactly like correct enforcement, so the check is inconclusive and the request is never made. Two tests assert the request list stays empty.
+- M3.5: `AccessCheckPlan` gained `resourceFields`, resolved from the spec entity at planning time, so a verdict does not look the entity up again per response.
+- M3.5: a test asserts no finding text contains idor, vulnerability, exploit, injection, cve, or owasp, per the module's Do Not on naming vulnerability classes.
 - M3.4 addition beyond the table, worth confirming: a 401, 403, or 404 that still returns resource fields is treated as a fail, not a pass. The table's first row says refusal statuses pass "with no resource fields in body", so this reads the qualifier as load bearing rather than descriptive. A refusal that returns the record is not a refusal.
 - M3.4: a status the table does not name, including 3xx and 4xx outside 401/403/404, is `inconclusive`. The table covers refusal statuses, 2xx, 5xx, and transport errors; anything else is not evidence of either outcome.
 - M3.4: resource fields are matched by name at any depth, so an enveloped or listed record still counts as returned. Matching requires parsed JSON, so an unparseable body never matches on a substring.

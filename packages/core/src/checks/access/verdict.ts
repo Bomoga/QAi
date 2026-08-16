@@ -153,3 +153,60 @@ export function assessDenyOutcome(
 export function isEmptyResponseBody(body: string): boolean {
   return isEmptyBody(body);
 }
+
+/**
+ * The allow rule assessment.
+ *
+ * modules/M3-access-checks.md states this one in prose rather than a table: an allow
+ * rule is verified by attempting the action and requiring success. So success is the
+ * whole assertion, and success is a 2xx.
+ *
+ * Resource fields deliberately do not gate a pass here. They are evidence in the deny
+ * direction, where the question is whether the record came back to someone who should
+ * not see it. In the allow direction the question is only whether the actor was let
+ * through, and a 204 on a permitted update is a success with nothing to return.
+ *
+ * The failure direction is narrow on purpose. A finding on an allow rule says a
+ * legitimate user is being refused, so only an actual refusal counts. A 400 or a 500
+ * is inconclusive: the tool cannot tell a malformed request of its own making from a
+ * broken target, and guessing would produce the false positive invariant I2 forbids.
+ */
+export type AllowVerdict = 'pass' | 'fail' | 'inconclusive';
+
+export interface AllowAssessment {
+  readonly verdict: AllowVerdict;
+  readonly reason:
+    'succeeded' | 'refused' | 'server-error' | 'transport-error' | 'unexpected-status';
+  readonly observedFields: readonly string[];
+  readonly status?: number;
+}
+
+export function assessAllowOutcome(
+  outcome: RequestOutcome,
+  resourceFields: readonly string[],
+): AllowAssessment {
+  if (outcome.kind === 'transport-error') {
+    return { verdict: 'inconclusive', reason: 'transport-error', observedFields: [] };
+  }
+
+  const { status, body } = outcome.response;
+
+  if (status >= 200 && status < 300) {
+    return {
+      verdict: 'pass',
+      reason: 'succeeded',
+      observedFields: resourceFieldsIn(body, resourceFields),
+      status,
+    };
+  }
+
+  if (REFUSAL_STATUSES.has(status)) {
+    return { verdict: 'fail', reason: 'refused', observedFields: [], status };
+  }
+
+  if (status >= 500) {
+    return { verdict: 'inconclusive', reason: 'server-error', observedFields: [], status };
+  }
+
+  return { verdict: 'inconclusive', reason: 'unexpected-status', observedFields: [], status };
+}
