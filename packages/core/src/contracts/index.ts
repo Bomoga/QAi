@@ -6,7 +6,8 @@
  * there is no second definition of these shapes anywhere in the repository. That means
  * no hand-written interface mirrors a schema: if you need the type, infer it from the
  * schema, and if you need to change a field, change 03-CONTRACTS.md in the same commit.
- *
- * Populated by M1.2 (Spec) and M1.3 (Observation, RunResult, Evidence).
  */
-export {};
+export * from './spec.ts';
+export * from './observation.ts';
+export * from './run-result.ts';
+export * from './evidence.ts';

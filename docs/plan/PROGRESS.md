@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T10:20:00Z
+Updated: 2026-08-15T10:35:00Z
 Current stage: S1
-Next task: M1.3
+Next task: M1.4
 
 ## S0. Skeleton
 
@@ -35,8 +35,8 @@ Surprises worth recording:
 ## S1. Spec and contracts (M1)
 
 - [x] M1.1 scaffold packages/core contracts directory (commit 5310e50)
-- [x] M1.2 SpecSchema and sub-schemas (commit backfilled below)
-- [ ] M1.3 ObservationSchema, RunResultSchema, EvidenceSchema
+- [x] M1.2 SpecSchema and sub-schemas (commit 61198b6)
+- [x] M1.3 ObservationSchema, RunResultSchema, EvidenceSchema (commit backfilled below)
 - [ ] M1.4 condition tokenizer and parser
 - [ ] M1.5 YAML loading, merge, identifier derivation, diagnostics
 - [ ] M1.6 canonicalization and hashing
@@ -84,6 +84,9 @@ Surprises worth recording:
 - zod resolved to 4.x. 04-CONVENTIONS.md approves `zod` without pinning a major.
 - M1.2: `pnpm --filter @qai/core test` was passing by running zero tests. Vitest walked up to the root config, whose include patterns are relative to the repository root, and matched nothing from inside the package. Core now has its own `vitest.config.ts` and its test script dropped `--passWithNoTests`. Worth checking the same trap if cli, action, or ledger ever get a Definition of Done command.
 - M1.2: `allowImportingTsExtensions` moved into `tsconfig.base.json`. Relative imports carry explicit `.ts` extensions repo wide, matching what the ledger already did. Every project sets `noEmit` and is bundled by tsup, so no `.ts` specifier reaches output. The redundant setting in `fixtures/ledger/tsconfig.json` is now a no-op and can be dropped whenever that file is next touched.
+- M1.3: three shapes in 03-CONTRACTS.md are shown in the examples but never named as enums. Chosen closed sets, flagged for review: `ObservationNote.level` as info/warn/error, `actorVisibility` values as untested/visible/refused/error, and structural entry `kind` as entity/endpoint/field. Only `untested` appears in the document. If M4 or M7 needs a value outside these, that is a contract change and a stop.
+- M1.3: `authRequired` has no default. Omitting it is a parse error rather than an assumed value, since the contract says never to default it to `true`.
+- M1.3: `packages/core/src/index.ts` now re-exports the contracts, so the public API matches the one in modules/M1-spec.md.
 - M1.2: every spec schema is `.strict()`. A key the schema does not know is an error rather than a silent drop, since a misspelled `acceptanceCriteria` would remove every check from a requirement and still report coverage.
 
 - S0 has no owning module file. 05-BUILD-ORDER.md points at 06-TESTING.md for fixture app requirements.
