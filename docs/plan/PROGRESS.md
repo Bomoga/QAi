@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T12:00:00Z
-Current stage: S1
-Next task: stage boundary, S1 exit criterion needs the `qai validate` command from M8
+Updated: 2026-08-15T15:00:00Z
+Current stage: S2
+Next task: stage boundary, demonstrate the S2 exit criterion
 
 ## S0. Skeleton
 
@@ -65,7 +65,32 @@ Surprises worth recording:
 
 ## S2. Target, actors, evidence (M2)
 
-- [ ] not started
+- [x] M2.1 TargetConfig schema and loadConfig (commit fa4f81f)
+- [x] M2.2 environment variable resolution, all missing named at once (commit cf105a2)
+- [x] M2.3 undici request layer with injected clock and id generator (commit 94f497e)
+- [x] M2.4 evidence capture, redaction, writing (commit 0f06546)
+- [x] M2.5 ActorSession for bearer, cookie, header, none (commit 0c198f5)
+- [x] M2.6 seed and reset execution with the disposability gate (commit d752a75)
+- [x] M2.7 startup capability report (commit backfilled below)
+- Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
+- Exit criterion: **met**, verified 2026-08-16 via `packages/core/scripts/capture-two-actors.ts` against a live ledger. Two actors resolved, one request each, four files written, `request.headers.authorization` and `response.body.notes` redacted in both. No token and no sensitive field reached disk; `INV-1001` and `org-1` were retained.
+
+### S2 summary
+
+Built: `qai.config.yaml` resolution, credential resolution from named environment
+variables, an undici request layer with injected clock and ids, evidence capture with
+redaction at the point of capture, actor sessions for all four auth kinds, the fixture
+disposability gate, and the startup capability report. 343 tests pass, 329 in core.
+
+Deferred: nothing from M2. `createTargetContext` is synchronous where the module
+declares a Promise, which is recorded rather than papered over.
+
+Surprises worth recording:
+
+- The stage demonstration found two faults the unit tests had passed over. Evidence recorded the caller's headers rather than the ones actually sent, so records showed no authorization header at all. And `createTargetContext` built a writer it never handed to the sessions, so a run printed evidence ids and bodyRef paths for files that were never written. Both looked correct in isolation and only failed when run end to end.
+- Writing the M2.5 session tests found a leak in M2.4: a target echoing a credential back in its response body had it written unredacted, because the always-redacted names were matched in header position only.
+- With `shell: true` a kill does not reach the command, reliably not on Windows, so a timeout waited out the full command. One test held the suite at 11.3s before that was fixed.
+- The proposed config has no way to supply `actor.org_id`, which the condition grammar compares against. Added as `actors[].attributes` and flagged.
 
 ## S3. Access checks (M3)
 
@@ -96,6 +121,29 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M2.7: `createTargetContext` is synchronous, while the Public API in modules/M2-target.md declares it returning a Promise. Nothing it does is asynchronous: credential resolution reads a passed-in map, and the only filesystem call is an existence check. Flagged for review; making it async to match the signature would be ceremony around nothing.
+- M2.7: the capability report states available capabilities as well as unavailable ones. A reader seeing only warnings cannot tell a clean setup from an unreported gap.
+- M2.6: the disposability gate requires both `disposable: true` and a `resetCommand`, even to seed. Seeding a target that cannot be restored leaves someone with a dirty database and no way back. Not overridable by flag; an interlock the person in a hurry can reach past is not an interlock.
+- M2.6 platform trap: with `shell: true` the child is the shell, and killing it does not take the command with it, reliably not on Windows. A timeout now resolves at the deadline rather than waiting for a close event, with a best effort tree kill (`taskkill /t /f` on Windows, SIGKILL elsewhere). Before the fix one test took 10.5s and the suite took 11.3s; it is back to 1.5s.
+- M2.5 found a real leak in M2.4, worth remembering: redaction matched `authorization` and `cookie` only in header position, so a target that echoed the credential back in its response body had it written to disk unredacted. The always-redacted names now apply to body field names too. Over-redacting a body field innocently named `cookie` is visible in the `redactions` list; under-redacting is a leak nobody notices.
+- M2.5: `ActorSession.request` is the only way to reach the target, and it always captures evidence, including on a transport failure. Rule R7 made structural: there is no method that requests without recording.
+- M2.4 contract question, needs review: Evidence in 03-CONTRACTS.md has `response.bodyRef` and no place for a request body, but modules/M2-target.md says the request body is captured. Rather than add a contract field, `bodyRef` points at a document holding both under `request.body` and `response.body`. If an emitter needs the response body alone, that is a contract change, not a local fix.
+- M2.4: two files per record, `EV-xxxx.json` for the bodies and `EV-xxxx.record.json` for the Evidence itself. A test asserts those are the only two files, so nothing else can be left holding an unredacted copy.
+- M2.4: a body that is not JSON passes through unredacted. Redaction matches field names, and guessing at structure in an opaque body would either miss the field or corrupt the evidence. A caller needing a guarantee over opaque bodies should not be storing them.
+- M2.4: an invalid `extraPatterns` regex is dropped and reported rather than thrown. A bad pattern in a config should not take down a run that would otherwise produce findings. The inline `(?i)` flag YAML configs tend to carry is translated to the JavaScript flag.
+- M2.3: `RequestSpec.method` is a closed union, not a string. The probe issues GET-equivalent traffic and mutating checks declare themselves, so an arbitrary method reaching a target should fail to compile.
+- M2.3: a transport failure is a returned value, not a throw, so M3 can turn it into `inconclusive` rather than losing the run. No retry and no backoff, per the module's Do Not.
+- M2.3: `fixedDeps` lives in `target/deps.ts` beside `systemDeps`, not in a test helper. Every module taking `Deps` needs the same fake, and three slightly different ones is how golden files start disagreeing.
+- M2.3: round trip tests start a `node:http` server inside the test on an ephemeral loopback port. Core does not depend on `fixtures/ledger`, and R9 rules out anything remote.
+- M2.2: an actor whose variable is unset is dropped, not given a blank credential. A blank credential produces a 401 that reads as a finding rather than a configuration mistake. An empty or whitespace only variable counts as unset for the same reason.
+- M2.2: `resolveCredentials` takes the environment as an argument. Core never reads `process.env`, per 02-ARCHITECTURE.md and rule R6, so the CLI will pass it in.
+- M2.1 addition, needs review: `actors[].attributes` is not in the proposed config in modules/M2-target.md, and without it the condition grammar cannot be evaluated at all. `Invoice.org_id != actor.org_id` needs a value for `actor.org_id`, and nothing in the proposed shape supplies one. Added as a string map per actor. M3 will need it; confirm the shape before it does.
+- M2.1 judgment call: the proposed config shows only `bearer`, but M2.5 has to implement `cookie`, `header`, and `none`. Designed as `cookie: {name, valueEnv}`, `header: {name, valueEnv}`, `none: {}`, keeping the rule that config names a variable and never holds a value.
+- M2.1: `target.disposable` defaults to false. A target is not disposable until someone writes it down. Invariant I7.
+- M2.1: literal secret detection runs before schema validation, so the message can name the fix rather than reporting an unrecognized key. Keys caught: token, password, secret, apiKey, value. A test asserts the rejected secret never appears in the error.
+- M2.1: `tokenEnv` and `valueEnv` are regex-constrained to `^[A-Z][A-Z0-9_]*$`, so a value pasted where a variable name belongs fails on shape even if the key is right.
+- Q2 and Q3 are listed unresolved in 07-DECISIONS.md but modules/M2-target.md says both proposals are implemented as written, the same pattern M1 used for Q4. Treated as directed, not as a stop.
 
 - M1.1 conflict, plan vs code: the task says scaffold `packages/core` with tsup, vitest, and a strict tsconfig, but S0.2 already did all three. Reduced to what was actually missing: the `contracts/` directory, `zod`, and a package level `test` script so the module's Definition of Done command resolves.
 - M1 Definition of Done runs `pnpm --filter @qai/core exec tsx scripts/validate-fixture-spec.ts`, but `tsx` is not in the approved dependency list in 04-CONVENTIONS.md. The repo already runs TypeScript directly through Node's type stripping for the ledger. Decide at M1.5 or M1.8: add `tsx` with approval, or correct the plan to use `node --experimental-strip-types`.

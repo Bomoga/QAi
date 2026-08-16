@@ -5,9 +5,11 @@
  * module lands. Anything reached by a deeper path is private code, and a surface
  * importing it has crossed a boundary the package does not promise to keep.
  *
- * Present: the contracts and condition parsing from M1.
- * Pending: spec loading from M1, target and actor sessions from M2, checks from M3
- * and M5, probe and diff from M4, store from M6, emitters from M7.
+ * Present: the contracts and spec loading from M1, target configuration from M2.
+ * Pending: actor sessions and evidence from M2, checks from M3 and M5, probe and
+ * diff from M4, store from M6, emitters from M7.
  */
 export * from './contracts/index.ts';
 export * from './spec/index.ts';
+export * from './target/index.ts';
+export * from './evidence/index.ts';
