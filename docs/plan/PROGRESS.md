@@ -43,6 +43,25 @@ Surprises worth recording:
 - [x] M1.7 generate schema/spec.schema.json and assert it matches (commit 29d3808)
 - [x] M1.8 author fixtures/ledger/spec/ledger.spec.yaml (commit backfilled below)
 - Exit criterion: `qai validate spec/ledger.spec.yaml` prints a structured summary and exits 0; a malformed spec exits 2 naming file, path, and reason
+- Exit criterion status: **blocked on the CLI, behavior demonstrated**. `qai validate` belongs to M8 and lands in S6, so the command does not exist. The behavior it describes does: a structured summary and exit 0 for the fixture spec, exit 2 with file, path, and reason for a malformed one. Recorded in the M1 Open questions; needs a human decision on whether to restate the criterion or pull `qai validate` into S1.
+
+### S1 summary
+
+Built: all four contracts as strict Zod schemas with types derived by inference, a
+condition tokenizer and parser that never evaluates, `loadSpec` with glob resolution,
+multi-file merge, identifier derivation and diagnostics, canonicalization and sha256
+hashing, a generated JSON Schema guarded against drift, and a 15 requirement fixture
+spec covering all seven defects and both negative controls. 193 tests pass, 178 of
+them in core.
+
+Deferred: nothing from M1. The `qai validate` command is M8 and was never in scope here.
+
+Surprises worth recording:
+
+- `pnpm --filter @qai/core test` was green while running zero tests, because vitest resolved the repository root config whose include patterns are root relative. A Definition of Done that passes by running nothing is worse than one that fails.
+- Node's type stripping refuses TypeScript parameter properties, so `scripts/validate-fixture-spec.ts` could not run while the whole suite stayed green. Vitest and tsup compile with esbuild, which accepts them. Passing tests do not prove core runs under plain `node`.
+- `pnpm format` rewrote the generated JSON Schema and broke its own byte for byte drift test. Generated artifacts now sit in `.prettierignore` alongside the plan.
+- Q4 needed no human decision in the end. Writing the fixture spec answered it: the proposed grammar covered every rule, and nothing wanted disjunction or ordering.
 
 ## S2. Target, actors, evidence (M2)
 
