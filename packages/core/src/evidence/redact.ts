@@ -81,8 +81,18 @@ export function rulesFor(spec: Spec, extraPatterns: readonly string[] = []): Red
   };
 }
 
+/**
+ * The always-redacted names apply to body fields as well as headers. A target that
+ * echoes the credential it was sent back in its response body is not hypothetical,
+ * and matching only header position would write that credential to disk.
+ *
+ * This over-redacts a body field innocently named `cookie`. That trade is deliberate:
+ * over-redaction is visible in the `redactions` list and costs a reader one lookup,
+ * while under-redaction is a leak nobody notices.
+ */
 function keyIsSensitive(key: string, rules: RedactionRules): boolean {
   const lower = key.toLowerCase();
+  if (ALWAYS_REDACTED_HEADERS.includes(lower)) return true;
   if (rules.sensitiveFields.has(lower)) return true;
   return rules.extraPatterns.some((pattern) => pattern.test(key));
 }
@@ -96,8 +106,7 @@ export function redactHeaders(
   const redactions: string[] = [];
 
   for (const [key, headerValue] of Object.entries(headers)) {
-    const lower = key.toLowerCase();
-    if (ALWAYS_REDACTED_HEADERS.includes(lower) || keyIsSensitive(key, rules)) {
+    if (keyIsSensitive(key, rules)) {
       value[key] = REDACTED;
       redactions.push(`${pathPrefix}.${key}`);
       continue;

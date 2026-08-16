@@ -131,6 +131,23 @@ describe('bodies', () => {
     expect(redactBody('', rules, 'response.body')).toEqual({ value: '', redactions: [] });
   });
 
+  it('removes a credential a target echoed back in its response body', () => {
+    const body = JSON.stringify({ authorization: 'Bearer ledger-owner-token', id: '1' });
+    const { value, redactions } = redactBody(body, rules, 'response.body');
+
+    expect(value).not.toContain('ledger-owner-token');
+    expect(redactions).toEqual(['response.body.authorization']);
+  });
+
+  it.each(['cookie', 'set-cookie', 'proxy-authorization'])(
+    'removes a body field named %s wherever it appears',
+    (key) => {
+      const body = JSON.stringify({ [key]: 'secret-value' });
+      const { value } = redactBody(body, rules, 'response.body');
+      expect(value).not.toContain('secret-value');
+    },
+  );
+
   it('applies configured extra patterns to field names', () => {
     const withPattern = rulesFor(SPEC, ['(?i)api[_-]?key']);
     const body = JSON.stringify({ apiKey: 'k', id: '1' });

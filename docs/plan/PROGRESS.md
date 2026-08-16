@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T13:45:00Z
+Updated: 2026-08-15T14:10:00Z
 Current stage: S2
-Next task: M2.5
+Next task: M2.6
 
 ## S0. Skeleton
 
@@ -68,8 +68,8 @@ Surprises worth recording:
 - [x] M2.1 TargetConfig schema and loadConfig (commit fa4f81f)
 - [x] M2.2 environment variable resolution, all missing named at once (commit cf105a2)
 - [x] M2.3 undici request layer with injected clock and id generator (commit 94f497e)
-- [x] M2.4 evidence capture, redaction, writing (commit backfilled below)
-- [ ] M2.5 ActorSession for bearer, cookie, header, none
+- [x] M2.4 evidence capture, redaction, writing (commit 0f06546)
+- [x] M2.5 ActorSession for bearer, cookie, header, none (commit backfilled below)
 - [ ] M2.6 seed and reset execution with the disposability gate
 - [ ] M2.7 startup capability report
 - Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
@@ -104,6 +104,8 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M2.5 found a real leak in M2.4, worth remembering: redaction matched `authorization` and `cookie` only in header position, so a target that echoed the credential back in its response body had it written to disk unredacted. The always-redacted names now apply to body field names too. Over-redacting a body field innocently named `cookie` is visible in the `redactions` list; under-redacting is a leak nobody notices.
+- M2.5: `ActorSession.request` is the only way to reach the target, and it always captures evidence, including on a transport failure. Rule R7 made structural: there is no method that requests without recording.
 - M2.4 contract question, needs review: Evidence in 03-CONTRACTS.md has `response.bodyRef` and no place for a request body, but modules/M2-target.md says the request body is captured. Rather than add a contract field, `bodyRef` points at a document holding both under `request.body` and `response.body`. If an emitter needs the response body alone, that is a contract change, not a local fix.
 - M2.4: two files per record, `EV-xxxx.json` for the bodies and `EV-xxxx.record.json` for the Evidence itself. A test asserts those are the only two files, so nothing else can be left holding an unredacted copy.
 - M2.4: a body that is not JSON passes through unredacted. Redaction matches field names, and guessing at structure in an opaque body would either miss the field or corrupt the evidence. A caller needing a guarantee over opaque bodies should not be storing them.
