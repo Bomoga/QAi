@@ -1,0 +1,33 @@
+# Points at fixtures/ledger, the only target this repository configures.
+# Credentials are named here and set in the environment, never written down.
+
+target:
+  baseUrl: http://127.0.0.1:3000
+  sourceRoot: fixtures/ledger
+  disposable: true
+  # The ledger holds its data in memory, so a restart is the reset.
+  resetCommand: 'node -e "process.stdout.write(\"ledger state is in memory, restart to reset\")"'
+
+actors:
+  - id: owner
+    auth:
+      kind: bearer
+      tokenEnv: LEDGER_OWNER_TOKEN
+    attributes:
+      org_id: org-1
+
+  - id: outsider
+    auth:
+      kind: bearer
+      tokenEnv: LEDGER_OUTSIDER_TOKEN
+    attributes:
+      org_id: org-2
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+redaction:
+  extraPatterns:
+    - '(?i)api[_-]?key'
