@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T12:30:00Z
+Updated: 2026-08-15T12:50:00Z
 Current stage: S2
-Next task: M2.2
+Next task: M2.3
 
 ## S0. Skeleton
 
@@ -65,8 +65,8 @@ Surprises worth recording:
 
 ## S2. Target, actors, evidence (M2)
 
-- [x] M2.1 TargetConfig schema and loadConfig (commit backfilled below)
-- [ ] M2.2 environment variable resolution, all missing named at once
+- [x] M2.1 TargetConfig schema and loadConfig (commit fa4f81f)
+- [x] M2.2 environment variable resolution, all missing named at once (commit backfilled below)
 - [ ] M2.3 undici request layer with injected clock and id generator
 - [ ] M2.4 evidence capture, redaction, writing
 - [ ] M2.5 ActorSession for bearer, cookie, header, none
@@ -104,6 +104,8 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M2.2: an actor whose variable is unset is dropped, not given a blank credential. A blank credential produces a 401 that reads as a finding rather than a configuration mistake. An empty or whitespace only variable counts as unset for the same reason.
+- M2.2: `resolveCredentials` takes the environment as an argument. Core never reads `process.env`, per 02-ARCHITECTURE.md and rule R6, so the CLI will pass it in.
 - M2.1 addition, needs review: `actors[].attributes` is not in the proposed config in modules/M2-target.md, and without it the condition grammar cannot be evaluated at all. `Invoice.org_id != actor.org_id` needs a value for `actor.org_id`, and nothing in the proposed shape supplies one. Added as a string map per actor. M3 will need it; confirm the shape before it does.
 - M2.1 judgment call: the proposed config shows only `bearer`, but M2.5 has to implement `cookie`, `header`, and `none`. Designed as `cookie: {name, valueEnv}`, `header: {name, valueEnv}`, `none: {}`, keeping the rule that config names a variable and never holds a value.
 - M2.1: `target.disposable` defaults to false. A target is not disposable until someone writes it down. Invariant I7.
