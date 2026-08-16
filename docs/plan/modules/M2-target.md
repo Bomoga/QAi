@@ -1,6 +1,6 @@
 # M2: Target, Actors, Fixtures, Evidence
 
-**Status:** not started
+**Status:** complete
 **Owns:** `packages/core/src/target/`, `packages/core/src/evidence/`
 **Depends on:** M1
 **Depended on by:** M3, M4, M5
@@ -101,4 +101,18 @@ pnpm --filter @qai/core test -- target evidence
 ## Open questions
 
 - Q2: credential supply mechanism. Proposal implemented above.
+  **Implemented as proposed.** Config names environment variables, values live in memory only. `tokenEnv` and `valueEnv` are shape-constrained so a pasted value fails validation, and a literal under a key like `token` is rejected before schema validation with a message naming the variable to set instead. Q2 can be marked resolved by a human.
 - Q3: reset strategy. Proposal is a target-declared command. If the target cannot provide one, mutating checks stay off and are reported as `unverified`.
+  **Implemented as proposed**, with one addition: a `resetCommand` is required even to seed, not only to run mutating checks. Seeding a target that cannot be restored leaves someone with a dirty database and no way back. Confirm that addition.
+
+### Raised during implementation, needs a human decision
+
+- **The proposed config cannot express `actor.org_id`.** The M1 condition grammar compares against `actor.<field>`, and nothing in the proposed shape supplies a value. Added `actors[].attributes`, a string map per actor. M3 needs this to evaluate any condition at all, so the shape should be confirmed before it lands.
+
+- **Evidence has nowhere to put a request body.** 03-CONTRACTS.md gives Evidence `response.bodyRef` and no request body field, while this document says the request body is captured. Implemented by pointing `bodyRef` at a document holding both under `request.body` and `response.body`. If an emitter needs the response body alone, that is a contract change rather than a local fix.
+
+- **Auth kinds beyond bearer were undesigned.** The proposed config shows only `bearer`, but M2.5 requires `cookie`, `header`, and `none`. Implemented as `cookie: {name, valueEnv}`, `header: {name, valueEnv}`, `none: {}`, keeping the rule that config names a variable and never holds a value. Confirm.
+
+- **`createTargetContext` is synchronous**, while the Public API above declares it returning a Promise. Nothing it does is asynchronous: credentials come from a passed-in map and the only filesystem call is an existence check. Either correct the signature here or say why it should be async.
+
+- **Redaction of always-redacted names applies to body fields, not only headers.** A target echoing a credential back in its response body would otherwise have it written to disk. This over-redacts a body field innocently named `cookie`, which is visible in the `redactions` list. Confirm the trade.
