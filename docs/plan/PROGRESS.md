@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T21:30:00Z
+Updated: 2026-08-16T22:10:00Z
 Current stage: S4
-Next task: M4.3
+Next task: M4.4
 
 ## S0. Skeleton
 
@@ -126,8 +126,8 @@ Surprises worth recording:
 ## S4. Probe and structural diff (M4)
 
 - [x] M4.1 probe interfaces and adapter registration (commit 6795e64)
-- [x] M4.2 Next.js App Router adapter (commit backfilled below)
-- [ ] M4.3 Express adapter
+- [x] M4.2 Next.js App Router adapter (commit f14f1cd)
+- [x] M4.3 Express adapter (commit backfilled below)
 - [ ] M4.4 Prisma schema adapter
 - [ ] M4.5 black box crawler, read-only, budgeted
 - [ ] M4.6 endpoint identity normalization
@@ -160,6 +160,13 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.3: the M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` does not filter anything. The `--` reaches vitest as a positional and the filters are dropped, so it runs the whole core suite, 26 files. `pnpm --filter @qai/core exec vitest run probe diff` is the form that actually filters, 3 files and 84 tests at M4.3. Same class as the M1.2 trap: a Definition of Done command that quietly does not do what it says. Both were run.
+- M4.3: mount prefixes are resolved across files. A router declaring `/invoices` that the app mounts at `/api` is recorded as `/api/invoices`, because recording the declared path alone puts an endpoint in the Observation the target does not serve, and that costs two structural findings rather than one: the specified path missing and the wrong path undeclared.
+- M4.3: a router file nothing mounts still contributes its endpoints, with an info note saying the path may be missing a prefix. Dropping it would hide a route that exists; claiming a prefix nobody could find would be a guess.
+- M4.3: a receiver counts as a router when it was assigned from `express()` or `Router()` in the same file, or when its last dotted segment is `app` or `router`, which covers `function routes(app)` and `this.app`. A registration also has to pass a handler argument, so `client.get('/api/invoices', config)` and `request(app).get('/x')` are not routes. Both forms have tests.
+- M4.3: `app.all('/x', h)` produces one endpoint with method `ALL`, not eight. Expanding it would invent endpoints; dropping it would lose one. Worth confirming at M4.7, since a black box observation of the same route reports a concrete method and the merge will have to reconcile `ALL` against it.
+- M4.3: a route registered on a path the adapter cannot read, a template literal for example, produces a warn note naming `file:line` and no endpoint.
+- M4.3: Express has no directory convention, so the adapter reads every source file rather than a glob of route files. Test files, type declarations, and the usual build directories are excluded, since a route registered inside a test is not a route the target serves.
 - M4.2: adapters are tested against synthetic route trees in a temp directory, not a scaffolded Next.js app. The adapter reads a directory convention and a few export forms; a real application would add hundreds of files without covering anything more.
 - M4.2: method patterns are anchored to the line start, so `// export async function DELETE()` in a comment and `"export function PUT()"` in a string do not become endpoints. Both have tests.
 - M4.2: a route file exporting nothing recognizable produces a warning note and no endpoint. Inventing a route from a filename would put something in the Observation the application does not serve.

@@ -5,7 +5,8 @@
  * them infers: an adapter reports what the code states, and anything it could not read
  * becomes a note rather than a guess.
  *
- * Present: Next.js App Router.
- * Pending: Express and Prisma.
+ * Present: Next.js App Router, Express.
+ * Pending: Prisma.
  */
+export * from './express.ts';
 export * from './next.ts';
