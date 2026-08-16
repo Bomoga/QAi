@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T19:30:00Z
+Updated: 2026-08-16T20:00:00Z
 Current stage: S3
-Next task: M3.9
+Next task: stage boundary, demonstrate the S3 exit criterion
 
 ## S0. Skeleton
 
@@ -101,8 +101,8 @@ Surprises worth recording:
 - [x] M3.5 allow rule verification and the check runner (commit 2545c2b)
 - [x] M3.6 list handling per Q5 (commit d73bd1e)
 - [x] M3.7 mutating rules behind the disposability gate (commit bdcf8c1)
-- [x] M3.8 severity assignment and finding text (commit backfilled below)
-- [ ] M3.9 integration test over D1, D2, D3, N1, N2
+- [x] M3.8 severity assignment and finding text (commit 8ac6c38)
+- [x] M3.9 integration test over D1, D2, D3, N1, N2 (commit backfilled below)
 - Exit criterion: `qai check` against `fixtures/ledger` reports the seeded cross-owner leak as a high severity finding with request and response evidence and exits 1; fixing the fixture app makes it exit 0
 - Known blockers on the criterion, same shape as S1: `qai check` is M8 and lands in S6, and the module Definition of Done names `pnpm --filter @qai/cli exec qai check`. The fixture also implements only D1, so D2 and D3 have to be added here before M3.9 can cover them.
 
@@ -132,6 +132,10 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.9: D2 and D3 are now implemented in `fixtures/ledger`, so the catalog has D1, D2, D3 and both negative controls. D4 through D7 remain deferred to the stages that build the checks consuming them. Ledger level tests hold D2 and D3 in place the same way they hold D1.
+- M3.9 placement: the integration test lives in the repository root `test/`, not in either package. 02-ARCHITECTURE.md says core depends on nothing here and `fixtures/ledger` likewise, and an integration test inside either one would quietly make that false. The root is the only place legitimately allowed to depend on both.
+- M3.9: the test pins both directions. Defects on gives exactly three failures and both controls passing; defects off gives zero failures and everything passing. A check family that always answered the same way would fail one of those two, so neither assertion can pass vacuously.
+- M3.9: D2 returns rows under an `invoices` key rather than a bare array, deliberately, so a list check that only understood top level arrays would miss it.
 - M3.8: severity is deny high, allow medium, and deliberately does not scale by which fields came back. Scaling by field sensitivity would look like a refinement but means guessing the cost of an exposure from field names, which the spec author is better placed to judge than the tool. A test asserts severity is unchanged when the resource declares no fields.
 - M3.8: a suggested fix lives inside `detail`, prefixed `Suggestion:`. The CheckResult contract has no field for one, and adding it would be a contract change. If a report wants to render suggestions separately, that is the contract question to raise.
 - M3.8: a passing check carries no reference and no suggestion. There is nothing to look up and nothing to fix, and a suggestion attached to a pass reads as a finding to anyone skimming.

@@ -31,13 +31,19 @@ These credentials are fixture data. They authenticate against this app and nothi
 
 ## Defect switches
 
-| Variable           | Values      | Default | Defect                                          |
-| ------------------ | ----------- | ------- | ----------------------------------------------- |
-| `LEDGER_DEFECT_D1` | `on`, `off` | `on`    | D1, invoice readable across organizations by id |
+| Variable           | Values      | Default | Defect                                                |
+| ------------------ | ----------- | ------- | ----------------------------------------------------- |
+| `LEDGER_DEFECT_D1` | `on`, `off` | `on`    | D1, invoice readable across organizations by id       |
+| `LEDGER_DEFECT_D2` | `on`, `off` | `on`    | D2, invoice list returns rows from every organization |
+| `LEDGER_DEFECT_D3` | `on`, `off` | `on`    | D3, invoice update accepts an unauthenticated caller  |
 
 Defects default to on. An unrecognized value is a startup error rather than a fallback,
 because a mistyped switch that silently leaves the defect enabled makes a passing run
 mean nothing.
 
-Defects D2 through D7 in the catalog are not implemented yet. They land with the stages
+Defects D4 through D7 in the catalog are not implemented yet. They land with the stages
 that build the checks which consume them.
+
+Negative control N2, a cross-organization write being refused, holds whether or not D3
+is on: D3 is about the missing credential check, not about ownership. A finding against
+N2 is a false positive and blocks merge.

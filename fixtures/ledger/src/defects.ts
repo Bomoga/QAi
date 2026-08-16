@@ -8,10 +8,16 @@
 export interface DefectSwitches {
   /** D1: an invoice is readable across organizations by id. */
   readonly d1CrossOrgInvoiceRead: boolean;
+  /** D2: the invoice list returns every row rather than the caller organization. */
+  readonly d2UnscopedInvoiceList: boolean;
+  /** D3: an invoice can be modified without any credentials. */
+  readonly d3UnauthenticatedMutation: boolean;
 }
 
 const SWITCHES = {
   d1CrossOrgInvoiceRead: 'LEDGER_DEFECT_D1',
+  d2UnscopedInvoiceList: 'LEDGER_DEFECT_D2',
+  d3UnauthenticatedMutation: 'LEDGER_DEFECT_D3',
 } as const satisfies Record<keyof DefectSwitches, string>;
 
 /**
