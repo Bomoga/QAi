@@ -1,6 +1,6 @@
 # M3: Access Checks
 
-**Status:** not started
+**Status:** complete
 **Owns:** `packages/core/src/checks/access/`, `packages/core/src/checks/registry.ts`
 **Depends on:** M1, M2
 **Optionally consumes:** M4 Observation for resource resolution. Runs without it at reduced precision, falling back to configured route overrides.
@@ -88,3 +88,20 @@ pnpm --filter @qai/cli exec qai check --config fixtures/ledger/qai.config.yaml
 ## Open questions
 
 - Q5: list semantics. Proposal implemented above.
+  **Implemented as proposed.** A deny rule on `list` asserts the absence of foreign rows. Rows must be present and identifiable for a pass; an empty list is inconclusive, and a row whose ownership cannot be judged also blocks a pass. Q5 can be marked resolved by a human.
+
+### Raised during implementation, needs a human decision
+
+- **The Definition of Done and the S3 exit criterion both need `qai check`**, which M8 owns and S6 delivers. The same coupling stopped S1's criterion being met as written. The behavior is demonstrated through `packages/core/scripts/check-ledger.ts`: defective ledger gives 3 failures and exit 1, fixed gives 0 and exit 0. Smallest correction: restate both against the check engine, or pull `qai check` into S3.
+
+- **The allow verdict table was designed here.** This document tables the deny case and states the allow case in one line of prose. Implemented as: any 2xx passes, since the assertion is only that the actor was let through and a 204 on a permitted update is a success with nothing to return; 401, 403, and 404 fail; everything else is inconclusive, because a finding on an allow rule claims a legitimate user is being refused and a 400 cannot be told apart from a request the tool malformed itself. Confirm or table it here.
+
+- **A refusal status that still returns the record is treated as a failure.** The deny table's first row reads "401, 403, or 404 with no resource fields in body", and that qualifier is read as load bearing. An endpoint answering 404 while handing back the invoice has not refused anything. Confirm.
+
+- **Action to method mapping is not stated anywhere.** Implemented as read and list to GET, create to POST, update to PATCH, delete to DELETE. PATCH over PUT for update is the one worth confirming.
+
+- **`TargetConfig` gained a `resources` section**, holding route templates and seeded instances, which M2 owns. It is here because a rule names a resource and this module refuses to guess a URL, while M4 lands a stage later. When the probe arrives the Observation takes precedence and this stays as the documented fallback.
+
+- **A suggested fix lives inside `CheckResult.detail`.** The contract has no field for one and adding it would be a contract change. If a report should render suggestions separately, that is the contract question.
+
+- **`HttpClient` has no teardown.** Calling `process.exit` with undici's pool open trips a libuv assertion on Windows and reports a crash code rather than the exit code the run reached. M8 will need a way to close the pool before exiting.
