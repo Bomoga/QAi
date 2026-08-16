@@ -175,12 +175,14 @@ const ALL_DEFECTS_ON: DefectSwitches = {
   d1CrossOrgInvoiceRead: true,
   d2UnscopedInvoiceList: true,
   d3UnauthenticatedMutation: true,
+  d5UndeclaredDebugEndpoint: true,
 };
 
 const ALL_DEFECTS_OFF: DefectSwitches = {
   d1CrossOrgInvoiceRead: false,
   d2UnscopedInvoiceList: false,
   d3UnauthenticatedMutation: false,
+  d5UndeclaredDebugEndpoint: false,
 };
 
 const running: Server[] = [];

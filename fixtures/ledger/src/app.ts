@@ -94,9 +94,43 @@ function updateInvoice(
   return { status: 200, body: invoice };
 }
 
+/**
+ * D5. A debug endpoint no requirement asks for, handing back internal state. It is the
+ * shape of a route added during development and never removed, which is what the
+ * structural diff exists to surface.
+ *
+ * The route index below is not a defect. A small JSON service that lists its own routes
+ * is ordinary, and without something naming this route a black box crawl could not
+ * reach it at all: an unlinked route is the known blind spot of crawling, recorded in
+ * the probe's confidence levels rather than papered over here.
+ */
+function routeIndex(options: LedgerOptions): { routes: string[] } {
+  const routes = ['/health', '/api/invoices', '/api/invoices/{id}'];
+  if (options.defects.d5UndeclaredDebugEndpoint) routes.push('/api/debug/state');
+  return { routes };
+}
+
 export function createLedgerServer(options: LedgerOptions): Server {
   return createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://ledger.invalid');
+
+    if (request.method === 'GET' && url.pathname === '/') {
+      send(response, 200, routeIndex(options));
+      return;
+    }
+
+    if (
+      request.method === 'GET' &&
+      url.pathname === '/api/debug/state' &&
+      options.defects.d5UndeclaredDebugEndpoint
+    ) {
+      send(response, 200, {
+        users: options.data.users.length,
+        invoices: options.data.invoices.length,
+        defects: options.defects,
+      });
+      return;
+    }
 
     if (request.method === 'GET' && url.pathname === '/health') {
       send(response, 200, { status: 'ok' });
