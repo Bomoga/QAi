@@ -16,6 +16,11 @@
 
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
+
+    // Relative imports carry an explicit `.ts` extension repo wide. Every project here
+    // sets `noEmit` and is bundled by tsup, so no `.ts` specifier survives into output.
+    "allowImportingTsExtensions": true,
+
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
