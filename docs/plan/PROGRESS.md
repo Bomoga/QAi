@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T22:10:00Z
+Updated: 2026-08-16T22:45:00Z
 Current stage: S4
-Next task: M4.4
+Next task: M4.6
 
 ## S0. Skeleton
 
@@ -127,9 +127,9 @@ Surprises worth recording:
 
 - [x] M4.1 probe interfaces and adapter registration (commit 6795e64)
 - [x] M4.2 Next.js App Router adapter (commit f14f1cd)
-- [x] M4.3 Express adapter (commit backfilled below)
-- [ ] M4.4 Prisma schema adapter
-- [ ] M4.5 black box crawler, read-only, budgeted
+- [x] M4.3 Express adapter (commit d1cbcbf)
+- [ ] M4.4 Prisma schema adapter, **deferred by decision**, see the M4 Open questions
+- [x] M4.5 black box crawler, read-only, budgeted (commit backfilled below)
 - [ ] M4.6 endpoint identity normalization
 - [ ] M4.7 source and black box merge with confidence
 - [ ] M4.8 diffSpecObservation and severity rules
@@ -160,6 +160,16 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.4 stopped the loop and was skipped by the user's decision on 2026-08-16. The module says to prefer `@prisma/internals` over regex for `schema.prisma`, and that package is not on the approved list in 04-CONVENTIONS.md, which is a dependency stop. Three options were put up: approve it as a runtime dependency, approve it as a lazily imported optional one, or correct the plan to read the schema textually like the other two adapters. The choice was to skip M4.4 for now and carry on; the options stay written down in the M4 Open questions. Consequence for the stage: the Observation has no entities from source at all, so `fieldMismatches` and `specifiedNotObserved` for an entity will have only the black box side to work from at M4.8.
+- M4.5: the M4 Definition of Done says a black box degrade produces `origin: "inferred"`, but `EndpointOrigin` in 03-CONTRACTS.md is `source` or `blackbox`, and `inferred` is an entity origin. The crawler emits `blackbox` for endpoints, per the contract. The same DoD line already needs restating for the fixture being probed black box, so both corrections belong in one edit at the stage boundary.
+- M4.5: the crawler records a path that answered 401 or 403 but not one that answered 404, 405, or 410. A refusal proves the route is there; a dead link is evidence against it, and recording one would invent a route the target refuses to serve.
+- M4.5: `authRequired` stays `unknown` even on a 401. The crawl is authenticated, so a refusal says this actor may not have it, not that credentials are required. Only a refusal without credentials establishes that, and observing it is a check's job.
+- M4.5: `actorVisibility` is left empty even though the crawling actor plainly saw the page, because 03-CONTRACTS.md reserves that field for checks and says a probe-only run reports every actor untested.
+- M4.5: the crawler produces no entities. A crawl sees response field names, which are recorded as `responseShape.fields`, but never a model name, and naming an entity from a response would be a guess dressed as a schema reading.
+- M4.5: static assets get HEAD rather than GET, and are recorded with the method that was issued. Reading the method off what was actually sent keeps the Observation a record of what happened; M4.8 already plans to lower asset routes to info severity.
+- M4.5: a JSON body is scanned for string values that look like same-origin paths, so an API index listing its own routes is followed. Without that a JSON-only target stops at the seed, since there are no links to follow.
+- M4.5: the crawl takes a narrow `CrawlSession` rather than the whole `ActorSession`. An `ActorSession` satisfies it structurally, and nothing in the probe should be able to reach a credential.
+- M4.5: exhausting the page budget produces a warn note naming the ceiling and how many paths were left. An Observation that stopped early and does not say so reads as an application with nothing more in it.
 - M4.3: the M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` does not filter anything. The `--` reaches vitest as a positional and the filters are dropped, so it runs the whole core suite, 26 files. `pnpm --filter @qai/core exec vitest run probe diff` is the form that actually filters, 3 files and 84 tests at M4.3. Same class as the M1.2 trap: a Definition of Done command that quietly does not do what it says. Both were run.
 - M4.3: mount prefixes are resolved across files. A router declaring `/invoices` that the app mounts at `/api` is recorded as `/api/invoices`, because recording the declared path alone puts an endpoint in the Observation the target does not serve, and that costs two structural findings rather than one: the specified path missing and the wrong path undeclared.
 - M4.3: a router file nothing mounts still contributes its endpoints, with an info note saying the path may be missing a prefix. Dropping it would hide a route that exists; claiming a prefix nobody could find would be a guess.
