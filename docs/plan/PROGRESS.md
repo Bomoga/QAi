@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T23:40:00Z
+Updated: 2026-08-17T00:10:00Z
 Current stage: S4
-Next task: M4.8
+Next task: M4.9
 
 ## S0. Skeleton
 
@@ -131,8 +131,8 @@ Surprises worth recording:
 - [ ] M4.4 Prisma schema adapter, **deferred by decision**, see the M4 Open questions
 - [x] M4.5 black box crawler, read-only, budgeted (commit 9adc558)
 - [x] M4.6 endpoint identity normalization (commit 5117842)
-- [x] M4.7 source and black box merge with confidence (commit backfilled below)
-- [ ] M4.8 diffSpecObservation and severity rules
+- [x] M4.7 source and black box merge with confidence (commit b82ae56)
+- [x] M4.8 diffSpecObservation and severity rules (commit backfilled below)
 - [ ] M4.9 integration test over D5 and D6
 - Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
 - **Conflict raised at stage start, decided 2026-08-16: black box origin for the ledger.** M4's adapters target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. The Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" therefore holds with `origin: blackbox` and reduced confidence, not `origin: source`. Adapters are built and tested against synthetic source trees. Rejected: adding a `node:http` adapter, which is outside Q1's list and covers a framework no real user has; and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in 06-TESTING.md. The DoD line should be restated to say black box for this fixture.
@@ -160,6 +160,14 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.8: the contract's `specifiedNotObserved` and `fieldMismatches` entries carry no severity field, while the module states a default severity for both. Adding the field would be a contract change, so the two defaults are exported as constants for whoever turns an entry into a finding. Worth resolving properly when M7 renders these.
+- M4.8: an Observation that saw nothing at all produces no `specifiedNotObserved` entries. A probe that could not reach the target and a target implementing none of the spec are different facts, and reporting the first as the second fills a report with findings about a run that never happened. The RunResult already has `probe-incomplete` for the real case.
+- M4.8: entity matching has three strengths, and they are recorded rather than flattened. An adapter that read the model is high, a route named after the entity is medium, and response fields lining up is low. With M4.4 deferred nothing produces schema entities, so in practice every match is by route or by fields, which is exactly why the confidence is on the record.
+- M4.8: an endpoint counts as specified when a path segment names a spec entity that some requirement references. That is the only link the spec offers, since a spec names entities and rules rather than routes. `TargetConfig.resources` would give an exact mapping, but `diffSpecObservation(spec, observation)` is the public API and taking config here would widen it.
+- M4.8: the unauthenticated rule is checked before the noise rule. A health route that answers without credentials and returns fields from a spec entity is not noise, whatever it is called. A test holds that ordering.
+- M4.8: `authRequired` is `unknown` on everything the crawler produces, so the high severity rule will rarely fire until a check establishes authentication. That is the module's rule working as written rather than a gap.
+- M4.8: field mismatches are only computed for an entity whose fields were actually observed. Otherwise a spec field the crawl never had a chance to see would be reported as missing, which is a finding about the crawl budget dressed up as a finding about the application.
+- M4.8: `singular` leaves words ending in `us`, `ss`, or `is` alone, so `status` does not become `statu`. Found by a test; both sides of a comparison run through it, so a wrong answer costs a match rather than inventing one.
 - M4.7 owns `probe()` as well as the merge. No task claims the orchestration, nothing else can assemble an Observation, and M4.9 needs it. Flagged rather than assumed: if the plan meant it elsewhere, this is where it landed.
 - M4.7 confidence table, from the module text: source only high, black box only low, both agree high, and in hybrid mode a route only one side saw is medium with a note. The two hybrid rows are the ones that matter. A declared route the crawl never reached may be unlinked, behind the budget, or not wired up, and the tool cannot tell which from outside. A route that answered while nothing declares it is the shape of an endpoint nobody asked for.
 - M4.7: nothing either side saw is dropped. A merge that resolved a disagreement silently would erase the finding this stage exists to make possible.
