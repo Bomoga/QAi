@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T12:00:00Z
-Current stage: S1
-Next task: stage boundary, S1 exit criterion needs the `qai validate` command from M8
+Updated: 2026-08-15T12:30:00Z
+Current stage: S2
+Next task: M2.2
 
 ## S0. Skeleton
 
@@ -65,7 +65,14 @@ Surprises worth recording:
 
 ## S2. Target, actors, evidence (M2)
 
-- [ ] not started
+- [x] M2.1 TargetConfig schema and loadConfig (commit backfilled below)
+- [ ] M2.2 environment variable resolution, all missing named at once
+- [ ] M2.3 undici request layer with injected clock and id generator
+- [ ] M2.4 evidence capture, redaction, writing
+- [ ] M2.5 ActorSession for bearer, cookie, header, none
+- [ ] M2.6 seed and reset execution with the disposability gate
+- [ ] M2.7 startup capability report
+- Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
 
 ## S3. Access checks (M3)
 
@@ -96,6 +103,13 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M2.1 addition, needs review: `actors[].attributes` is not in the proposed config in modules/M2-target.md, and without it the condition grammar cannot be evaluated at all. `Invoice.org_id != actor.org_id` needs a value for `actor.org_id`, and nothing in the proposed shape supplies one. Added as a string map per actor. M3 will need it; confirm the shape before it does.
+- M2.1 judgment call: the proposed config shows only `bearer`, but M2.5 has to implement `cookie`, `header`, and `none`. Designed as `cookie: {name, valueEnv}`, `header: {name, valueEnv}`, `none: {}`, keeping the rule that config names a variable and never holds a value.
+- M2.1: `target.disposable` defaults to false. A target is not disposable until someone writes it down. Invariant I7.
+- M2.1: literal secret detection runs before schema validation, so the message can name the fix rather than reporting an unrecognized key. Keys caught: token, password, secret, apiKey, value. A test asserts the rejected secret never appears in the error.
+- M2.1: `tokenEnv` and `valueEnv` are regex-constrained to `^[A-Z][A-Z0-9_]*$`, so a value pasted where a variable name belongs fails on shape even if the key is right.
+- Q2 and Q3 are listed unresolved in 07-DECISIONS.md but modules/M2-target.md says both proposals are implemented as written, the same pattern M1 used for Q4. Treated as directed, not as a stop.
 
 - M1.1 conflict, plan vs code: the task says scaffold `packages/core` with tsup, vitest, and a strict tsconfig, but S0.2 already did all three. Reduced to what was actually missing: the `contracts/` directory, `zod`, and a package level `test` script so the module's Definition of Done command resolves.
 - M1 Definition of Done runs `pnpm --filter @qai/core exec tsx scripts/validate-fixture-spec.ts`, but `tsx` is not in the approved dependency list in 04-CONVENTIONS.md. The repo already runs TypeScript directly through Node's type stripping for the ledger. Decide at M1.5 or M1.8: add `tsx` with approval, or correct the plan to use `node --experimental-strip-types`.
