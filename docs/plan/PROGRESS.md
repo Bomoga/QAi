@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T13:15:00Z
+Updated: 2026-08-15T13:45:00Z
 Current stage: S2
-Next task: M2.4
+Next task: M2.5
 
 ## S0. Skeleton
 
@@ -67,8 +67,8 @@ Surprises worth recording:
 
 - [x] M2.1 TargetConfig schema and loadConfig (commit fa4f81f)
 - [x] M2.2 environment variable resolution, all missing named at once (commit cf105a2)
-- [x] M2.3 undici request layer with injected clock and id generator (commit backfilled below)
-- [ ] M2.4 evidence capture, redaction, writing
+- [x] M2.3 undici request layer with injected clock and id generator (commit 94f497e)
+- [x] M2.4 evidence capture, redaction, writing (commit backfilled below)
 - [ ] M2.5 ActorSession for bearer, cookie, header, none
 - [ ] M2.6 seed and reset execution with the disposability gate
 - [ ] M2.7 startup capability report
@@ -104,6 +104,10 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M2.4 contract question, needs review: Evidence in 03-CONTRACTS.md has `response.bodyRef` and no place for a request body, but modules/M2-target.md says the request body is captured. Rather than add a contract field, `bodyRef` points at a document holding both under `request.body` and `response.body`. If an emitter needs the response body alone, that is a contract change, not a local fix.
+- M2.4: two files per record, `EV-xxxx.json` for the bodies and `EV-xxxx.record.json` for the Evidence itself. A test asserts those are the only two files, so nothing else can be left holding an unredacted copy.
+- M2.4: a body that is not JSON passes through unredacted. Redaction matches field names, and guessing at structure in an opaque body would either miss the field or corrupt the evidence. A caller needing a guarantee over opaque bodies should not be storing them.
+- M2.4: an invalid `extraPatterns` regex is dropped and reported rather than thrown. A bad pattern in a config should not take down a run that would otherwise produce findings. The inline `(?i)` flag YAML configs tend to carry is translated to the JavaScript flag.
 - M2.3: `RequestSpec.method` is a closed union, not a string. The probe issues GET-equivalent traffic and mutating checks declare themselves, so an arbitrary method reaching a target should fail to compile.
 - M2.3: a transport failure is a returned value, not a throw, so M3 can turn it into `inconclusive` rather than losing the run. No retry and no backoff, per the module's Do Not.
 - M2.3: `fixedDeps` lives in `target/deps.ts` beside `systemDeps`, not in a test helper. Every module taking `Deps` needs the same fake, and three slightly different ones is how golden files start disagreeing.
