@@ -146,17 +146,21 @@ function mergeActors(files: readonly ParsedFile[], diagnostics: LoadDiagnostic[]
   return [...merged.values()].map((entry) => entry.actor);
 }
 
+/**
+ * Fields are compared by name, not by position. Declaration order carries no meaning
+ * for an entity: nothing derives an identifier from it, and `hash.ts` already sorts
+ * fields before hashing. Comparing positionally made two files that agree about an
+ * entity, and hash identically, fail to load as a conflicting redefinition.
+ */
 function sameEntity(left: Entity, right: Entity): boolean {
   if (left.ownedBy !== right.ownedBy) return false;
   if (left.fields.length !== right.fields.length) return false;
-  return left.fields.every((field, index) => {
-    const other = right.fields[index];
-    return (
-      other !== undefined &&
-      field.name === other.name &&
-      field.type === other.type &&
-      field.sensitive === other.sensitive
-    );
+
+  const byName = new Map(right.fields.map((field) => [field.name, field]));
+
+  return left.fields.every((field) => {
+    const other = byName.get(field.name);
+    return other !== undefined && field.type === other.type && field.sensitive === other.sensitive;
   });
 }
 
