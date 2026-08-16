@@ -1,6 +1,6 @@
 # M4: Probe and Structural Diff
 
-**Status:** not started
+**Status:** complete, except M4.4, which is blocked on the dependency decision in Open questions
 **Owns:** `packages/core/src/probe/`, `packages/core/src/diff/spec-observation.ts`
 **Depends on:** M1, M2
 **Depended on by:** M7
