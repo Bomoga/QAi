@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T14:10:00Z
+Updated: 2026-08-15T14:35:00Z
 Current stage: S2
-Next task: M2.6
+Next task: M2.7
 
 ## S0. Skeleton
 
@@ -69,8 +69,8 @@ Surprises worth recording:
 - [x] M2.2 environment variable resolution, all missing named at once (commit cf105a2)
 - [x] M2.3 undici request layer with injected clock and id generator (commit 94f497e)
 - [x] M2.4 evidence capture, redaction, writing (commit 0f06546)
-- [x] M2.5 ActorSession for bearer, cookie, header, none (commit backfilled below)
-- [ ] M2.6 seed and reset execution with the disposability gate
+- [x] M2.5 ActorSession for bearer, cookie, header, none (commit 0c198f5)
+- [x] M2.6 seed and reset execution with the disposability gate (commit backfilled below)
 - [ ] M2.7 startup capability report
 - Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
 
@@ -104,6 +104,8 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M2.6: the disposability gate requires both `disposable: true` and a `resetCommand`, even to seed. Seeding a target that cannot be restored leaves someone with a dirty database and no way back. Not overridable by flag; an interlock the person in a hurry can reach past is not an interlock.
+- M2.6 platform trap: with `shell: true` the child is the shell, and killing it does not take the command with it, reliably not on Windows. A timeout now resolves at the deadline rather than waiting for a close event, with a best effort tree kill (`taskkill /t /f` on Windows, SIGKILL elsewhere). Before the fix one test took 10.5s and the suite took 11.3s; it is back to 1.5s.
 - M2.5 found a real leak in M2.4, worth remembering: redaction matched `authorization` and `cookie` only in header position, so a target that echoed the credential back in its response body had it written to disk unredacted. The always-redacted names now apply to body field names too. Over-redacting a body field innocently named `cookie` is visible in the `redactions` list; under-redacting is a leak nobody notices.
 - M2.5: `ActorSession.request` is the only way to reach the target, and it always captures evidence, including on a transport failure. Rule R7 made structural: there is no method that requests without recording.
 - M2.4 contract question, needs review: Evidence in 03-CONTRACTS.md has `response.bodyRef` and no place for a request body, but modules/M2-target.md says the request body is captured. Rather than add a contract field, `bodyRef` points at a document holding both under `request.body` and `response.body`. If an emitter needs the response body alone, that is a contract change, not a local fix.
