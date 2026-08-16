@@ -128,7 +128,16 @@ function mergeFields(
   return { ...(entity === undefined ? {} : { entity }), fields };
 }
 
-function mergeInto(first: ObservedEndpoint, next: ObservedEndpoint): ObservedEndpoint {
+/**
+ * Folds a second observation of one endpoint into the first, keeping everything that
+ * was learned. The first wins every scalar the two simply state differently, so a
+ * caller decides precedence by argument order. M4.7 uses this across the source and
+ * black box sides, where it passes the authoritative side first.
+ */
+export function mergeObservedEndpoints(
+  first: ObservedEndpoint,
+  next: ObservedEndpoint,
+): ObservedEndpoint {
   const shape = mergeFields(first.responseShape, next.responseShape);
   const handlerRef = first.handlerRef ?? next.handlerRef;
 
@@ -163,7 +172,10 @@ export function normalizeEndpoints(
   for (const endpoint of endpoints) {
     const normalized = normalizeEndpoint(endpoint);
     const existing = byId.get(normalized.id);
-    byId.set(normalized.id, existing === undefined ? normalized : mergeInto(existing, normalized));
+    byId.set(
+      normalized.id,
+      existing === undefined ? normalized : mergeObservedEndpoints(existing, normalized),
+    );
   }
 
   return [...byId.values()];

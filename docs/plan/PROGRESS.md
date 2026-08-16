@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T23:05:00Z
+Updated: 2026-08-16T23:40:00Z
 Current stage: S4
-Next task: M4.7
+Next task: M4.8
 
 ## S0. Skeleton
 
@@ -130,8 +130,8 @@ Surprises worth recording:
 - [x] M4.3 Express adapter (commit d1cbcbf)
 - [ ] M4.4 Prisma schema adapter, **deferred by decision**, see the M4 Open questions
 - [x] M4.5 black box crawler, read-only, budgeted (commit 9adc558)
-- [x] M4.6 endpoint identity normalization (commit backfilled below)
-- [ ] M4.7 source and black box merge with confidence
+- [x] M4.6 endpoint identity normalization (commit 5117842)
+- [x] M4.7 source and black box merge with confidence (commit backfilled below)
 - [ ] M4.8 diffSpecObservation and severity rules
 - [ ] M4.9 integration test over D5 and D6
 - Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
@@ -160,6 +160,13 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.7 owns `probe()` as well as the merge. No task claims the orchestration, nothing else can assemble an Observation, and M4.9 needs it. Flagged rather than assumed: if the plan meant it elsewhere, this is where it landed.
+- M4.7 confidence table, from the module text: source only high, black box only low, both agree high, and in hybrid mode a route only one side saw is medium with a note. The two hybrid rows are the ones that matter. A declared route the crawl never reached may be unlinked, behind the budget, or not wired up, and the tool cannot tell which from outside. A route that answered while nothing declares it is the shape of an endpoint nobody asked for.
+- M4.7: nothing either side saw is dropped. A merge that resolved a disagreement silently would erase the finding this stage exists to make possible.
+- M4.7: when both sides agree, the source spelling of the path and its handler reference win, and the crawl contributes evidence and observed fields. Matching is by the M4.6 identity key, so `:invoiceId` from source pairs with `INV-1001` from the crawl.
+- M4.7: `probe` takes a narrow `ProbeContext` rather than the whole `TargetContext`, which satisfies it structurally. The probe has no business reaching credentials, the evidence writer, or the redaction rules, and the narrower seam is what lets the unit tests state a target in three lines.
+- M4.7: `ProbeOptions` gained `deps`, `cwd`, and `startPaths`. `deps` is required, because an Observation carries a timestamp and rule R6 says core does not read the clock on its own.
+- M4.7 test trap, same family as the earlier ones: four probe tests wrote a synthetic Express file with no `import express`, so the adapter's detect correctly said no and the source half never ran. Three of them asserted things that were true anyway and passed. Only the one asserting an endpoint list failed. A fixture that does not trip detection tests nothing about the adapter.
 - M4.6: identity has two levels. `endpointId` is what a reader sees and what the Observation stores, keeping parameter names as the adapter wrote them. `identityKey` erases them, so a source `:invoiceId` and a crawl's derived `:id` are recognized as one route. A merge comparing the written form would report each side as an endpoint the other did not have.
 - M4.6: a segment becomes a parameter only when it is recognizably an identifier: all digits, a UUID, 24 or more hex characters, `INV-1001` or `user_42`, or a 20 character opaque token containing a digit. Never merely because it contains a digit, which is why `/api/v1/invoices` and `/oauth2/callback` survive intact. M6 diffs on this, so widening the rule renames every endpoint in every stored run.
 - M4.6: a catch-all keeps its own marker in the identity key. `/files/:path*` and `/files/:name` match a different number of segments and are not the same route.

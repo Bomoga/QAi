@@ -9,11 +9,13 @@
  * spec cannot support a finding that the two disagree.
  *
  * Present: probe interfaces, adapter registration, the Next.js and Express adapters,
- * the black box crawler, and endpoint identity normalization.
- * Pending: the Prisma adapter, the merge, and the structural diff.
+ * the black box crawler, endpoint identity normalization, the merge, and `probe`.
+ * Pending: the Prisma adapter and the structural diff.
  */
 export * from './crawl.ts';
 export * from './identity.ts';
+export * from './merge.ts';
+export * from './probe.ts';
 export * from './registry.ts';
 export * from './source/index.ts';
 export * from './types.ts';

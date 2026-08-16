@@ -5,6 +5,7 @@ import type {
   ObservedEntity,
   ProbeMode,
 } from '../contracts/index.ts';
+import type { Deps } from '../target/deps.ts';
 
 /**
  * Probe interfaces and the adapter contract.
@@ -41,9 +42,15 @@ export interface SourceAdapter {
 }
 
 export interface ProbeOptions {
+  /** Injected clock, per rule R6. An Observation is timestamped and must be reproducible. */
+  readonly deps: Deps;
   /** Absent means no source is available and the probe is black box only. */
   readonly sourceRoot?: string;
   readonly baseUrl?: string;
+  /** Directory a relative `sourceRoot` is resolved against. Defaults to the process cwd. */
+  readonly cwd?: string;
+  /** Where the crawl starts. Defaults to the site root. */
+  readonly startPaths?: readonly string[];
   /** Hard ceiling on crawled pages. A probe that runs forever is not read-only in practice. */
   readonly maxPages?: number;
   readonly maxDepth?: number;
