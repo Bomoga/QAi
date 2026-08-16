@@ -137,7 +137,7 @@ Surprises worth recording:
 - S0.2: `@qai/cli` has no `bin` entry yet. The command surface, flags, and exit codes belong to M8 and land in S6; `npx qai` should not resolve until it does something.
 - S0.2: all three package index files export nothing. The public API of core is assembled by later modules, and a surface reaching past `src/index.ts` is reaching into private code.
 - S0.2: `ignoreDeprecations: "6.0"` is set in `tsconfig.base.json` only because tsup's dts build injects the deprecated `baseUrl`. Drop it when tsup stops.
-- S0.3: CI runs typecheck, lint, format:check, test, build on push to main or dev and on PRs into them. Feature branch pushes are covered by the PR event, not by a second push trigger.
+- S0.3: CI runs typecheck, lint, format:check, test, build on push to main or dev and on every pull request. The `pull_request` branch filter was removed during S1: it left PR #2, stacked on the S0 branch, with no checks at all. Push stays filtered to main and dev so feature branches are not checked twice.
 - S0.3: the workflow's green run cannot be demonstrated until the branch is pushed. That evidence belongs to the S0 exit criterion at the stage boundary.
 - S0.4: only D1 is implemented. D2 through D7 and the two negative controls beyond N1 land with the stages that build the checks consuming them. D1 alone is what the S0 exit criterion asks for.
 - S0.4: `spec/ledger.spec.yaml` does not exist yet. 06-TESTING.md lists it as a fixture requirement, but there is no schema to validate it against until M1, so writing it now would produce a file nothing can check.

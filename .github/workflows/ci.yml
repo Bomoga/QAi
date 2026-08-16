@@ -3,8 +3,10 @@ name: CI
 on:
   push:
     branches: [main, dev]
+  # Every pull request, whatever it targets. Filtering to main and dev left a PR
+  # stacked on another branch with no checks at all, which is the case most likely
+  # to need them: it carries its parent's changes as well as its own.
   pull_request:
-    branches: [main, dev]
 
 concurrency:
   group: ci-${{ github.ref }}
