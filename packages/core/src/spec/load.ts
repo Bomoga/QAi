@@ -14,6 +14,7 @@ import {
 } from '../contracts/index.ts';
 import { isConditionParseError, parseCondition, type ConditionAst } from './condition.ts';
 import { error, hasErrors, warning, type LoadDiagnostic, type SpecError } from './diagnostics.ts';
+import { hashSpec } from './hash.ts';
 
 /**
  * Spec loading, merging, identifier derivation, and diagnostics.
@@ -31,6 +32,8 @@ export interface LoadOptions {
 
 export interface LoadedSpec {
   readonly spec: Spec;
+  /** sha256 over the canonicalized spec. M6 uses it to tell whether two runs compare. */
+  readonly hash: string;
   readonly diagnostics: readonly LoadDiagnostic[];
   /** Parsed conditions, keyed by access rule id. Populated for every rule that has one. */
   readonly conditions: ReadonlyMap<string, ConditionAst>;
@@ -422,5 +425,5 @@ export function loadSpec(paths: readonly string[], options: LoadOptions = {}): L
     };
   }
 
-  return { spec, diagnostics, conditions };
+  return { spec, hash: hashSpec(spec), diagnostics, conditions };
 }
