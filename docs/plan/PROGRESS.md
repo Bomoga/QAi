@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T12:50:00Z
+Updated: 2026-08-15T13:15:00Z
 Current stage: S2
-Next task: M2.3
+Next task: M2.4
 
 ## S0. Skeleton
 
@@ -66,8 +66,8 @@ Surprises worth recording:
 ## S2. Target, actors, evidence (M2)
 
 - [x] M2.1 TargetConfig schema and loadConfig (commit fa4f81f)
-- [x] M2.2 environment variable resolution, all missing named at once (commit backfilled below)
-- [ ] M2.3 undici request layer with injected clock and id generator
+- [x] M2.2 environment variable resolution, all missing named at once (commit cf105a2)
+- [x] M2.3 undici request layer with injected clock and id generator (commit backfilled below)
 - [ ] M2.4 evidence capture, redaction, writing
 - [ ] M2.5 ActorSession for bearer, cookie, header, none
 - [ ] M2.6 seed and reset execution with the disposability gate
@@ -104,6 +104,10 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M2.3: `RequestSpec.method` is a closed union, not a string. The probe issues GET-equivalent traffic and mutating checks declare themselves, so an arbitrary method reaching a target should fail to compile.
+- M2.3: a transport failure is a returned value, not a throw, so M3 can turn it into `inconclusive` rather than losing the run. No retry and no backoff, per the module's Do Not.
+- M2.3: `fixedDeps` lives in `target/deps.ts` beside `systemDeps`, not in a test helper. Every module taking `Deps` needs the same fake, and three slightly different ones is how golden files start disagreeing.
+- M2.3: round trip tests start a `node:http` server inside the test on an ephemeral loopback port. Core does not depend on `fixtures/ledger`, and R9 rules out anything remote.
 - M2.2: an actor whose variable is unset is dropped, not given a blank credential. A blank credential produces a 401 that reads as a finding rather than a configuration mistake. An empty or whitespace only variable counts as unset for the same reason.
 - M2.2: `resolveCredentials` takes the environment as an argument. Core never reads `process.env`, per 02-ARCHITECTURE.md and rule R6, so the CLI will pass it in.
 - M2.1 addition, needs review: `actors[].attributes` is not in the proposed config in modules/M2-target.md, and without it the condition grammar cannot be evaluated at all. `Invoice.org_id != actor.org_id` needs a value for `actor.org_id`, and nothing in the proposed shape supplies one. Added as a string map per actor. M3 will need it; confirm the shape before it does.
