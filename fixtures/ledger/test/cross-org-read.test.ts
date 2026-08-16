@@ -19,7 +19,11 @@ let running: Server | undefined;
 
 async function start(
   d1CrossOrgInvoiceRead: boolean,
-  overrides: Partial<{ d2UnscopedInvoiceList: boolean; d3UnauthenticatedMutation: boolean }> = {},
+  overrides: Partial<{
+    d2UnscopedInvoiceList: boolean;
+    d3UnauthenticatedMutation: boolean;
+    d5UndeclaredDebugEndpoint: boolean;
+  }> = {},
 ): Promise<string> {
   const server = createLedgerServer({
     data: seedLedger(),
@@ -27,6 +31,7 @@ async function start(
       d1CrossOrgInvoiceRead,
       d2UnscopedInvoiceList: overrides.d2UnscopedInvoiceList ?? true,
       d3UnauthenticatedMutation: overrides.d3UnauthenticatedMutation ?? true,
+      d5UndeclaredDebugEndpoint: overrides.d5UndeclaredDebugEndpoint ?? true,
     },
   });
 
