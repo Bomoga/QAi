@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T16:30:00Z
+Updated: 2026-08-16T17:00:00Z
 Current stage: S3
-Next task: M3.4
+Next task: M3.5
 
 ## S0. Skeleton
 
@@ -96,8 +96,8 @@ Surprises worth recording:
 
 - [x] M3.1 CheckResult helpers and the check registry (commit 9e91220)
 - [x] M3.2 rule to plan expansion (commit 5eaaaaf)
-- [x] M3.3 condition AST evaluation against a candidate record (commit backfilled below)
-- [ ] M3.4 deny verdict table
+- [x] M3.3 condition AST evaluation against a candidate record (commit 6d7c324)
+- [x] M3.4 deny verdict table (commit backfilled below)
 - [ ] M3.5 allow rule verification
 - [ ] M3.6 list handling per Q5
 - [ ] M3.7 mutating rules behind the disposability gate
@@ -132,6 +132,9 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.4 addition beyond the table, worth confirming: a 401, 403, or 404 that still returns resource fields is treated as a fail, not a pass. The table's first row says refusal statuses pass "with no resource fields in body", so this reads the qualifier as load bearing rather than descriptive. A refusal that returns the record is not a refusal.
+- M3.4: a status the table does not name, including 3xx and 4xx outside 401/403/404, is `inconclusive`. The table covers refusal statuses, 2xx, 5xx, and transport errors; anything else is not evidence of either outcome.
+- M3.4: resource fields are matched by name at any depth, so an enveloped or listed record still counts as returned. Matching requires parsed JSON, so an unparseable body never matches on a substring.
 - M3.3 bug worth remembering: attribute lookup read inherited properties, so a condition naming `Invoice.constructor` resolved to the `Object` constructor and was compared as data, returning `false` rather than `unknown`. Own properties only now. A condition should read the target, never the runtime, and the two tests that caught it were written to assert exactly that.
 - M3.3: evaluation is three-valued. What cannot be resolved is `unknown`, never `false`. Treating a missing attribute as a failed match would silently pick the wrong record and then report a confident verdict about it.
 - M3.3: an undecidable condition does not fall through to an arbitrary record. `selectCandidate` returns a reason, and the caller turns that into `inconclusive`, per the module note that testing access control against a record that does not exist proves nothing.
