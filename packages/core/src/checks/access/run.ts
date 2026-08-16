@@ -2,6 +2,7 @@ import type { ActorSession } from '../../target/session.ts';
 import { fail, inconclusive, pass } from '../result.ts';
 import type { CheckResult } from '../types.ts';
 import { selectCandidate, type CandidateRecord } from './evaluate.ts';
+import { assessDenyListOutcome } from './list.ts';
 import { resolvePath, type AccessCheckPlan } from './plan.ts';
 import { assessAllowOutcome, assessDenyOutcome } from './verdict.ts';
 
@@ -79,10 +80,52 @@ export async function runAccessCheck(
 
   const { outcome, evidenceId } = await session.request({ method: plan.method, path });
   const evidence = [evidenceId];
+  const where = `${plan.method} ${path} as actor ${plan.actorId}`;
+
+  if (plan.action === 'list' && plan.rule.effect === 'deny') {
+    const assessment = assessDenyListOutcome({
+      outcome,
+      condition: plan.condition,
+      entity: plan.resource,
+      actorAttributes: session.attributes,
+    });
+
+    if (assessment.verdict === 'fail') {
+      return fail(
+        {
+          identity: plan.identity,
+          title: `${plan.resource} list returned rows belonging to another owner`,
+          detail: `${where} returned ${assessment.status} with ${assessment.totalRows} row(s), ${assessment.foreignRowCount} of which the rule denies: ${assessment.foreignRowIds.join(', ')}`,
+          evidence,
+        },
+        plan.severityOnFail,
+      );
+    }
+
+    if (assessment.verdict === 'pass') {
+      const detail =
+        assessment.reason === 'refused'
+          ? `${where} returned ${assessment.status}`
+          : `${where} returned ${assessment.status} with ${assessment.totalRows} row(s), none of which the rule denies`;
+
+      return pass({
+        identity: plan.identity,
+        title: `${plan.resource} list is scoped to actor ${plan.actorId}`,
+        detail,
+        evidence,
+      });
+    }
+
+    return inconclusive({
+      identity: plan.identity,
+      title: `Scoping of the ${plan.resource} list could not be established`,
+      detail: describeListInconclusive(where, assessment.reason, assessment.status),
+      evidence,
+    });
+  }
 
   if (plan.rule.effect === 'deny') {
     const assessment = assessDenyOutcome(outcome, plan.resourceFields);
-    const where = `${plan.method} ${path} as actor ${plan.actorId}`;
 
     if (assessment.verdict === 'fail') {
       return fail(
@@ -114,7 +157,6 @@ export async function runAccessCheck(
   }
 
   const assessment = assessAllowOutcome(outcome, plan.resourceFields);
-  const where = `${plan.method} ${path} as actor ${plan.actorId}`;
 
   if (assessment.verdict === 'pass') {
     return pass({
@@ -143,6 +185,24 @@ export async function runAccessCheck(
     detail: describeInconclusive(where, assessment.reason, assessment.status),
     evidence,
   });
+}
+
+/** Q5: an empty list and an unreadable one are different facts and read differently. */
+function describeListInconclusive(where: string, reason: string, status?: number): string {
+  switch (reason) {
+    case 'transport-error':
+      return `${where} did not complete, so nothing was established about it`;
+    case 'server-error':
+      return `${where} returned ${status}, which says nothing about how the list is scoped`;
+    case 'no-rows-returned':
+      return `${where} returned ${status} with no rows. An empty list may mean the endpoint scopes correctly or that there was nothing to return, and those are not distinguishable from here`;
+    case 'no-rows-recognized':
+      return `${where} returned ${status} in a shape this check could not read as a list of records`;
+    case 'ownership-undecidable':
+      return `${where} returned ${status}, but ownership of the returned rows could not be established from the rule condition`;
+    default:
+      return `${where} returned ${status}, which the verdict table does not cover`;
+  }
 }
 
 /** States the observation, never the label. See the output style in 04-CONVENTIONS.md. */

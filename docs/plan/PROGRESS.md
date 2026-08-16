@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T18:00:00Z
+Updated: 2026-08-16T18:30:00Z
 Current stage: S3
-Next task: M3.6
+Next task: M3.7
 
 ## S0. Skeleton
 
@@ -98,8 +98,8 @@ Surprises worth recording:
 - [x] M3.2 rule to plan expansion (commit 5eaaaaf)
 - [x] M3.3 condition AST evaluation against a candidate record (commit 6d7c324)
 - [x] M3.4 deny verdict table (commit 56a9cf3)
-- [x] M3.5 allow rule verification and the check runner (commit backfilled below)
-- [ ] M3.6 list handling per Q5
+- [x] M3.5 allow rule verification and the check runner (commit 2545c2b)
+- [x] M3.6 list handling per Q5 (commit backfilled below)
 - [ ] M3.7 mutating rules behind the disposability gate
 - [ ] M3.8 severity assignment and finding text
 - [ ] M3.9 integration test over D1, D2, D3, N1, N2
@@ -132,6 +132,9 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.6, Q5 answered by implementation: a deny list rule asserts the absence of foreign rows. Rows must be present and identifiable for a pass. An empty list is inconclusive, since the endpoint scoping correctly and the dataset simply being empty are not distinguishable from outside. A row whose ownership cannot be judged also blocks a pass, because claiming correct scoping on the strength of rows nobody could read is the same mistake in a quieter form.
+- M3.6: row extraction reads a top level array, or the first own property holding an array of objects, which covers `{invoices: []}` and `{data: []}` without guessing at key names. Returning undefined for an unreadable shape is deliberate: not recognizing the shape and the list being empty are different facts and get different verdicts.
+- M3.6 test bug worth remembering: a default parameter swallows an explicitly passed `undefined`, so a test meant to exercise the no-condition path was silently exercising the with-condition path and failing for the right reason by accident. Call the function directly when the point of the test is that an argument is absent.
 - M3.5 design not given by the plan, needs review: the module states the allow case in prose, not a table, so the assessment was designed here. 2xx is a pass whatever the body, since the assertion is only that the actor was let through and a 204 on a permitted update is a success with nothing to return. 401, 403, and 404 fail. 5xx and any other status are inconclusive, because a finding on an allow rule claims a legitimate user is being refused and the tool cannot tell a malformed request of its own making from a broken target.
 - M3.5: the runner sends nothing when no suitable record can be identified. Requesting an id that was never seeded returns a 404 that looks exactly like correct enforcement, so the check is inconclusive and the request is never made. Two tests assert the request list stays empty.
 - M3.5: `AccessCheckPlan` gained `resourceFields`, resolved from the spec entity at planning time, so a verdict does not look the entity up again per response.
