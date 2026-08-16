@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T22:45:00Z
+Updated: 2026-08-16T23:05:00Z
 Current stage: S4
-Next task: M4.6
+Next task: M4.7
 
 ## S0. Skeleton
 
@@ -129,8 +129,8 @@ Surprises worth recording:
 - [x] M4.2 Next.js App Router adapter (commit f14f1cd)
 - [x] M4.3 Express adapter (commit d1cbcbf)
 - [ ] M4.4 Prisma schema adapter, **deferred by decision**, see the M4 Open questions
-- [x] M4.5 black box crawler, read-only, budgeted (commit backfilled below)
-- [ ] M4.6 endpoint identity normalization
+- [x] M4.5 black box crawler, read-only, budgeted (commit 9adc558)
+- [x] M4.6 endpoint identity normalization (commit backfilled below)
 - [ ] M4.7 source and black box merge with confidence
 - [ ] M4.8 diffSpecObservation and severity rules
 - [ ] M4.9 integration test over D5 and D6
@@ -160,6 +160,11 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.6: identity has two levels. `endpointId` is what a reader sees and what the Observation stores, keeping parameter names as the adapter wrote them. `identityKey` erases them, so a source `:invoiceId` and a crawl's derived `:id` are recognized as one route. A merge comparing the written form would report each side as an endpoint the other did not have.
+- M4.6: a segment becomes a parameter only when it is recognizably an identifier: all digits, a UUID, 24 or more hex characters, `INV-1001` or `user_42`, or a 20 character opaque token containing a digit. Never merely because it contains a digit, which is why `/api/v1/invoices` and `/oauth2/callback` survive intact. M6 diffs on this, so widening the rule renames every endpoint in every stored run.
+- M4.6: a catch-all keeps its own marker in the identity key. `/files/:path*` and `/files/:name` match a different number of segments and are not the same route.
+- M4.6: folding two records of one route unions their evidence and their observed fields, takes a determined `authRequired` over an unknown one, and falls back to `unknown` when two observations disagree rather than picking a side.
+- M4.6: normalization is not applied inside the crawler. The crawl records what it observed and the fold happens once, over both sides, so the source and black box readings are normalized by the same rule. That is M4.7.
 - M4.4 stopped the loop and was skipped by the user's decision on 2026-08-16. The module says to prefer `@prisma/internals` over regex for `schema.prisma`, and that package is not on the approved list in 04-CONVENTIONS.md, which is a dependency stop. Three options were put up: approve it as a runtime dependency, approve it as a lazily imported optional one, or correct the plan to read the schema textually like the other two adapters. The choice was to skip M4.4 for now and carry on; the options stay written down in the M4 Open questions. Consequence for the stage: the Observation has no entities from source at all, so `fieldMismatches` and `specifiedNotObserved` for an entity will have only the black box side to work from at M4.8.
 - M4.5: the M4 Definition of Done says a black box degrade produces `origin: "inferred"`, but `EndpointOrigin` in 03-CONTRACTS.md is `source` or `blackbox`, and `inferred` is an entity origin. The crawler emits `blackbox` for endpoints, per the contract. The same DoD line already needs restating for the fixture being probed black box, so both corrections belong in one edit at the stage boundary.
 - M4.5: the crawler records a path that answered 401 or 403 but not one that answered 404, 405, or 410. A refusal proves the route is there; a dead link is evidence against it, and recording one would invent a route the target refuses to serve.
