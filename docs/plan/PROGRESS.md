@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-15T15:00:00Z
-Current stage: S2
-Next task: stage boundary, demonstrate the S2 exit criterion
+Updated: 2026-08-16T15:30:00Z
+Current stage: S3
+Next task: M3.2
 
 ## S0. Skeleton
 
@@ -94,7 +94,17 @@ Surprises worth recording:
 
 ## S3. Access checks (M3)
 
-- [ ] not started
+- [x] M3.1 CheckResult helpers and the check registry (commit backfilled below)
+- [ ] M3.2 rule to plan expansion
+- [ ] M3.3 condition AST evaluation against a candidate record
+- [ ] M3.4 deny verdict table
+- [ ] M3.5 allow rule verification
+- [ ] M3.6 list handling per Q5
+- [ ] M3.7 mutating rules behind the disposability gate
+- [ ] M3.8 severity assignment and finding text
+- [ ] M3.9 integration test over D1, D2, D3, N1, N2
+- Exit criterion: `qai check` against `fixtures/ledger` reports the seeded cross-owner leak as a high severity finding with request and response evidence and exits 1; fixing the fixture app makes it exit 0
+- Known blockers on the criterion, same shape as S1: `qai check` is M8 and lands in S6, and the module Definition of Done names `pnpm --filter @qai/cli exec qai check`. The fixture also implements only D1, so D2 and D3 have to be added here before M3.9 can cover them.
 
 ## S4. Probe and structural diff (M4)
 
@@ -121,6 +131,12 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M3.1: the registry converts a thrown runner into `inconclusive` rather than letting it escape. Rule R4 stated as a convention would leave every runner to remember it; here it is enforced in the one place every check passes through. A test asserts a throwing check does not remove the checks after it.
+- M3.1: `runAll` orders non-mutating checks before mutating ones by plan, not by caller discipline, so a mutating check cannot land mid-batch and change what later checks observe.
+- M3.1: check ids are content-hashed over type, requirement, rule, actor, and action. Two actors against one rule are two checks. Anything that changes identity renames the check and breaks M6's run comparison, so the hash inputs are deliberately narrow.
+- M3.1: lint now stops `packages/core/src/checks/**` importing `llm/` by path, which is the M3 Definition of Done item. Verified by probe: a check importing `../../llm/judge.ts` errors, the same import from `spec/` passes. The model client patterns already covered the direct route; this covers importing a helper that wraps one.
+- M3.1: `pnpm --filter @qai/core test -- access` exits 1 with "No test files found" until `checks/access/` exists at M3.2. Expected at this task; it is a module level Definition of Done, not a per task one.
 
 - Post-merge fix, branch `fix/entity-field-order`: `sameEntity` in the loader compared entity fields by array position, so two spec files agreeing about an entity but declaring its fields in a different order failed to load as a conflicting redefinition. `hash.ts` already sorted fields before hashing, so the two disagreed with each other: the loader called them different, the hash called them identical. Found by Copilot's review on PR #2. The fixture spec hash is unchanged, `sha256:5a31b527c6c1...`.
 - Worth watching for the same class of bug elsewhere: any place that compares two authored collections should say whether order is meaningful. It is for access rules, since ordinal position derives an identifier. It is not for entity fields, actors, or entities.
