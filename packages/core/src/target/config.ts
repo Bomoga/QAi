@@ -87,10 +87,50 @@ export const RedactionSectionSchema = z
   })
   .strict();
 
+/**
+ * Route and instance overrides, used when no Observation is available.
+ *
+ * An access rule names a resource, not a URL, and M3 refuses to guess one by
+ * pluralizing an entity name. Until M4 can discover routes, this is where the mapping
+ * comes from. `{id}` in a path is substituted with the instance being acted on.
+ */
+export const ResourceInstanceSchema = z
+  .object({
+    id: z.string().min(1),
+    /** Compared against a rule's condition to decide which instance is foreign. */
+    attributes: z.record(z.string(), z.string()).default({}),
+  })
+  .strict();
+
+export const ResourceRoutesSchema = z
+  .object({
+    read: z.string().min(1).optional(),
+    list: z.string().min(1).optional(),
+    create: z.string().min(1).optional(),
+    update: z.string().min(1).optional(),
+    delete: z.string().min(1).optional(),
+  })
+  .strict();
+
+export const ResourceConfigSchema = z
+  .object({
+    /** Matches an entity name in the spec. */
+    name: z.string().min(1),
+    routes: ResourceRoutesSchema.default({}),
+    /**
+     * Records the target is known to hold. A deny check needs a real record owned by
+     * someone else: testing access control against a record that does not exist
+     * proves nothing, so an absent instance produces `inconclusive`, never `pass`.
+     */
+    instances: z.array(ResourceInstanceSchema).default([]),
+  })
+  .strict();
+
 export const TargetConfigSchema = z
   .object({
     target: TargetSectionSchema,
     actors: z.array(ActorConfigSchema).default([]),
+    resources: z.array(ResourceConfigSchema).default([]),
     redaction: RedactionSectionSchema.default({ extraPatterns: [] }),
   })
   .strict();
@@ -101,6 +141,9 @@ export type HeaderAuth = z.infer<typeof HeaderAuthSchema>;
 export type ActorAuth = z.infer<typeof ActorAuthSchema>;
 export type ActorConfig = z.infer<typeof ActorConfigSchema>;
 export type TargetSection = z.infer<typeof TargetSectionSchema>;
+export type ResourceInstance = z.infer<typeof ResourceInstanceSchema>;
+export type ResourceRoutes = z.infer<typeof ResourceRoutesSchema>;
+export type ResourceConfig = z.infer<typeof ResourceConfigSchema>;
 export type TargetConfig = z.infer<typeof TargetConfigSchema>;
 
 export interface ConfigError {

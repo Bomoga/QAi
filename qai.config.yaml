@@ -28,6 +28,24 @@ actors:
       kind: none
     attributes: {}
 
+# Routes and seeded records. An access rule names a resource, not a URL, and the tool
+# refuses to guess one from the entity name. Until the probe in M4 can discover these,
+# this is where the mapping comes from.
+resources:
+  - name: Invoice
+    routes:
+      read: /api/invoices/{id}
+      list: /api/invoices
+      update: /api/invoices/{id}
+      delete: /api/invoices/{id}
+    instances:
+      - id: INV-1001
+        attributes:
+          org_id: org-1
+      - id: INV-2001
+        attributes:
+          org_id: org-2
+
 redaction:
   extraPatterns:
     - '(?i)api[_-]?key'

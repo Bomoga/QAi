@@ -11,3 +11,4 @@
 export * from './registry.ts';
 export * from './result.ts';
 export * from './types.ts';
+export * from './access/index.ts';

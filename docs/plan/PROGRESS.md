@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T15:30:00Z
+Updated: 2026-08-16T16:00:00Z
 Current stage: S3
-Next task: M3.2
+Next task: M3.3
 
 ## S0. Skeleton
 
@@ -94,8 +94,8 @@ Surprises worth recording:
 
 ## S3. Access checks (M3)
 
-- [x] M3.1 CheckResult helpers and the check registry (commit backfilled below)
-- [ ] M3.2 rule to plan expansion
+- [x] M3.1 CheckResult helpers and the check registry (commit 9e91220)
+- [x] M3.2 rule to plan expansion (commit backfilled below)
 - [ ] M3.3 condition AST evaluation against a candidate record
 - [ ] M3.4 deny verdict table
 - [ ] M3.5 allow rule verification
@@ -132,6 +132,10 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.2 cross-module edit, needs a PR note: `TargetConfig` gained a `resources` section holding route templates and seeded instances. M2 owns that file. It is here because M3 resolves a resource to a URL and refuses to guess one, and M4, which would discover routes, is S4. When the probe lands, the Observation takes precedence and this becomes the fallback the module already describes.
+- M3.2: a rule that cannot be planned comes back in `unplannable` with a reason from the contract's closed set, not dropped. An unplanned rule that vanished would read as coverage.
+- M3.2: action to method mapping is fixed, read and list to GET, create to POST, update to PATCH, delete to DELETE. Not stated anywhere in the plan; confirm, particularly PATCH over PUT for update.
+- M3.2: severity on failure is deny high, allow medium, which M3.8 may refine. A deny that fails means something forbidden is reachable; an allow that fails means a feature is broken, which matters less to this audience.
 - M3.1: the registry converts a thrown runner into `inconclusive` rather than letting it escape. Rule R4 stated as a convention would leave every runner to remember it; here it is enforced in the one place every check passes through. A test asserts a throwing check does not remove the checks after it.
 - M3.1: `runAll` orders non-mutating checks before mutating ones by plan, not by caller discipline, so a mutating check cannot land mid-batch and change what later checks observe.
 - M3.1: check ids are content-hashed over type, requirement, rule, actor, and action. Two actors against one rule are two checks. Anything that changes identity renames the check and breaks M6's run comparison, so the hash inputs are deliberately narrow.
