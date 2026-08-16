@@ -1,0 +1,297 @@
+specVersion: '0.1'
+name: 'Ledger invoicing'
+
+# This describes the ledger app as intended, not as built. Every defect in the
+# catalog in docs/plan/06-TESTING.md is a disagreement between this file and the
+# running application, which is the disagreement the tool exists to find.
+#
+# Requirements are numbered to match the defect they cover where one exists:
+# REQ-001 to REQ-003 cover D1 to D3, REQ-004 covers D4, REQ-005 and REQ-006 cover
+# the structural defects D5 and D6, and REQ-007 covers D7. The rest describe
+# behavior the app gets right, so a run that flags them has produced a false
+# positive, which invariant I2 treats as worse than a missed finding.
+
+actors:
+  - id: owner
+    description: 'Authenticated user belonging to organization org-1'
+  - id: outsider
+    description: 'Authenticated user belonging to organization org-2'
+  - id: anonymous
+    description: 'Unauthenticated caller carrying no credentials'
+
+entities:
+  - name: Organization
+    fields:
+      - name: id
+        type: string
+      - name: name
+        type: string
+
+  - name: User
+    ownedBy: Organization
+    fields:
+      - name: id
+        type: string
+      - name: email
+        type: string
+      - name: org_id
+        type: string
+      - name: token
+        type: string
+        sensitive: true
+
+  - name: Invoice
+    ownedBy: Organization
+    fields:
+      - name: id
+        type: string
+      - name: org_id
+        type: string
+      - name: total_cents
+        type: number
+      - name: notes
+        type: string
+        sensitive: true
+
+  # D6: specified and never implemented. The structural diff should report this
+  # as specifiedNotObserved at low severity.
+  - name: AuditLog
+    ownedBy: Organization
+    fields:
+      - name: id
+        type: string
+      - name: org_id
+        type: string
+      - name: action
+        type: string
+      - name: invoice_id
+        type: string
+
+requirements:
+  # D1, the seeded defect. High severity, and the finding S3 has to produce.
+  - id: REQ-001
+    statement: 'A user can only read invoices belonging to their own organization'
+    entities: [Invoice, Organization]
+    fields: [Invoice.org_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: read
+        resource: Invoice
+        condition: 'Invoice.org_id != actor.org_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'an invoice belonging to organization org-1'
+        when: 'actor outsider requests that invoice by id'
+        then: 'the response status is 403 or 404 and the body contains no Invoice fields'
+
+  # D2, not yet implemented in the app. The list endpoint does not exist at all
+  # today, so this requirement is expected to be unverified until it does.
+  - id: REQ-002
+    statement: 'Listing invoices returns only invoices belonging to the caller organization'
+    entities: [Invoice]
+    fields: [Invoice.org_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: outsider
+        action: list
+        resource: Invoice
+        condition: 'Invoice.org_id != actor.org_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'invoices belonging to both organizations'
+        when: 'actor outsider lists invoices'
+        then: 'every returned invoice has org_id equal to the caller organization'
+
+  # D3, mutation reachable without credentials.
+  - id: REQ-003
+    statement: 'Modifying an invoice requires an authenticated caller'
+    entities: [Invoice]
+    tags: [access-control, authentication]
+    accessRules:
+      - id: AR-003-01
+        actor: anonymous
+        action: update
+        resource: Invoice
+        effect: deny
+      - id: AR-003-02
+        actor: anonymous
+        action: delete
+        resource: Invoice
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'an existing invoice'
+        when: 'a caller with no credentials attempts to update it'
+        then: 'the response status is 401 and the invoice is unchanged'
+
+  # D4, a sensitive field returned where it should be omitted.
+  - id: REQ-004
+    statement: 'Invoice notes are omitted from list responses'
+    entities: [Invoice]
+    fields: [Invoice.notes]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an invoice carrying notes'
+        when: 'actor owner lists invoices'
+        then: 'no returned invoice includes a notes field'
+
+  # D5, the undeclared debug endpoint. Nothing here declares it, which is exactly
+  # what makes the structural diff able to report it as observed and not specified.
+  - id: REQ-005
+    statement: 'The application exposes no administrative or debug endpoints'
+    tags: [surface-area]
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'the running application'
+        when: 'a caller requests a path under /api/debug'
+        then: 'the response status is 404'
+
+  # D6, the audit entity specified above and never built.
+  - id: REQ-006
+    statement: 'Every modification to an invoice is recorded in an audit log entry'
+    entities: [AuditLog, Invoice]
+    tags: [audit]
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'an authenticated owner and one of their invoices'
+        when: 'the owner updates the invoice'
+        then: 'an AuditLog entry exists referencing that invoice'
+
+  # D7, deliberately no checks. Loads with a warning and reports as unverified
+  # with reason no-checks-defined, which is how a coverage gap stays visible.
+  - id: REQ-007
+    statement: 'Invoice totals are displayed in the organization preferred currency'
+    entities: [Invoice, Organization]
+    tags: [presentation]
+
+  # N1, the negative control. The owner reading their own invoice must keep
+  # working. A finding here is a false positive and blocks merge.
+  - id: REQ-008
+    statement: 'A user can read invoices belonging to their own organization'
+    entities: [Invoice]
+    fields: [Invoice.org_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-008-01
+        actor: owner
+        action: read
+        resource: Invoice
+        condition: 'Invoice.org_id == actor.org_id'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-008-01
+        mode: deterministic
+        given: 'an invoice belonging to the caller organization'
+        when: 'actor owner requests that invoice by id'
+        then: 'the response status is 200 and the body contains the invoice id'
+
+  # N2, the second negative control. A cross-organization write is already
+  # refused, so a finding here is also a false positive.
+  - id: REQ-009
+    statement: 'A user cannot modify invoices belonging to another organization'
+    entities: [Invoice]
+    fields: [Invoice.org_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-009-01
+        actor: outsider
+        action: update
+        resource: Invoice
+        condition: 'Invoice.org_id != actor.org_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-009-01
+        mode: deterministic
+        given: 'an invoice belonging to organization org-1'
+        when: 'actor outsider attempts to update that invoice'
+        then: 'the response status is 403 or 404 and the invoice is unchanged'
+
+  - id: REQ-010
+    statement: 'An unauthenticated caller cannot read any invoice'
+    entities: [Invoice]
+    tags: [access-control, authentication]
+    accessRules:
+      - id: AR-010-01
+        actor: anonymous
+        action: read
+        resource: Invoice
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-010-01
+        mode: deterministic
+        given: 'an existing invoice'
+        when: 'a caller with no credentials requests it by id'
+        then: 'the response status is 401'
+
+  - id: REQ-011
+    statement: 'A request carrying an unrecognized token is refused'
+    entities: [User]
+    tags: [authentication]
+    accessRules:
+      - id: AR-011-01
+        actor: anonymous
+        action: read
+        resource: User
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-011-01
+        mode: deterministic
+        given: 'a bearer token belonging to no user'
+        when: 'the caller requests an invoice by id'
+        then: 'the response status is 401'
+
+  - id: REQ-012
+    statement: 'A request for an invoice that does not exist reports it as absent'
+    entities: [Invoice]
+    tags: [correctness]
+    acceptanceCriteria:
+      - id: AC-012-01
+        mode: deterministic
+        given: 'an authenticated owner'
+        when: 'the owner requests an invoice id that was never created'
+        then: 'the response status is 404'
+
+  - id: REQ-013
+    statement: 'A refused cross-organization read does not confirm that the invoice exists'
+    entities: [Invoice]
+    tags: [access-control, data-exposure]
+    acceptanceCriteria:
+      - id: AC-013-01
+        mode: deterministic
+        given: 'an invoice belonging to another organization'
+        when: 'actor outsider requests it by id'
+        then: 'the response status matches the status returned for an invoice id that does not exist'
+
+  - id: REQ-014
+    statement: 'A user token is never returned in any response body'
+    entities: [User]
+    fields: [User.token]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-014-01
+        mode: deterministic
+        given: 'the running application'
+        when: 'any endpoint is called by any actor'
+        then: 'no response body contains a token field'
+
+  - id: REQ-015
+    statement: 'The application reports its health without requiring credentials'
+    tags: [operability]
+    acceptanceCriteria:
+      - id: AC-015-01
+        mode: deterministic
+        given: 'the running application'
+        when: 'a caller with no credentials requests /health'
+        then: 'the response status is 200 and the body reports status ok'

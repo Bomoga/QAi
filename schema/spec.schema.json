@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Bomoga/QAi/schema/spec.schema.json",
+  "title": "QAi spec",
+  "description": "Machine-readable statement of intent. See docs/plan/03-CONTRACTS.md section 1. Input only, never mutated by a run.",
+  "type": "object",
+  "properties": {
+    "specVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actors": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "entities": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ownedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "fields": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "type": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sensitive": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "name",
+          "fields"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "requirements": {
+      "default": [],
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^REQ-[A-Za-z0-9_-]+$"
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entities": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "fields": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "tags": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "accessRules": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^AR-[A-Za-z0-9_-]+$"
+                },
+                "actor": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "read",
+                    "create",
+                    "update",
+                    "delete",
+                    "list"
+                  ]
+                },
+                "resource": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "condition": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "effect": {
+                  "type": "string",
+                  "enum": [
+                    "allow",
+                    "deny"
+                  ]
+                }
+              },
+              "required": [
+                "actor",
+                "action",
+                "resource",
+                "effect"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "acceptanceCriteria": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^AC-[A-Za-z0-9_-]+$"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "deterministic",
+                    "fuzzy"
+                  ]
+                },
+                "given": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "when": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "then": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "mode",
+                "given",
+                "when",
+                "then"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "entities",
+          "fields",
+          "tags",
+          "accessRules",
+          "acceptanceCriteria"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "specVersion",
+    "name",
+    "actors",
+    "entities",
+    "requirements"
+  ],
+  "additionalProperties": false
+}

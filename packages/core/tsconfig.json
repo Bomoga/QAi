@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist",
+    // No rootDir or outDir: this config typechecks only, and tsup owns the build.
+    // Pinning rootDir to src would reject the schema generator under scripts/.
     "noEmit": true,
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts"]
 }
