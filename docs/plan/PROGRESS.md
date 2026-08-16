@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T21:00:00Z
+Updated: 2026-08-16T21:30:00Z
 Current stage: S4
-Next task: M4.2
+Next task: M4.3
 
 ## S0. Skeleton
 
@@ -125,8 +125,8 @@ Surprises worth recording:
 
 ## S4. Probe and structural diff (M4)
 
-- [x] M4.1 probe interfaces and adapter registration (commit backfilled below)
-- [ ] M4.2 Next.js App Router adapter
+- [x] M4.1 probe interfaces and adapter registration (commit 6795e64)
+- [x] M4.2 Next.js App Router adapter (commit backfilled below)
 - [ ] M4.3 Express adapter
 - [ ] M4.4 Prisma schema adapter
 - [ ] M4.5 black box crawler, read-only, budgeted
@@ -135,7 +135,7 @@ Surprises worth recording:
 - [ ] M4.8 diffSpecObservation and severity rules
 - [ ] M4.9 integration test over D5 and D6
 - Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
-- **Conflict raised at stage start, needs a decision.** M4's adapters target Next.js, Express, and Prisma. `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. So the Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" cannot hold with `origin: source`; the ledger will be black box probed. Adapters are built and tested against small synthetic source trees instead. Options: accept black box origin for the ledger, add a plain `node:http` adapter (outside Q1's list, needs approval), or rewrite the fixture on a supported framework (contradicts the three second boot requirement in 06-TESTING.md).
+- **Conflict raised at stage start, decided 2026-08-16: black box origin for the ledger.** M4's adapters target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. The Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" therefore holds with `origin: blackbox` and reduced confidence, not `origin: source`. Adapters are built and tested against synthetic source trees. Rejected: adding a `node:http` adapter, which is outside Q1's list and covers a framework no real user has; and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in 06-TESTING.md. The DoD line should be restated to say black box for this fixture.
 - D5, the undeclared debug endpoint, does not exist in the ledger yet and has to be added before M4.9, the same way D2 and D3 were added during S3.
 
 ## S5. Behavioral checks (M5)
@@ -160,6 +160,10 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.2: adapters are tested against synthetic route trees in a temp directory, not a scaffolded Next.js app. The adapter reads a directory convention and a few export forms; a real application would add hundreds of files without covering anything more.
+- M4.2: method patterns are anchored to the line start, so `// export async function DELETE()` in a comment and `"export function PUT()"` in a string do not become endpoints. Both have tests.
+- M4.2: a route file exporting nothing recognizable produces a warning note and no endpoint. Inventing a route from a filename would put something in the Observation the application does not serve.
+- M4.2: confidence constants revised from the M4.1 guess. Source only is now `high`, because an adapter read the declaration rather than deducing it; black box only is `low`, since traffic inference can miss an unlinked route and can split one route into two.
 - M4.1: `ProbeMode` was briefly redefined in `probe/types.ts` when the contracts already export it. Typecheck caught the ambiguous re-export. Worth remembering as a category: anything the contracts already name is imported, never restated, and the barrel makes a duplicate a compile error rather than a silent divergence.
 - M4.1: an adapter whose `detect` throws has simply not recognized the root; an adapter whose `scan` throws produces an error note and the other adapters still run. A probe that fails partially produces a partial Observation, per the failure posture in 02-ARCHITECTURE.md.
 - M4.1: more than one adapter recognizing a repository is normal rather than a conflict. A Next.js app with a Prisma schema is two adapters describing different things.

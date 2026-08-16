@@ -69,10 +69,15 @@ export interface ProbeFindings {
 }
 
 /**
- * Confidence when only one side saw something. The merge raises it to `high` when both
- * agree and lowers it to `medium` with a note when they disagree, per the module.
+ * Confidence levels the merge assigns.
+ *
+ * Source is authoritative about what routes exist: an adapter read the declaration, it
+ * did not deduce it. Black box alone is inference from traffic, which can miss a route
+ * nothing linked to and can mistake one route for two. Both agreeing is the strongest
+ * statement available, and disagreement is recorded as `medium` with a note rather than
+ * resolved silently, because which side is wrong is exactly what a reader needs to see.
  */
-export const CONFIDENCE_SOURCE_ONLY: Confidence = 'medium';
+export const CONFIDENCE_SOURCE_ONLY: Confidence = 'high';
 export const CONFIDENCE_BLACKBOX_ONLY: Confidence = 'low';
 export const CONFIDENCE_BOTH_AGREE: Confidence = 'high';
 export const CONFIDENCE_DISAGREEMENT: Confidence = 'medium';
