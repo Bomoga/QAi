@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T19:00:00Z
+Updated: 2026-08-16T19:30:00Z
 Current stage: S3
-Next task: M3.8
+Next task: M3.9
 
 ## S0. Skeleton
 
@@ -100,8 +100,8 @@ Surprises worth recording:
 - [x] M3.4 deny verdict table (commit 56a9cf3)
 - [x] M3.5 allow rule verification and the check runner (commit 2545c2b)
 - [x] M3.6 list handling per Q5 (commit d73bd1e)
-- [x] M3.7 mutating rules behind the disposability gate (commit backfilled below)
-- [ ] M3.8 severity assignment and finding text
+- [x] M3.7 mutating rules behind the disposability gate (commit bdcf8c1)
+- [x] M3.8 severity assignment and finding text (commit backfilled below)
 - [ ] M3.9 integration test over D1, D2, D3, N1, N2
 - Exit criterion: `qai check` against `fixtures/ledger` reports the seeded cross-owner leak as a high severity finding with request and response evidence and exits 1; fixing the fixture app makes it exit 0
 - Known blockers on the criterion, same shape as S1: `qai check` is M8 and lands in S6, and the module Definition of Done names `pnpm --filter @qai/cli exec qai check`. The fixture also implements only D1, so D2 and D3 have to be added here before M3.9 can cover them.
@@ -132,6 +132,11 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M3.8: severity is deny high, allow medium, and deliberately does not scale by which fields came back. Scaling by field sensitivity would look like a refinement but means guessing the cost of an exposure from field names, which the spec author is better placed to judge than the tool. A test asserts severity is unchanged when the resource declares no fields.
+- M3.8: a suggested fix lives inside `detail`, prefixed `Suggestion:`. The CheckResult contract has no field for one, and adding it would be a contract change. If a report wants to render suggestions separately, that is the contract question to raise.
+- M3.8: a passing check carries no reference and no suggestion. There is nothing to look up and nothing to fix, and a suggestion attached to a pass reads as a finding to anyone skimming.
+- M3.8: `FORBIDDEN_FINDING_TERMS` is exported and asserted per term against real finding output, so the Do Not on naming vulnerability classes is enforced rather than remembered.
+- M3.8: plans now carry `locationRef` from an Observation `handlerRef` when a probe supplied one, so a finding cites a file rather than a request. Nothing supplies it until M4.
 - M3.7: the runner takes mutation permission as an argument from the M2 gate rather than recomputing disposability itself. One interlock, not two implementations of one. Absent permission means refused, so the safe answer is the default rather than something a caller has to remember to ask for.
 - M3.7: `runAccessChecks` orders by plan, so handing it mutating checks first still runs every read first. A test sorts the plans backwards to prove the ordering does not come from the caller.
 - M3.7: a failed reset stops the remaining mutating checks and reports them inconclusive naming the reset failure. Continuing would run them against a target in an unknown state, and a verdict from that describes nothing.

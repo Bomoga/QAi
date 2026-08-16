@@ -2,6 +2,13 @@ import type { ActorSession } from '../../target/session.ts';
 import { fail, inconclusive, pass } from '../result.ts';
 import type { CheckResult } from '../types.ts';
 import { selectCandidate, type CandidateRecord } from './evaluate.ts';
+import {
+  allowFailureDetail,
+  denyFailureDetail,
+  listFailureDetail,
+  passDetail,
+  severityForAccessFailure,
+} from './findings.ts';
 import { assessDenyListOutcome } from './list.ts';
 import { resolvePath, type AccessCheckPlan } from './plan.ts';
 import { assessAllowOutcome, assessDenyOutcome } from './verdict.ts';
@@ -109,7 +116,9 @@ export async function runAccessCheck(
 
   const { outcome, evidenceId } = await session.request({ method: plan.method, path });
   const evidence = [evidenceId];
-  const where = `${plan.method} ${path} as actor ${plan.actorId}`;
+  const request = `${plan.method} ${path}`;
+  const where = `${request} as actor ${plan.actorId}`;
+  const locationRef = plan.locationRef === undefined ? {} : { locationRef: plan.locationRef };
 
   if (plan.action === 'list' && plan.rule.effect === 'deny') {
     const assessment = assessDenyListOutcome({
@@ -124,24 +133,39 @@ export async function runAccessCheck(
         {
           identity: plan.identity,
           title: `${plan.resource} list returned rows belonging to another owner`,
-          detail: `${where} returned ${assessment.status} with ${assessment.totalRows} row(s), ${assessment.foreignRowCount} of which the rule denies: ${assessment.foreignRowIds.join(', ')}`,
+          detail: listFailureDetail({
+            plan,
+            request,
+            evidenceId,
+            ...(assessment.status === undefined ? {} : { status: assessment.status }),
+            foreignRowIds: assessment.foreignRowIds,
+            totalRows: assessment.totalRows,
+          }),
           evidence,
+          ...locationRef,
         },
-        plan.severityOnFail,
+        severityForAccessFailure(plan),
       );
     }
 
     if (assessment.verdict === 'pass') {
-      const detail =
+      const note =
         assessment.reason === 'refused'
-          ? `${where} returned ${assessment.status}`
-          : `${where} returned ${assessment.status} with ${assessment.totalRows} row(s), none of which the rule denies`;
+          ? ''
+          : `with ${assessment.totalRows} row(s), none of which the rule denies`;
 
       return pass({
         identity: plan.identity,
         title: `${plan.resource} list is scoped to actor ${plan.actorId}`,
-        detail,
+        detail: passDetail({
+          plan,
+          request,
+          evidenceId,
+          ...(assessment.status === undefined ? {} : { status: assessment.status }),
+          note,
+        }).trim(),
         evidence,
+        ...locationRef,
       });
     }
 
@@ -161,10 +185,17 @@ export async function runAccessCheck(
         {
           identity: plan.identity,
           title: `${plan.resource} readable by actor ${plan.actorId}, which the spec denies`,
-          detail: `${where} returned ${assessment.status} with ${plan.resource} fields ${assessment.observedFields.join(', ')}`,
+          detail: denyFailureDetail({
+            plan,
+            request,
+            evidenceId,
+            ...(assessment.status === undefined ? {} : { status: assessment.status }),
+            observedFields: assessment.observedFields,
+          }),
           evidence,
+          ...locationRef,
         },
-        plan.severityOnFail,
+        severityForAccessFailure(plan),
       );
     }
 
@@ -172,8 +203,15 @@ export async function runAccessCheck(
       return pass({
         identity: plan.identity,
         title: `${plan.resource} refused to actor ${plan.actorId}`,
-        detail: `${where} returned ${assessment.status} with no ${plan.resource} fields in the body`,
+        detail: passDetail({
+          plan,
+          request,
+          evidenceId,
+          ...(assessment.status === undefined ? {} : { status: assessment.status }),
+          note: `with no ${plan.resource} fields in the body`,
+        }),
         evidence,
+        ...locationRef,
       });
     }
 
@@ -182,6 +220,7 @@ export async function runAccessCheck(
       title: `Access to ${plan.resource} by actor ${plan.actorId} could not be established`,
       detail: describeInconclusive(where, assessment.reason, assessment.status),
       evidence,
+      ...locationRef,
     });
   }
 
@@ -191,8 +230,15 @@ export async function runAccessCheck(
     return pass({
       identity: plan.identity,
       title: `${plan.resource} reachable by actor ${plan.actorId}, as the spec allows`,
-      detail: `${where} returned ${assessment.status}`,
+      detail: passDetail({
+        plan,
+        request,
+        evidenceId,
+        ...(assessment.status === undefined ? {} : { status: assessment.status }),
+        note: '',
+      }).trim(),
       evidence,
+      ...locationRef,
     });
   }
 
@@ -201,10 +247,16 @@ export async function runAccessCheck(
       {
         identity: plan.identity,
         title: `${plan.resource} refused to actor ${plan.actorId}, which the spec allows`,
-        detail: `${where} returned ${assessment.status}`,
+        detail: allowFailureDetail({
+          plan,
+          request,
+          evidenceId,
+          ...(assessment.status === undefined ? {} : { status: assessment.status }),
+        }),
         evidence,
+        ...locationRef,
       },
-      plan.severityOnFail,
+      severityForAccessFailure(plan),
     );
   }
 
@@ -213,6 +265,7 @@ export async function runAccessCheck(
     title: `Access to ${plan.resource} by actor ${plan.actorId} could not be established`,
     detail: describeInconclusive(where, assessment.reason, assessment.status),
     evidence,
+    ...locationRef,
   });
 }
 

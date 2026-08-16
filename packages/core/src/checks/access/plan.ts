@@ -52,6 +52,8 @@ export interface AccessCheckPlan extends CheckPlan {
    * them came back, so they are resolved once here rather than per response.
    */
   readonly resourceFields: readonly string[];
+  /** `app/api/invoices/[id]/route.ts:12` when a probe supplied one. */
+  readonly locationRef?: string;
 }
 
 export interface UnplannableRule {
@@ -102,7 +104,7 @@ function resolveRoute(
   action: AccessAction,
   observation: Observation | null,
   context: PlanningContext,
-): { method: HttpMethod; path: string } | undefined {
+): { method: HttpMethod; path: string; handlerRef?: string } | undefined {
   const method = METHOD_FOR_ACTION[action];
 
   const observed = observation?.endpoints.find(
@@ -114,7 +116,14 @@ function resolveRoute(
         ? !endpoint.path.includes(':')
         : endpoint.path.includes(':')),
   );
-  if (observed !== undefined) return { method, path: observed.path };
+  if (observed !== undefined) {
+    // The handler reference is what lets a finding cite a file rather than a request.
+    return {
+      method,
+      path: observed.path,
+      ...(observed.handlerRef === undefined ? {} : { handlerRef: observed.handlerRef }),
+    };
+  }
 
   const configured = context.resources.find(
     (entry) => entry.name.toLowerCase() === resource.toLowerCase(),
@@ -192,6 +201,7 @@ export function planAccessChecks(
         ...(condition === undefined ? {} : { condition }),
         candidates,
         resourceFields,
+        ...(route.handlerRef === undefined ? {} : { locationRef: route.handlerRef }),
       });
     }
   }
