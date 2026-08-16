@@ -193,6 +193,53 @@ describe('every request produces evidence', () => {
     expect(record).not.toContain('a sensitive value that must not reach disk');
   });
 
+  it('records that a credential was sent, redacted, rather than omitting it', async () => {
+    const baseUrl = await startCredentialEcho();
+    const session = createActorSession(OWNER, {
+      client: createHttpClient({ baseUrl }),
+      rules: RULES,
+      deps: fixedDeps(),
+    });
+
+    const { evidence } = await session.request({ method: 'GET', path: '/whoami' });
+
+    expect(evidence.request?.headers['authorization']).toBe('[redacted]');
+    expect(evidence.redactions).toContain('request.headers.authorization');
+  });
+
+  it('records no authorization header for an actor that carries none', async () => {
+    const baseUrl = await startCredentialEcho();
+    const actor: ResolvedActor = { id: 'anonymous', credential: { kind: 'none' }, attributes: {} };
+    const session = createActorSession(actor, {
+      client: createHttpClient({ baseUrl }),
+      rules: RULES,
+      deps: fixedDeps(),
+    });
+
+    const { evidence } = await session.request({ method: 'GET', path: '/whoami' });
+
+    expect(evidence.request?.headers['authorization']).toBeUndefined();
+    expect(evidence.redactions).not.toContain('request.headers.authorization');
+  });
+
+  it('records a cookie credential as sent and redacted', async () => {
+    const baseUrl = await startCredentialEcho();
+    const actor: ResolvedActor = {
+      id: 'owner',
+      credential: { kind: 'cookie', name: 'session', value: 'abc' },
+      attributes: {},
+    };
+    const session = createActorSession(actor, {
+      client: createHttpClient({ baseUrl }),
+      rules: RULES,
+      deps: fixedDeps(),
+    });
+
+    const { evidence } = await session.request({ method: 'GET', path: '/whoami' });
+
+    expect(evidence.request?.headers['cookie']).toBe('[redacted]');
+  });
+
   it('gives each request a distinct evidence id', async () => {
     const baseUrl = await startCredentialEcho();
     const session = createActorSession(OWNER, {

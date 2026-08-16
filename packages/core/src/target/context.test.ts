@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { SpecSchema } from '../contracts/index.ts';
+import type { CapturedEvidence } from '../evidence/capture.ts';
 import { TargetConfigSchema, type TargetConfig } from './config.ts';
 import { createTargetContext, describeCapabilities } from './context.ts';
 import { fixedDeps } from './deps.ts';
@@ -133,6 +134,35 @@ describe('gaps are stated rather than assumed away', () => {
 
     expect(capabilities.invalidRedactionPatterns).toEqual(['([unclosed']);
     expect(capabilities.warnings.some((line) => line.includes('is not being hidden'))).toBe(true);
+  });
+});
+
+describe('sessions built by the context write evidence', () => {
+  it('passes the writer through, so a recorded id corresponds to a real file', async () => {
+    const written: CapturedEvidence[] = [];
+    const context = createTargetContext(config(), SPEC, {
+      env: BOTH_TOKENS,
+      deps: fixedDeps(),
+      client: {
+        send: () =>
+          Promise.resolve({
+            kind: 'response' as const,
+            response: {
+              status: 200,
+              headers: {},
+              body: '{"id":"INV-1001","notes":"private"}',
+              truncated: false,
+              durationMs: 1,
+            },
+          }),
+      },
+      writer: { write: (capture) => void written.push(capture) },
+    });
+
+    const result = await context.sessions.get('owner')?.request({ method: 'GET', path: '/x' });
+
+    expect(written).toHaveLength(1);
+    expect(written[0]?.evidence.id).toBe(result?.evidenceId);
   });
 });
 

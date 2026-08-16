@@ -3,7 +3,12 @@ import type { RedactionRules } from '../evidence/redact.ts';
 import type { Evidence } from '../contracts/index.ts';
 import type { ResolvedActor } from './credentials.ts';
 import type { Deps } from './deps.ts';
-import type { HttpClient, RequestOutcome, RequestSpec } from './request.ts';
+import {
+  applyCredential,
+  type HttpClient,
+  type RequestOutcome,
+  type RequestSpec,
+} from './request.ts';
 
 /**
  * An authenticated identity, and the only way a check reaches the target.
@@ -43,7 +48,20 @@ export function createActorSession(actor: ResolvedActor, options: SessionOptions
     async request(spec) {
       const outcome = await options.client.send(spec, actor.credential);
 
-      const capture = captureHttpEvidence(spec, outcome, options.rules, options.deps, {
+      /**
+       * Evidence records the headers that were actually sent, not the ones the caller
+       * passed. `applyCredential` is pure, so deriving them again here changes nothing
+       * about the request. Capturing the caller's headers instead left the record with
+       * no authorization header at all, which reads as "no credential was sent" and is
+       * exactly the ambiguity between redaction and absence that the redactions list
+       * exists to remove.
+       */
+      const sent: RequestSpec = {
+        ...spec,
+        headers: applyCredential(spec.headers ?? {}, actor.credential),
+      };
+
+      const capture = captureHttpEvidence(sent, outcome, options.rules, options.deps, {
         actorId: actor.id,
         ...(options.evidenceDir === undefined ? {} : { evidenceDir: options.evidenceDir }),
       });

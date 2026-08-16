@@ -116,7 +116,9 @@ export function createTargetContext(
 
   const writer = options.writer ?? createEvidenceWriter({ cwd });
 
-  const sessions = createActorSessions(actors, { client, rules, deps: options.deps });
+  // The writer has to reach the sessions. Without it they build records and drop
+  // them, and the run reports evidence ids for files that were never written.
+  const sessions = createActorSessions(actors, { client, rules, deps: options.deps, writer });
 
   const refusal = checkDisposability(config);
   const sourcePresent =
