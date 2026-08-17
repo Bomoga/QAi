@@ -359,6 +359,209 @@ describe('asserting over every row of a list', () => {
   });
 });
 
+/**
+ * The before and after form, which is the only assertion that needs the runner to hold
+ * state across requests. The sessions here answer differently on each call so a change
+ * can be staged, which a single canned response cannot do.
+ */
+describe('comparing a record before and after the action', () => {
+  function stagedSessions(
+    bodies: string[],
+    statuses: number[] = [],
+  ): ReadonlyMap<string, ActorSession> {
+    let call = -1;
+    const session = {
+      id: 'owner',
+      attributes: { org_id: 'org-1' },
+      request() {
+        call += 1;
+        return Promise.resolve({
+          outcome: {
+            kind: 'response' as const,
+            response: response({
+              body: bodies[call] ?? bodies[bodies.length - 1] ?? '{}',
+              status: statuses[call] ?? 200,
+            }),
+          },
+          evidenceId: `EV-00000${call + 1}`,
+          evidence: {} as never,
+        });
+      },
+    };
+
+    return new Map([['owner', session]]);
+  }
+
+  function unchangedPlan(): BehavioralPlan {
+    return plan({
+      request: { method: 'PATCH', path: '/api/invoices/INV-1001' },
+      mutates: true,
+      assertions: [{ kind: 'record-unchanged', entity: 'Invoice', instanceId: 'INV-1001' }],
+      recordReads: [{ entity: 'Invoice', instanceId: 'INV-1001', path: '/api/invoices/INV-1001' }],
+      then: 'record Invoice INV-1001 is unchanged',
+    });
+  }
+
+  const withStateActor = (sessions: ReadonlyMap<string, ActorSession>): BehavioralContext => ({
+    sessions,
+    stateActorId: 'owner',
+    mutation: { allowed: true },
+  });
+
+  it('passes when the record reads the same before and after', async () => {
+    const sessions = stagedSessions(['{"id":"INV-1001","total_cents":100}']);
+
+    const result = await runDeterministicCheck(unchangedPlan(), withStateActor(sessions));
+
+    expect(result.verdict).toBe('pass');
+  });
+
+  it('fails when a field moved, and names the field rather than only the record', async () => {
+    // Read before, the action itself, then read after.
+    const sessions = stagedSessions([
+      '{"id":"INV-1001","total_cents":100}',
+      '{"id":"INV-1001","total_cents":101}',
+      '{"id":"INV-1001","total_cents":101}',
+    ]);
+
+    const result = await runDeterministicCheck(unchangedPlan(), withStateActor(sessions));
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('total_cents');
+  });
+
+  it('reads the record before issuing the action, which is the whole point', async () => {
+    const sent: RequestSpec[] = [];
+    let call = -1;
+    const session = {
+      id: 'owner',
+      attributes: {},
+      request(spec: RequestSpec) {
+        call += 1;
+        sent.push(spec);
+        return Promise.resolve({
+          outcome: { kind: 'response' as const, response: response({ body: '{"id":"INV-1001"}' }) },
+          evidenceId: `EV-00000${call + 1}`,
+          evidence: {} as never,
+        });
+      },
+    };
+
+    await runDeterministicCheck(unchangedPlan(), withStateActor(new Map([['owner', session]])));
+
+    expect(sent.map((request) => request.method)).toEqual(['GET', 'PATCH', 'GET']);
+  });
+
+  it('carries both reads as evidence alongside the action', async () => {
+    const sessions = stagedSessions(['{"id":"INV-1001"}']);
+
+    const result = await runDeterministicCheck(unchangedPlan(), withStateActor(sessions));
+
+    expect(result.evidence).toHaveLength(3);
+  });
+
+  it('treats a record that no longer exists as changed, which is the delete case', async () => {
+    const sessions = stagedSessions(
+      ['{"id":"INV-1001"}', '{}', '{"error":"not_found"}'],
+      [200, 200, 404],
+    );
+
+    const result = await runDeterministicCheck(unchangedPlan(), withStateActor(sessions));
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('no longer exists');
+  });
+
+  it('is unevaluable when no state actor is configured, never a failure', async () => {
+    const sessions = stagedSessions(['{"id":"INV-1001"}']);
+
+    const result = await runDeterministicCheck(unchangedPlan(), {
+      sessions,
+      mutation: { allowed: true },
+    });
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('no actor is configured for reading persisted state');
+  });
+
+  it('is unevaluable when the record could not be read before the action', async () => {
+    const sessions = stagedSessions(
+      ['{"error":"nope"}', '{}', '{"id":"INV-1001"}'],
+      [500, 200, 200],
+    );
+
+    const result = await runDeterministicCheck(unchangedPlan(), withStateActor(sessions));
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('could not be compared');
+  });
+
+  it('is unevaluable when the record did not exist before the action', async () => {
+    const sessions = stagedSessions(
+      ['{"error":"not_found"}', '{}', '{"error":"not_found"}'],
+      [404, 200, 404],
+    );
+
+    const result = await runDeterministicCheck(unchangedPlan(), withStateActor(sessions));
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('did not exist before the action');
+  });
+
+  it('is unevaluable when the plan found nowhere to read the record', async () => {
+    const sessions = stagedSessions(['{"id":"INV-1001"}']);
+    const withoutRoute = plan({
+      request: { method: 'PATCH', path: '/api/invoices/INV-1001' },
+      mutates: true,
+      assertions: [{ kind: 'record-unchanged', entity: 'Invoice', instanceId: 'INV-1001' }],
+      then: 'record Invoice INV-1001 is unchanged',
+    });
+
+    const result = await runDeterministicCheck(withoutRoute, withStateActor(sessions));
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('no route and instance');
+  });
+
+  it('accepts identical bodies that are not JSON, and refuses to compare differing ones', async () => {
+    const identical = stagedSessions(['plain text', 'plain text', 'plain text']);
+    expect((await runDeterministicCheck(unchangedPlan(), withStateActor(identical))).verdict).toBe(
+      'pass',
+    );
+
+    const differing = stagedSessions(['plain text', 'ignored', 'other text']);
+    const result = await runDeterministicCheck(unchangedPlan(), withStateActor(differing));
+
+    // Two different unparseable bodies could differ by a rendered timestamp, which is not
+    // evidence that the record changed.
+    expect(result.verdict).toBe('inconclusive');
+  });
+
+  it('issues no read at all when a mutating criterion was refused', async () => {
+    const sent: RequestSpec[] = [];
+    const session = {
+      id: 'owner',
+      attributes: {},
+      request(spec: RequestSpec) {
+        sent.push(spec);
+        return Promise.resolve({
+          outcome: { kind: 'response' as const, response: response() },
+          evidenceId: 'EV-000001',
+          evidence: {} as never,
+        });
+      },
+    };
+
+    const result = await runDeterministicCheck(unchangedPlan(), {
+      sessions: new Map([['owner', session]]),
+      stateActorId: 'owner',
+    });
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(sent).toEqual([]);
+  });
+});
+
 describe('the acting actor reaches the assertion', () => {
   it('resolves an actor attribute from the session that issued the request', async () => {
     const sessions = sessionReturning(

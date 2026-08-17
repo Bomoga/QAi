@@ -26,6 +26,18 @@ export interface StateRead {
   readonly path: string;
 }
 
+/**
+ * Where to read one record, so it can be compared before and after the action.
+ *
+ * Resolved at planning time for the same reason `StateRead` is: route resolution lives in
+ * one place, and the runner is handed a path rather than the rules for building one.
+ */
+export interface RecordRead {
+  readonly entity: string;
+  readonly instanceId: string;
+  readonly path: string;
+}
+
 export interface BehavioralPlan extends CheckPlan {
   readonly requirementId: string;
   readonly criterionId: string;
@@ -42,6 +54,8 @@ export interface BehavioralPlan extends CheckPlan {
   readonly locationRef?: string;
   /** One per entity a `record count of` assertion names, where a route was found. */
   readonly stateReads?: readonly StateRead[];
+  /** One per record an `is unchanged` assertion names, where a route and instance resolved. */
+  readonly recordReads?: readonly RecordRead[];
 }
 
 /**

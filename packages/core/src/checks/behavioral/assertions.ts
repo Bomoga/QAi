@@ -15,6 +15,7 @@ import { type LoadDiagnostic, warning } from '../../spec/diagnostics.ts';
  *   body.org_id equals actor.org_id
  *   every Invoice has org_id equal to actor.org_id
  *   record count of AuditLog is 1
+ *   record Invoice INV-1001 is unchanged
  *   response time under 500ms
  *
  * The last two right hand sides arrived together on 2026-08-17, with approval, because
@@ -67,6 +68,15 @@ export type Assertion =
       readonly expected: AssertionValue;
     }
   | { readonly kind: 'record-count'; readonly entity: string; readonly count: number }
+  /**
+   * The record is the same after the action as it was before it. Added 2026-08-17 with
+   * approval, and the only form that needs the runner to hold state across requests: the
+   * record is read once before the action and once after, and the two are compared.
+   *
+   * The instance is optional so a criterion can say "the invoice" and mean the one the
+   * `when` clause acts on, which is what an author means every time.
+   */
+  | { readonly kind: 'record-unchanged'; readonly entity: string; readonly instanceId?: string }
   /** Informational severity only, per the module. A slow response is not a failure. */
   | { readonly kind: 'response-time'; readonly maxMs: number };
 
@@ -96,6 +106,7 @@ const BODY_EQUALS = /^body\.([A-Za-z_][\w.[\]]*)\s+equals\s+(.+)$/iu;
 const RECORD_COUNT = /^record\s+count\s+of\s+([A-Za-z_][\w]*)\s+is\s+(\d+)$/iu;
 const RESPONSE_TIME = /^time\s+under\s+(\d+)\s*(?:ms)?$/iu;
 const EVERY_ROW = /^every\s+([A-Za-z_][\w]*)\s+has\s+([A-Za-z_][\w]*)\s+equal\s+to\s+(.+)$/iu;
+const RECORD_UNCHANGED = /^record\s+([A-Za-z_][\w]*)(?:\s+(\S+))?\s+is\s+unchanged$/iu;
 const ACTOR_REF = /^actor\.([A-Za-z_][\w]*)$/iu;
 
 const STATUS_CODE = /^[1-5]\d{2}$/u;
@@ -208,6 +219,19 @@ function parseClause(clause: string): Assertion | undefined {
     return { kind: 'record-count', entity: count[1], count: Number(count[2]) };
   }
 
+  // Tried after the count form, which also begins with `record`. The two cannot collide,
+  // since a count says `count of` where this says the entity, but order makes that a
+  // property of the code rather than of a reader's confidence in two regexes.
+  const unchanged = RECORD_UNCHANGED.exec(text);
+  if (unchanged?.[1] !== undefined) {
+    const instanceId = unchanged[2];
+    return {
+      kind: 'record-unchanged',
+      entity: unchanged[1],
+      ...(instanceId === undefined ? {} : { instanceId }),
+    };
+  }
+
   const time = RESPONSE_TIME.exec(text);
   if (time?.[1] !== undefined) {
     return { kind: 'response-time', maxMs: Number(time[1]) };
@@ -269,6 +293,7 @@ export const ASSERTION_FORMS: readonly string[] = [
   'body.<path> equals <literal>, or equals actor.<attribute>',
   'every <Entity> has <field> equal to <literal>, or equal to actor.<attribute>',
   'record count of <Entity> is <n>',
+  'record <Entity> is unchanged, optionally naming an instance',
   'response time under <ms>',
 ];
 

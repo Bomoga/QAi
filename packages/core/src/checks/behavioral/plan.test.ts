@@ -276,6 +276,43 @@ describe('what cannot be planned comes back with a reason', () => {
     expect(plans[0]?.request).toEqual({ method: 'GET', path: '/invoices' });
   });
 
+  it('resolves where to read a record an unchanged assertion names', () => {
+    const spec = specWith([
+      {
+        when: 'actor owner updates Invoice INV-1001',
+        then: 'record Invoice INV-1001 is unchanged',
+      },
+    ]);
+    const { plans } = planBehavioralChecks(spec, null, CONTEXT);
+
+    expect(plans[0]?.recordReads).toEqual([
+      { entity: 'Invoice', instanceId: 'INV-1001', path: '/api/invoices/INV-1001' },
+    ]);
+  });
+
+  it('takes the instance from the when clause when the assertion names none', () => {
+    const spec = specWith([
+      { when: 'actor owner updates Invoice INV-2001', then: 'record Invoice is unchanged' },
+    ]);
+    const { plans } = planBehavioralChecks(spec, null, CONTEXT);
+
+    // "the invoice is unchanged" in a criterion about updating one invoice means that
+    // invoice, which is what an author means every time.
+    expect(plans[0]?.recordReads?.[0]?.instanceId).toBe('INV-2001');
+  });
+
+  it('plans the criterion anyway when no record read can be resolved', () => {
+    const spec = specWith([
+      { when: 'actor owner updates Invoice INV-1001', then: 'record AuditLog is unchanged' },
+    ]);
+    const { plans, unplannable } = planBehavioralChecks(spec, null, CONTEXT);
+
+    // The clause is expressible and it is the target that offers nowhere to look, so the
+    // runner reports the assertion unevaluable rather than the criterion vanishing.
+    expect(unplannable).toEqual([]);
+    expect(plans[0]?.recordReads).toBeUndefined();
+  });
+
   it('keeps planning after one criterion it could not read', () => {
     const spec = specWith([
       { when: 'the owner updates the invoice', then: 'status is 200' },

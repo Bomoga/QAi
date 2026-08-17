@@ -1,7 +1,12 @@
 import type { Observation, Spec, UnverifiedReason } from '../../contracts/index.ts';
 import { resolvePath, type PlanningContext } from '../access/plan.ts';
 import { isSupported, parseThen, type Assertion } from './assertions.ts';
-import { BEHAVIORAL_SEVERITY, type BehavioralPlan, type StateRead } from './types.ts';
+import {
+  BEHAVIORAL_SEVERITY,
+  type BehavioralPlan,
+  type RecordRead,
+  type StateRead,
+} from './types.ts';
 import {
   isRequest,
   METHOD_FOR_WHEN,
@@ -99,6 +104,51 @@ function stateReadsFor(
   return reads;
 }
 
+/**
+ * Where each record an `is unchanged` assertion names can be read.
+ *
+ * The instance is taken from the assertion when it names one, and otherwise from the
+ * record the `when` clause acts on, which is what "the invoice is unchanged" means in a
+ * criterion about updating one invoice. An entity with no read route or no instance
+ * contributes nothing, and the runner reports the assertion unevaluable rather than the
+ * criterion unplannable: the clause is expressible and it is the target that offers
+ * nowhere to look.
+ */
+function recordReadsFor(
+  assertions: readonly Assertion[],
+  request: WhenRequest,
+  fallbackInstanceId: string | undefined,
+  observation: Observation | null,
+  context: PlanningContext,
+): RecordRead[] {
+  const reads: RecordRead[] = [];
+
+  for (const assertion of assertions) {
+    if (assertion.kind !== 'record-unchanged') continue;
+
+    const instanceId =
+      assertion.instanceId ??
+      (assertion.entity.toLowerCase() === request.entity?.toLowerCase()
+        ? fallbackInstanceId
+        : undefined);
+    if (instanceId === undefined) continue;
+
+    const key = `${assertion.entity.toLowerCase()} ${instanceId}`;
+    if (reads.some((read) => `${read.entity.toLowerCase()} ${read.instanceId}` === key)) continue;
+
+    const template = routeTemplateFor(assertion.entity, 'read', observation, context);
+    if (template === undefined) continue;
+
+    reads.push({
+      entity: assertion.entity,
+      instanceId,
+      path: resolvePath(template, instanceId),
+    });
+  }
+
+  return reads;
+}
+
 function handlerRefFor(request: WhenRequest, observation: Observation | null): string | undefined {
   if (request.entity === undefined) return undefined;
 
@@ -185,6 +235,7 @@ export function planBehavioralChecks(
       const method = METHOD_FOR_WHEN[when.action];
       const handlerRef = handlerRefFor(when, observation);
       const stateReads = stateReadsFor(assertions, observation, context);
+      const recordReads = recordReadsFor(assertions, when, instanceId, observation, context);
 
       plans.push({
         identity: {
@@ -207,6 +258,7 @@ export function planBehavioralChecks(
         then: criterion.then,
         ...(handlerRef === undefined ? {} : { locationRef: handlerRef }),
         ...(stateReads.length === 0 ? {} : { stateReads }),
+        ...(recordReads.length === 0 ? {} : { recordReads }),
       });
     });
   }

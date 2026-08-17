@@ -109,6 +109,37 @@ describe('the value form', () => {
   });
 });
 
+describe('the unchanged form', () => {
+  it('reads a record named by instance', () => {
+    expect(assertionsOf('record Invoice INV-1001 is unchanged')).toEqual([
+      { kind: 'record-unchanged', entity: 'Invoice', instanceId: 'INV-1001' },
+    ]);
+  });
+
+  it('reads a record with no instance, which means the one the when clause acts on', () => {
+    expect(assertionsOf('record Invoice is unchanged')).toEqual([
+      { kind: 'record-unchanged', entity: 'Invoice' },
+    ]);
+  });
+
+  it('does not collide with the count form, which also begins with record', () => {
+    expect(assertionsOf('record count of AuditLog is 1')).toEqual([
+      { kind: 'record-count', entity: 'AuditLog', count: 1 },
+    ]);
+  });
+
+  it('joins a status clause without either swallowing the other', () => {
+    expect(assertionsOf('status is 401 and record Invoice INV-1001 is unchanged')).toEqual([
+      { kind: 'status', codes: [401] },
+      { kind: 'record-unchanged', entity: 'Invoice', instanceId: 'INV-1001' },
+    ]);
+  });
+
+  it('still refuses the prose it replaced', () => {
+    expect(parseThen('the invoice is unchanged').kind).toBe('unsupported');
+  });
+});
+
 describe('the every row form', () => {
   it('reads a comparison against the acting actor', () => {
     expect(assertionsOf('every Invoice has org_id equal to actor.org_id')).toEqual([

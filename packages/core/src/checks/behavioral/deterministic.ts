@@ -6,7 +6,7 @@ import { fail, inconclusive, pass } from '../result.ts';
 import type { CheckResult } from '../types.ts';
 import type { Assertion, AssertionValue, LiteralValue } from './assertions.ts';
 import type { Severity } from '../../contracts/index.ts';
-import type { BehavioralContext, BehavioralPlan } from './types.ts';
+import type { BehavioralContext, BehavioralPlan, RecordRead } from './types.ts';
 
 /**
  * The deterministic behavioral runner.
@@ -280,6 +280,16 @@ export function evaluateAssertion(
       };
     }
 
+    case 'record-unchanged': {
+      // Read before the action and again after it, in `evaluateRecordUnchanged`. The
+      // response to the action is the one thing that cannot answer this.
+      return {
+        assertion,
+        state: 'unevaluable',
+        observed: `whether ${assertion.entity} changed, which is read before and after separately`,
+      };
+    }
+
     case 'response-time': {
       const satisfied = response.durationMs <= assertion.maxMs;
       return {
@@ -362,6 +372,206 @@ async function evaluateRecordCount(
   };
 }
 
+/**
+ * One record, as the state actor could see it at a moment in time.
+ *
+ * `missing` and `unreadable` are kept apart all the way through. A record that was there
+ * and is now gone is the largest change there is, while a read that failed says nothing
+ * about the record at all, and collapsing the two would turn a broken read into a
+ * finding about somebody's application.
+ */
+type RecordSnapshot =
+  | { readonly kind: 'record'; readonly body: string; readonly evidenceId: string }
+  | { readonly kind: 'missing'; readonly evidenceId: string }
+  | { readonly kind: 'unreadable'; readonly reason: string; readonly evidenceId?: string };
+
+async function readRecord(read: RecordRead, context: BehavioralContext): Promise<RecordSnapshot> {
+  const actorId = context.stateActorId;
+  if (actorId === undefined) {
+    return {
+      kind: 'unreadable',
+      reason: `no actor is configured for reading persisted state, so ${read.entity} ${read.instanceId} was not read`,
+    };
+  }
+
+  const session = context.sessions.get(actorId);
+  if (session === undefined) {
+    return { kind: 'unreadable', reason: `actor ${actorId} is not configured` };
+  }
+
+  const { outcome, evidenceId } = await session.request({ method: 'GET', path: read.path });
+
+  if (isTransportError(outcome)) {
+    return { kind: 'unreadable', reason: `${read.path} could not be reached`, evidenceId };
+  }
+
+  if (outcome.response.status === 404) return { kind: 'missing', evidenceId };
+
+  if (outcome.response.status >= 400) {
+    return {
+      kind: 'unreadable',
+      reason: `GET ${read.path} as actor ${actorId} returned status ${outcome.response.status}`,
+      evidenceId,
+    };
+  }
+
+  return { kind: 'record', body: outcome.response.body, evidenceId };
+}
+
+/**
+ * Reads every record an `is unchanged` assertion names, before the action is taken.
+ *
+ * This is the one thing in this runner that has to happen first. An assertion about what
+ * changed cannot be answered from the response to the change.
+ */
+export async function readRecordsBefore(
+  plan: BehavioralPlan,
+  context: BehavioralContext,
+): Promise<Map<string, RecordSnapshot>> {
+  const snapshots = new Map<string, RecordSnapshot>();
+
+  for (const read of plan.recordReads ?? []) {
+    snapshots.set(snapshotKey(read.entity, read.instanceId), await readRecord(read, context));
+  }
+
+  return snapshots;
+}
+
+function snapshotKey(entity: string, instanceId: string): string {
+  return `${entity.toLowerCase()} ${instanceId}`;
+}
+
+/** Field names whose values differ between two readings of the same record. */
+function changedFields(before: unknown, after: unknown): string[] {
+  const left =
+    typeof before === 'object' && before !== null ? (before as Record<string, unknown>) : {};
+  const right =
+    typeof after === 'object' && after !== null ? (after as Record<string, unknown>) : {};
+
+  const names = new Set([...Object.keys(left), ...Object.keys(right)]);
+  const changed: string[] = [];
+
+  for (const name of names) {
+    if (JSON.stringify(left[name]) !== JSON.stringify(right[name])) changed.push(name);
+  }
+
+  return changed.sort();
+}
+
+/**
+ * Compares the record as it was against the record as it is.
+ *
+ * Two readable records that differ is the only violation. Everything else that could go
+ * wrong, a missing state actor, a read that failed, a body that will not parse, is
+ * unevaluable with the reason attached, because none of it is evidence that the record
+ * did or did not change.
+ *
+ * A record present before and absent after is a violation rather than an unreadable
+ * reading. That is the delete case, and it is the largest change a record can undergo.
+ */
+async function evaluateRecordUnchanged(
+  assertion: Extract<Assertion, { kind: 'record-unchanged' }>,
+  plan: BehavioralPlan,
+  context: BehavioralContext,
+  before: ReadonlyMap<string, RecordSnapshot>,
+): Promise<{ outcome: AssertionOutcome; evidenceIds: string[] }> {
+  const read = plan.recordReads?.find(
+    (entry) =>
+      entry.entity.toLowerCase() === assertion.entity.toLowerCase() &&
+      (assertion.instanceId === undefined || entry.instanceId === assertion.instanceId),
+  );
+
+  const unevaluable = (observed: string, evidenceIds: string[] = []) => ({
+    outcome: { assertion, state: 'unevaluable' as const, observed },
+    evidenceIds,
+  });
+
+  if (read === undefined) {
+    return unevaluable(
+      `no route and instance for reading one ${assertion.entity}, so it was not compared before and after`,
+    );
+  }
+
+  const label = `${assertion.entity} ${read.instanceId}`;
+  const first = before.get(snapshotKey(read.entity, read.instanceId));
+
+  if (first === undefined || first.kind === 'unreadable') {
+    const reason = first?.reason ?? 'it was not read before the action';
+    return unevaluable(
+      `${label} could not be compared: ${reason}`,
+      first?.evidenceId === undefined ? [] : [first.evidenceId],
+    );
+  }
+
+  const second = await readRecord(read, context);
+  const evidenceIds = [first.evidenceId, second.evidenceId].filter(
+    (id): id is string => id !== undefined,
+  );
+
+  if (second.kind === 'unreadable') {
+    return unevaluable(`${label} could not be compared: ${second.reason}`, evidenceIds);
+  }
+
+  if (first.kind === 'missing') {
+    return second.kind === 'missing'
+      ? unevaluable(
+          `${label} did not exist before the action, so nothing could change`,
+          evidenceIds,
+        )
+      : {
+          outcome: {
+            assertion,
+            state: 'violated',
+            observed: `${label} did not exist before the action and does now`,
+          },
+          evidenceIds,
+        };
+  }
+
+  if (second.kind === 'missing') {
+    return {
+      outcome: { assertion, state: 'violated', observed: `${label} no longer exists` },
+      evidenceIds,
+    };
+  }
+
+  const parsedBefore = parseBody(first.body);
+  const parsedAfter = parseBody(second.body);
+
+  if (!parsedBefore.ok || !parsedAfter.ok) {
+    // Byte-identical bodies are still evidence of nothing having changed, whatever the
+    // format. Two different unparseable bodies are not evidence of a change, since the
+    // difference could be a timestamp in a rendered page.
+    return first.body === second.body
+      ? {
+          outcome: {
+            assertion,
+            state: 'satisfied',
+            observed: `${label} returned an identical body before and after`,
+          },
+          evidenceIds,
+        }
+      : unevaluable(
+          `${label} returned a body that is not JSON, so before and after could not be compared`,
+          evidenceIds,
+        );
+  }
+
+  const changed = changedFields(parsedBefore.value, parsedAfter.value);
+
+  return {
+    outcome: {
+      assertion,
+      state: changed.length === 0 ? 'satisfied' : 'violated',
+      observed:
+        changed.length === 0
+          ? `${label} unchanged across the action`
+          : `${label} changed across the action: ${changed.join(', ')}`,
+    },
+    evidenceIds,
+  };
+}
+
 /** Latency is informational, per the module. A slow answer is not a wrong answer. */
 function severityFor(violations: readonly AssertionOutcome[], plan: BehavioralPlan): Severity {
   const allLatency = violations.every((outcome) => outcome.assertion.kind === 'response-time');
@@ -413,6 +623,15 @@ export async function runDeterministicCheck(
     });
   }
 
+  /**
+   * The one read that has to happen before the action. An assertion about what a request
+   * changed cannot be answered afterwards, and reading the record as the state actor
+   * rather than the acting one is what makes the answer about the record: the actor under
+   * test here is frequently one that cannot read it at all, which is the point of the
+   * criterion.
+   */
+  const before = await readRecordsBefore(plan, context);
+
   // Evidence before verdict, rule R7. The session records one either way, including
   // when the request never reached the target.
   const { outcome, evidenceId } = await session.request(plan.request);
@@ -435,6 +654,13 @@ export async function runDeterministicCheck(
       const counted = await evaluateRecordCount(assertion, plan, context);
       if (counted.evidenceId !== undefined) evidence.push(counted.evidenceId);
       outcomes.push(counted.outcome);
+      continue;
+    }
+
+    if (assertion.kind === 'record-unchanged') {
+      const compared = await evaluateRecordUnchanged(assertion, plan, context, before);
+      evidence.push(...compared.evidenceIds);
+      outcomes.push(compared.outcome);
       continue;
     }
 
