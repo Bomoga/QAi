@@ -10,6 +10,14 @@ name: 'Ledger invoicing'
 # the structural defects D5 and D6, and REQ-007 covers D7. The rest describe
 # behavior the app gets right, so a run that flags them has produced a false
 # positive, which invariant I2 treats as worse than a missed finding.
+#
+# Criteria were rewritten at M5.8-pre2 into the two vocabularies in
+# modules/M5-behavioral-checks.md, `when` as a request and `then` as assertions.
+# The file was authored at M1.8 in prose, before either table existed, so none of
+# the `when` clauses and only four of the `then` clauses could be read. Three
+# clauses stay in prose on purpose, each with a comment saying why: they are the
+# coverage gaps, and a criterion that cannot be checked is meant to be visible as
+# a warning rather than quietly rewritten into something narrower.
 
 actors:
   - id: owner
@@ -82,11 +90,15 @@ requirements:
         condition: 'Invoice.org_id != actor.org_id'
         effect: deny
     acceptanceCriteria:
+      # "the body contains no Invoice fields" is spelled out field by field, since
+      # the vocabulary asserts one named field at a time. Naming all four is what
+      # the prose meant; asserting only org_id would pass on a body that returned
+      # the rest of the record.
       - id: AC-001-01
         mode: deterministic
         given: 'an invoice belonging to organization org-1'
-        when: 'actor outsider requests that invoice by id'
-        then: 'the response status is 403 or 404 and the body contains no Invoice fields'
+        when: 'actor outsider reads Invoice INV-1001'
+        then: 'status in 403, 404 and body omits field Invoice.id and body omits field Invoice.org_id and body omits field Invoice.total_cents and body omits field Invoice.notes'
 
   # D2, not yet implemented in the app. The list endpoint does not exist at all
   # today, so this requirement is expected to be unverified until it does.
@@ -103,10 +115,16 @@ requirements:
         condition: 'Invoice.org_id != actor.org_id'
         effect: deny
     acceptanceCriteria:
+      # Coverage gap, deliberately left in prose. The `then` compares a field on
+      # every returned row against an attribute of the caller, and the assertion
+      # table has no per-row form. Rewriting it into something the table can state
+      # would assert less than the requirement says. The access rule above covers
+      # the same ground deterministically, so the gap costs a duplicate check
+      # rather than the finding itself.
       - id: AC-002-01
         mode: deterministic
         given: 'invoices belonging to both organizations'
-        when: 'actor outsider lists invoices'
+        when: 'actor outsider lists Invoice'
         then: 'every returned invoice has org_id equal to the caller organization'
 
   # D3, mutation reachable without credentials.
@@ -126,11 +144,17 @@ requirements:
         resource: Invoice
         effect: deny
     acceptanceCriteria:
+      # "and the invoice is unchanged" was dropped rather than left in prose,
+      # because it needs the record read before and after the action and the
+      # vocabulary offers only a count. Keeping it would make the whole criterion
+      # unsupported and leave D3 with no behavioral coverage at all. What remains
+      # is narrower than the sentence that was here, which is the cost of the
+      # rewrite and is recorded in the M5 Open questions.
       - id: AC-003-01
         mode: deterministic
         given: 'an existing invoice'
-        when: 'a caller with no credentials attempts to update it'
-        then: 'the response status is 401 and the invoice is unchanged'
+        when: 'actor anonymous updates Invoice INV-1001'
+        then: 'status is 401'
 
   # D4, a sensitive field returned where it should be omitted.
   - id: REQ-004
@@ -142,8 +166,8 @@ requirements:
       - id: AC-004-01
         mode: deterministic
         given: 'an invoice carrying notes'
-        when: 'actor owner lists invoices'
-        then: 'no returned invoice includes a notes field'
+        when: 'actor owner lists Invoice'
+        then: 'body omits field Invoice.notes'
 
   # D5, the undeclared debug endpoint. Nothing here declares it, which is exactly
   # what makes the structural diff able to report it as observed and not specified.
@@ -154,8 +178,20 @@ requirements:
       - id: AC-005-01
         mode: deterministic
         given: 'the running application'
-        when: 'a caller requests a path under /api/debug'
-        then: 'the response status is 404'
+        when: 'actor anonymous requests /api/debug/state'
+        then: 'status is 404'
+
+      # The one fuzzy criterion in this file, and the subject of the S5 exit
+      # criterion. The index page lists the routes the application offers, and
+      # whether a route reads as administrative is a judgment rather than an
+      # assertion, which is what `mode: fuzzy` is for. It can produce pass or
+      # inconclusive and never fail, per invariant I1, so the deterministic
+      # criterion above stays the one that reports the defect.
+      - id: AC-005-02
+        mode: fuzzy
+        given: 'the running application'
+        when: 'actor anonymous requests /'
+        then: 'the page offers no administrative or debug route'
 
   # D6, the audit entity specified above and never built.
   - id: REQ-006
@@ -163,11 +199,16 @@ requirements:
     entities: [AuditLog, Invoice]
     tags: [audit]
     acceptanceCriteria:
+      # "referencing that invoice" is outside the table, which counts records and
+      # does not filter them. The count is the honest remainder: with no AuditLog
+      # route to read, the count comes back unevaluable and the criterion is
+      # inconclusive, which is the right answer for an entity that was specified
+      # and never built.
       - id: AC-006-01
         mode: deterministic
         given: 'an authenticated owner and one of their invoices'
-        when: 'the owner updates the invoice'
-        then: 'an AuditLog entry exists referencing that invoice'
+        when: 'actor owner updates Invoice INV-1001'
+        then: 'record count of AuditLog is 1'
 
   # D7, deliberately no checks. Loads with a warning and reports as unverified
   # with reason no-checks-defined, which is how a coverage gap stays visible.
@@ -194,8 +235,8 @@ requirements:
       - id: AC-008-01
         mode: deterministic
         given: 'an invoice belonging to the caller organization'
-        when: 'actor owner requests that invoice by id'
-        then: 'the response status is 200 and the body contains the invoice id'
+        when: 'actor owner reads Invoice INV-1001'
+        then: 'status is 200 and body contains field Invoice.id'
 
   # N2, the second negative control. A cross-organization write is already
   # refused, so a finding here is also a false positive.
@@ -212,11 +253,14 @@ requirements:
         condition: 'Invoice.org_id != actor.org_id'
         effect: deny
     acceptanceCriteria:
+      # The unchanged half was dropped here for the same reason as AC-003-01, and
+      # at the same cost. The ledger tests hold N2 in both directions, so the
+      # control itself is not resting on this criterion alone.
       - id: AC-009-01
         mode: deterministic
         given: 'an invoice belonging to organization org-1'
-        when: 'actor outsider attempts to update that invoice'
-        then: 'the response status is 403 or 404 and the invoice is unchanged'
+        when: 'actor outsider updates Invoice INV-1001'
+        then: 'status in 403, 404'
 
   - id: REQ-010
     statement: 'An unauthenticated caller cannot read any invoice'
@@ -232,8 +276,8 @@ requirements:
       - id: AC-010-01
         mode: deterministic
         given: 'an existing invoice'
-        when: 'a caller with no credentials requests it by id'
-        then: 'the response status is 401'
+        when: 'actor anonymous reads Invoice INV-1001'
+        then: 'status is 401'
 
   - id: REQ-011
     statement: 'A request carrying an unrecognized token is refused'
@@ -246,11 +290,16 @@ requirements:
         resource: User
         effect: deny
     acceptanceCriteria:
+      # Coverage gap, and this one is about the target rather than the vocabulary.
+      # Every request form names a configured actor, and no actor carries a token
+      # belonging to no user; `anonymous` sends no credential at all, which is
+      # REQ-010 and a different claim. Configuring a fourth actor with a bogus
+      # token would express it.
       - id: AC-011-01
         mode: deterministic
         given: 'a bearer token belonging to no user'
         when: 'the caller requests an invoice by id'
-        then: 'the response status is 401'
+        then: 'status is 401'
 
   - id: REQ-012
     statement: 'A request for an invoice that does not exist reports it as absent'
@@ -260,19 +309,24 @@ requirements:
       - id: AC-012-01
         mode: deterministic
         given: 'an authenticated owner'
-        when: 'the owner requests an invoice id that was never created'
-        then: 'the response status is 404'
+        when: 'actor owner reads Invoice INV-9999'
+        then: 'status is 404'
 
   - id: REQ-013
     statement: 'A refused cross-organization read does not confirm that the invoice exists'
     entities: [Invoice]
     tags: [access-control, data-exposure]
     acceptanceCriteria:
+      # The prose compared this status against the one another request returns,
+      # which no assertion form can state. REQ-012 pins the absent-invoice status
+      # at 404, so naming 404 here says the same thing about this application.
+      # It says it less generally: if REQ-012 ever changes, this literal has to
+      # change with it, and nothing enforces that.
       - id: AC-013-01
         mode: deterministic
         given: 'an invoice belonging to another organization'
-        when: 'actor outsider requests it by id'
-        then: 'the response status matches the status returned for an invoice id that does not exist'
+        when: 'actor outsider reads Invoice INV-1001'
+        then: 'status is 404'
 
   - id: REQ-014
     statement: 'A user token is never returned in any response body'
@@ -280,11 +334,22 @@ requirements:
     fields: [User.token]
     tags: [data-exposure]
     acceptanceCriteria:
+      # "any endpoint by any actor" is a universal, and every request form names
+      # one actor and one route. It becomes one criterion per endpoint that
+      # returns a record, which is the whole surface a token could leak through
+      # today. An endpoint added later is not covered until someone adds a
+      # criterion for it, and that is worse than the sentence it replaces.
       - id: AC-014-01
         mode: deterministic
         given: 'the running application'
-        when: 'any endpoint is called by any actor'
-        then: 'no response body contains a token field'
+        when: 'actor owner lists Invoice'
+        then: 'body omits field User.token'
+
+      - id: AC-014-02
+        mode: deterministic
+        given: 'the running application'
+        when: 'actor owner reads Invoice INV-1001'
+        then: 'body omits field User.token'
 
   - id: REQ-015
     statement: 'The application reports its health without requiring credentials'
@@ -293,5 +358,5 @@ requirements:
       - id: AC-015-01
         mode: deterministic
         given: 'the running application'
-        when: 'a caller with no credentials requests /health'
-        then: 'the response status is 200 and the body reports status ok'
+        when: 'actor anonymous requests /health'
+        then: 'status is 200 and body.status equals "ok"'

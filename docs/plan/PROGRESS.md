@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T11:40:00Z
+Updated: 2026-08-17T11:50:00Z
 Current stage: S5
-Next task: M5.8-pre2
+Next task: M5.7
 
 ## S0. Skeleton
 
@@ -185,8 +185,8 @@ Surprises worth recording:
 - [x] M5.4 the Judge interface in llm/ (commits ecc5057 and 8191700)
 - [x] M5.5 browser capture, lazy Playwright, selector policy (commit c2e1c02)
 - [x] M5.6 verdict mapping, one test per row (commit 7774ab4)
-- [x] M5.8-pre1 D4 in fixtures/ledger, the switch M5.8 has to toggle (commit backfilled below)
-- [ ] M5.8-pre2 rewrite fixtures/ledger/spec/ledger.spec.yaml into both vocabularies
+- [x] M5.8-pre1 D4 in fixtures/ledger, the switch M5.8 has to toggle (commit ccd7892)
+- [x] M5.8-pre2 the fixture spec rewritten into both vocabularies (commit backfilled below)
 - [ ] M5.7 graceful degradation when Playwright is absent
 - [ ] M5.8 integration test over D4
 - Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
@@ -209,6 +209,43 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.8-pre2: the fixture spec now reads through both vocabularies. 13 of 16 criteria plan,
+  and the three that do not are recorded gaps rather than silence: AC-002-01 whose `then`
+  compares a field on every row against a caller attribute, AC-011-01 whose `when` needs an
+  actor holding a token belonging to no user, and AC-005-02 which is the fuzzy one. The
+  spec hash moved to `sha256:63c0096716d3...`; nothing pinned the old one.
+- M5.8-pre2, the honest cost of the rewrite: two criteria lost a clause. "and the invoice
+  is unchanged" in AC-003-01 and AC-009-01 needs the record read before and after the
+  action, and the vocabulary offers only a count. Keeping the sentence whole would have
+  left D3 and N2 with no behavioral coverage at all, so the clause was dropped with a
+  comment in the spec rather than left to fail the whole criterion. The criteria now assert
+  less than the sentences they replaced, which is a real reduction and belongs in a review.
+- M5.8-pre2: AC-013-01 traded generality for expressibility. It compared the status of two
+  different requests, which nothing can state, and now names 404 as a literal because
+  REQ-012 pins the absent-invoice status at 404. If REQ-012 ever changes, this literal has
+  to change with it and nothing enforces that.
+- M5.8-pre2: AC-014-01 was one universal over every endpoint and every actor, and is now
+  two criteria naming two routes. An endpoint added later is not covered until somebody
+  adds a criterion for it. That is worse than the sentence it replaces and is the shape of
+  the tradeoff every rewrite here made: what the tool can check is narrower than what an
+  author can say.
+- M5.8-pre2: AC-005-02 was added as the one `mode: fuzzy` criterion in the fixture, since
+  the S5 exit criterion needs a fuzzy criterion to run and the file had none. It asks
+  whether the index page offers an administrative route, which is a judgment rather than an
+  assertion. `planBehavioralChecks` refuses fuzzy criteria today with
+  `capability-unavailable`, so M5.7 owns what happens to it when Playwright is present.
+- M5.8-pre2: no actor was added to the spec. `fixture-spec.test.ts` asserts the actor list
+  is exactly owner, outsider, anonymous, and a fourth actor for AC-011-01 would need a
+  credential in `qai.config.yaml` that resolves to a token belonging to no user. That is a
+  target configuration question, not a vocabulary one, so the criterion stays a gap.
+- M5.8-pre2: `fixture-criteria.test.ts` builds its planning context from the repository's
+  own `qai.config.yaml` rather than a literal, so the claim under test is that this spec
+  plans against this target. A hand-built context would assert only that the spec plans
+  against something the test invented, and could not fail when config drifts.
+- M5.8-pre2: the planning result was read by running it, not inferred from a green suite.
+  13 planned, 3 unplannable, and every route, actor, method and assertion kind was printed
+  and checked by eye before the test was believed.
 
 - M5.8-pre1: D4 is now implemented in `fixtures/ledger` behind `LEDGER_DEFECT_D4`, with
   ledger level tests holding it in both directions, the same shape D5 took at M4.9. The
