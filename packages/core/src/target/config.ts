@@ -131,6 +131,20 @@ export const TargetConfigSchema = z
     target: TargetSectionSchema,
     actors: z.array(ActorConfigSchema).default([]),
     resources: z.array(ResourceConfigSchema).default([]),
+    /**
+     * The actor persisted state is read as, after an action has been taken.
+     *
+     * Added at M2.8 because two behavioral assertion forms need one, the record count and
+     * the before and after comparison, and every caller was choosing an identity for
+     * itself. It names a configured actor rather than carrying credentials of its own.
+     *
+     * **No default, deliberately.** Absent leaves state assertions unevaluable, which is
+     * honest, and neither available default is safe. The acting actor is frequently one
+     * that cannot read the record at all, which is the point of the criterion; and an
+     * actor scoped to its own organization counts only what it can see, so a scoping bug
+     * would arrive dressed as a state bug.
+     */
+    stateActor: z.string().min(1).optional(),
     redaction: RedactionSectionSchema.default({ extraPatterns: [] }),
   })
   .strict();
@@ -292,6 +306,30 @@ export function loadConfig(path?: string, cwd: string = process.cwd()): LoadConf
         message: `${relative} defines actor "${duplicate}" more than once`,
         diagnostics: [
           error(relative, 'actors', `actor id "${duplicate}" is defined more than once`),
+        ],
+      },
+    };
+  }
+
+  /**
+   * A state actor naming nobody is an authoring mistake worth failing the load for.
+   * Left to runtime it would make every state assertion unevaluable, and a run reporting
+   * a column of unverified criteria for a reason nobody reads is how a typo becomes a
+   * coverage gap that survives review.
+   */
+  const stateActor = parsed.data.stateActor;
+  if (stateActor !== undefined && !parsed.data.actors.some((actor) => actor.id === stateActor)) {
+    const known = parsed.data.actors.map((actor) => actor.id);
+    return {
+      error: {
+        kind: 'error',
+        message: `${relative} names a state actor that is not configured`,
+        diagnostics: [
+          error(
+            relative,
+            'stateActor',
+            `"${stateActor}" is not a configured actor. ${known.length === 0 ? 'No actors are configured.' : `Configured actors: ${known.join(', ')}.`}`,
+          ),
         ],
       },
     };

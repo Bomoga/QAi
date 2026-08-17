@@ -12,6 +12,8 @@ export interface DefectSwitches {
   readonly d2UnscopedInvoiceList: boolean;
   /** D3: an invoice can be modified without any credentials. */
   readonly d3UnauthenticatedMutation: boolean;
+  /** D4: the invoice list returns the sensitive notes field REQ-004 says to omit. */
+  readonly d4NotesInInvoiceList: boolean;
   /** D5: a debug endpoint no requirement asks for, serving internal state. */
   readonly d5UndeclaredDebugEndpoint: boolean;
 }
@@ -20,6 +22,7 @@ const SWITCHES = {
   d1CrossOrgInvoiceRead: 'LEDGER_DEFECT_D1',
   d2UnscopedInvoiceList: 'LEDGER_DEFECT_D2',
   d3UnauthenticatedMutation: 'LEDGER_DEFECT_D3',
+  d4NotesInInvoiceList: 'LEDGER_DEFECT_D4',
   d5UndeclaredDebugEndpoint: 'LEDGER_DEFECT_D5',
 } as const satisfies Record<keyof DefectSwitches, string>;
 

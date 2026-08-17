@@ -24,6 +24,7 @@ async function start(d5UndeclaredDebugEndpoint: boolean): Promise<string> {
       d1CrossOrgInvoiceRead: true,
       d2UnscopedInvoiceList: true,
       d3UnauthenticatedMutation: true,
+      d4NotesInInvoiceList: true,
       d5UndeclaredDebugEndpoint,
     },
   });

@@ -86,6 +86,46 @@ describe('loading the proposed config shape', () => {
   });
 });
 
+describe('the state actor', () => {
+  it('is absent unless configured, since neither available default is safe', () => {
+    write(LEDGER);
+
+    // The acting actor is frequently one that cannot read the record at all, and a
+    // scoped actor counts only what it can see. Absent leaves state assertions
+    // unevaluable, which is the honest answer.
+    expect(load().stateActor).toBeUndefined();
+  });
+
+  it('names a configured actor', () => {
+    write(`${LEDGER}stateActor: owner\n`);
+    expect(load().stateActor).toBe('owner');
+  });
+
+  it('fails the load when it names nobody, rather than leaving a quiet coverage gap', () => {
+    write(`${LEDGER}stateActor: admin\n`);
+    const failure = loadFailing();
+
+    expect(failure.message).toContain('state actor');
+    expect(failure.diagnostics[0]?.path).toBe('stateActor');
+    expect(failure.diagnostics[0]?.message).toContain('admin');
+  });
+
+  it('names the actors that are configured, so the fix is in the message', () => {
+    write(`${LEDGER}stateActor: admin\n`);
+    expect(loadFailing().diagnostics[0]?.message).toContain('owner, outsider');
+  });
+
+  it('says so plainly when no actor is configured at all', () => {
+    write(`
+target:
+  baseUrl: http://localhost:3000
+actors: []
+stateActor: owner
+`);
+    expect(loadFailing().diagnostics[0]?.message).toContain('No actors are configured');
+  });
+});
+
 describe('the disposability default', () => {
   it('is false when unstated, so a target is not disposable until someone says so', () => {
     write(`

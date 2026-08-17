@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T01:40:00Z
-Current stage: S4 complete, awaiting review
-Next task: S5, behavioral checks (M5)
+Updated: 2026-08-17T12:20:00Z
+Current stage: S5 complete, pull request open, awaiting review
+Next task: S6, modules M7 and M8, after the merge decision
 
 ## S0. Skeleton
 
@@ -72,6 +72,7 @@ Surprises worth recording:
 - [x] M2.5 ActorSession for bearer, cookie, header, none (commit 0c198f5)
 - [x] M2.6 seed and reset execution with the disposability gate (commit d752a75)
 - [x] M2.7 startup capability report (commit backfilled below)
+- [x] M2.8 `stateActor` in TargetConfig (commit backfilled below), added 2026-08-17 on the S5 branch, after S2 merged, because M5's state assertions had no configured identity to read as
 - Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
 - Exit criterion: **met**, verified 2026-08-16 via `packages/core/scripts/capture-two-actors.ts` against a live ledger. Two actors resolved, one request each, four files written, `request.headers.authorization` and `response.body.notes` redacted in both. No token and no sensitive field reached disk; `INV-1001` and `org-1` were retained.
 
@@ -137,6 +138,7 @@ Surprises worth recording:
 - Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
 - **Conflict raised at stage start, decided 2026-08-16: black box origin for the ledger.** M4's adapters target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. The Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" therefore holds with `origin: blackbox` and reduced confidence, not `origin: source`. Adapters are built and tested against synthetic source trees. Rejected: adding a `node:http` adapter, which is outside Q1's list and covers a framework no real user has; and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in 06-TESTING.md. The DoD line should be restated to say black box for this fixture.
 - D5, the undeclared debug endpoint, was added to the ledger at M4.9, the same way D2 and D3 were added during S3.
+- Merged into `dev` as `11e987a`, PR #6, 2026-08-17. Not squashed.
 - Exit criterion: **behavior met, command still M8**. Verified 2026-08-16 via `packages/core/scripts/probe-ledger.ts` against a live ledger, both directions. Defects on: 4 endpoints, every one `origin: blackbox` and `confidence: low` with one evidence id each, `GET /api/debug/state` reported in `observedNotSpecified` at medium, `AuditLog` in `specifiedNotObserved`, exit 1. D5 off: 3 endpoints, no medium finding, exit 0. The source adapters cannot be demonstrated against this fixture and are covered by their own tests, per the decision recorded at the top of this section.
 
 ### S4 summary
@@ -177,7 +179,63 @@ Surprises worth recording:
 
 ## S5. Behavioral checks (M5)
 
-- [ ] not started
+- [x] M5.1 assertion vocabulary parser and validation warnings (commit 2ecf6f2)
+- [x] M5.2 deterministic HTTP runner with evidence capture (commits 45fc681, 0a75029, 16c8501)
+- [x] M5.9 the `when` vocabulary and planBehavioralChecks (commits 4fd00c1 and 15ddee1), added by decision, out of order because M5.8 needs it
+- [x] M5.3 persisted state assertions via follow-up reads (commit fe2cc2a)
+- [x] M5.4 the Judge interface in llm/ (commits ecc5057 and 8191700)
+- [x] M5.5 browser capture, lazy Playwright, selector policy (commit c2e1c02)
+- [x] M5.6 verdict mapping, one test per row (commit 7774ab4)
+- [x] M5.8-pre1 D4 in fixtures/ledger, the switch M5.8 has to toggle (commit ccd7892)
+- [x] M5.8-pre2 the fixture spec rewritten into both vocabularies (commits 5dc6c8b and bc93686)
+- [x] M5.7 graceful degradation when Playwright is absent (commits e086e1a, af65b47, c2fd391)
+- [x] M5.8 integration test over D4 (commits 7505312, 2c86e39, 03dc6fa)
+- [x] M5.10 the actor reference and every row assertion forms (commits d70cb04, 7e231ab, 079a08f), approved 2026-08-17 after the stage was otherwise complete
+- [x] M5.11 the before and after state form (commits 83b86ca, 0d26083, f47327e, ad9ed65), approved 2026-08-17
+- [x] M5.12 the cross-request status comparison (commits 049e8b3, d986c5e, 06eb606), approved 2026-08-17
+- [x] M5.12b the endpoint sweep (commits 0e126b0, 284ed8c, c93c02b), approved 2026-08-17
+- [x] M5.12c the actor axis on the sweep (commits adcff2a, 8199d07, aa954c5), approved 2026-08-17
+- [x] M5.13 the impostor actor, closing the last criterion in the fixture spec (commit backfilled below), approved 2026-08-17
+- Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
+- **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
+- **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
+- Pull request #7 opened into `dev` on 2026-08-17, 22 commits, not squashed. Awaiting review; the merge decision is the human's.
+- Exit criterion: **met as restated**, verified 2026-08-17 via `packages/core/scripts/check-behavior-ledger.ts` against a live ledger, both directions, and re-run after M5.10 changed the counts. Defective: 15 criteria planned, 7 pass, 6 fail, 2 unverified, exit 1, with D4 reported at medium severity carrying request evidence. Repaired: 13 pass, 0 fail, 2 unverified, exit 0. The same 15 checks run in both, so the runs compare. With Playwright absent, `AC-005-02` is unverified with reason `capability-unavailable` and the install line, and the exit code is unaffected in both directions. Re-run after M5.13, which closed the last criterion: 16 criteria planned and 0 not, giving 8 pass, 6 fail, 2 unverified, exit 1 defective, and 14 pass, 0 fail, 2 unverified, exit 0 repaired. The two unverified are the fuzzy criterion with no Playwright and the audit log the application never built. Authoring warnings went from 1 to 0 when M5.10 closed the last unexpressible `then`. M5.11 did not move the counts, since AC-003-01 was already failing on its status clause; what changed is what the finding says, which now reads `status 200, Invoice INV-1001 changed across the action: total_cents`. `qai check` is M8 and lands in S6, so the command itself does not exist yet.
+- **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
+
+### S5 summary
+
+Built: the assertion vocabulary and its authoring warnings, the deterministic HTTP
+runner, the `when` request vocabulary and `planBehavioralChecks`, persisted state
+assertions through follow-up reads, the judge boundary proved by type sweep, page capture
+with a lazily imported Playwright, the fuzzy verdict mapping that makes invariant I1
+executable, the batch runner that degrades to unverified when no browser is there, D4 in
+the fixture, the fixture spec rewritten into both vocabularies, and an integration run
+over the live ledger, and five assertion forms added afterwards at M5.10 through M5.12c,
+with the state actor field M2.8 added to carry them. 1137 tests pass across 47 files.
+
+Deferred: a fuzzy criterion judged by a real model, which needs a model SDK nobody has
+approved, and a run against a real browser, which needs Playwright installed. Both are
+recorded in the M5 Open questions rather than papered over. The fixture spec has no
+coverage gap left at all: all 16 criteria plan, and every one narrowed at M5.8-pre2 says
+what it originally said.
+
+Surprises worth recording:
+
+- The stage found its own blocker before the demonstration did. `planBehavioralChecks`
+  refused every fuzzy criterion, which made the exit criterion unreachable by
+  construction: a criterion that never plans can never run under a browser. Four tasks had
+  passed over it because each one tested its own half.
+- The fixture spec was the real work. Ten of fourteen criteria could not be read at all,
+  and rewriting them turned up something worth more than the rewrite: what the tool can
+  check is narrower than what an author can say. Two of the gaps that argument produced
+  were closed the same day at M5.10, which is the argument working.
+- Verifying by breaking kept paying. Removing the capability branch left the run working
+  and only the reason wrong, which is exactly the failure a passing suite hides. One test
+  caught it.
+- The demonstration disagreed with nothing this time, which is itself worth noting after
+  S2 and S4 both found faults there. The integration test was written to pin whole verdict
+  maps in both directions first, and the script found no eighth thing.
 
 ## S6. Report and CI (M7, M8)
 
@@ -196,6 +254,338 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.13, approved by the human on 2026-08-17: `qai.config.yaml` configures an `impostor`
+  actor carrying a bearer token that matches no seeded user, which closes AC-011-01. Every
+  criterion in the fixture spec now plans, 16 of 16, and the file has no recorded gap left.
+- M5.13, the thing worth remembering: this was never a vocabulary problem, and no assertion
+  form would ever have closed it. A spec can only ask about identities the target is
+  configured to present. That is a limit on coverage no grammar reaches, and the honest
+  signal was the criterion staying unplannable with its `when` clause named rather than
+  being quietly rewritten into a claim about `anonymous`.
+- M5.13: `anonymous` and `impostor` are two actors on purpose. One presents nothing and the
+  other presents a credential belonging to nobody, and a target can refuse the first while
+  accepting the second. Collapsing them would have made REQ-010 and REQ-011 the same check.
+- M5.13 consequence for every script: `resolveCredentials` treats an unresolved credential
+  as fatal, so a fourth configured actor makes `LEDGER_UNKNOWN_TOKEN` mandatory for all
+  four scripts in `packages/core/scripts/`, not just the behavioral one. Their run recipes
+  say so now. Without it a run stops at exit code 2 naming the variable, which is the right
+  failure and still a new one.
+- M5.13: the loader caught something the change would otherwise have hidden. Adding the
+  actor produced a second load warning, that `impostor` is referenced by no access rule,
+  which pointed straight at AR-011-01 naming `anonymous` for a requirement about
+  unrecognized tokens. The rule now names the impostor and says what REQ-011 says. It stays
+  unplannable, since the target serves no `User` route, exactly as it was before.
+- M5.13 follow-up worth considering: AR-011-01 could point at `Invoice`, which has routes,
+  and REQ-011 would then be checked on the access side as well as the behavioral one. Left
+  alone here because it changes what the S3 demonstration script reports, and that evidence
+  is recorded against a run nobody has repeated.
+
+- M5.12c, approved by the human on 2026-08-17: `as every actor` on the endpoint sweep
+  closes the second half of AC-014-01. Every criterion the fixture spec narrowed at
+  M5.8-pre2 has now been restored to what it originally claimed, which was not the plan
+  when those gaps were recorded as losses.
+- M5.12c: the axis is written out in the criterion rather than implied by the word every,
+  because it multiplies the request count. Three actors across four observed endpoints is
+  twelve readings from one criterion, and an author should meet that number in the spec
+  rather than in a run. The result states the reading count and names the actors.
+- M5.12c: the sweep runs as the actors in the session map, which holds those whose
+  credentials resolved. An actor that did not resolve is absent rather than failing, so
+  naming who was swept is what stops that reading as coverage the run did not have.
+- M5.12c earns its cost, measured rather than argued. Making the fixture hand a token to
+  org-2 only, the criterion without the axis passes over four clean readings as the owner
+  while the outsider is being handed a token; with the axis it fails naming
+  `/health as outsider`. A field one identity can see and another cannot is exactly what a
+  single-actor sweep cannot find.
+- M5.12c: `every endpoint omits field User.token for every actor` is refused, as is a
+  sentence that trails off after `as every`. Multiplying the request count is not something
+  to infer from prose that nearly says it.
+
+- M5.12b, approved by the human on 2026-08-17: `every endpoint omits field <Entity>.<field>`
+  closes AC-014-01, the last of the fixture spec's vocabulary gaps. It quantifies over the
+  endpoints an Observation holds, which is the only enumeration of an application that
+  exists here.
+- M5.12b, the rule that makes the quantifier safe: with no Observation, or none the sweep
+  can read, the assertion is unevaluable rather than satisfied. A universal over nothing
+  was not asked. An integration test runs the criterion both ways and asserts exactly that,
+  since a form that passed when it checked nothing would be worse than the enumerated
+  criteria it replaced.
+- M5.12b: an endpoint whose body could not be read blocks a pass. Four clean readings and
+  one unparseable body do not establish that every endpoint omits a field, which is the
+  refusal M3.6 already made about rows nobody could judge. A definite leak still outranks
+  an unreadable body, since the leak was seen.
+- M5.12b proved by breaking it: adding a `token` field to the debug endpoint's response
+  made the criterion fail, and `AC-014-02`, the enumerated read this form replaced, did not
+  notice. That is the coverage the universal buys, measured rather than asserted.
+- M5.12b: only GET and HEAD are swept and a path carrying an unresolved parameter is
+  skipped, so an assertion cannot write and cannot request a route the target does not
+  serve.
+- M5.12b honest limitation: coverage is the crawl's coverage. An endpoint the probe never
+  reached was never checked. The result says how many endpoints answered so the scope of
+  the claim is visible, and the structural diff remains what reports an endpoint nobody
+  specified.
+- M5.12b: the demonstration script now probes before planning, since a criterion that
+  quantifies over an Observation needs one. `AC-014-02` was kept deliberately, so REQ-014
+  still has deterministic coverage in a run with no probe at all.
+- M5.12b: the universal over actors was deliberately not closed. A criterion names one
+  actor, and sweeping every configured identity would read as thoroughness while hiding a
+  loop whose cost the author cannot see. One criterion per actor keeps the request count in
+  the spec where somebody can read it.
+
+- M5.12, approved by the human on 2026-08-17: `status matches <request>` compares the
+  action's status against the status another request returns, which is what AC-013-01
+  claimed at M1.8 and lost at M5.8-pre2. The reference is written in the `when` vocabulary
+  rather than a second grammar, so it resolves its route, actor, and instance exactly as an
+  action does and a reader learns one table.
+- M5.12: a reference that mutates is refused at parse time and the criterion is reported
+  unsupported. An assertion that changed the target would break invariant I7 from inside a
+  verdict, and that is not a rule to leave in a runner for future callers to preserve.
+- M5.12 is worth more than the literal it replaced, and this was shown rather than argued.
+  Making the fixture answer 403 to both a cross-organization read and a read of a
+  nonexistent invoice keeps the criterion passing, where `status is 404` would have reported
+  a false finding against an application that was behaving correctly.
+- M5.12: only the status is compared. The form says status and claims nothing more.
+  Comparing two whole responses is a much larger assertion wearing the same words and would
+  need its own approval.
+- M5.12: this is the third form that issues its own traffic, after the record count and the
+  before and after comparison, so the runner's old framing of one criterion, one request is
+  no longer literally true. The header comment in `deterministic.ts` now says so. Every one
+  of the three is a read, and every request any of them makes is recorded as evidence.
+- M5.12: the parsed reference is rebuilt field by field rather than stored as the parser
+  returned it, so the parse discriminator does not travel into the assertion AST. A `kind`
+  nested inside another `kind` reads like a bug the first time somebody serializes one, and
+  a deep-equality test caught it immediately.
+
+- M5.11, approved by the human on 2026-08-17: the assertion table gained
+  `record <Entity> is unchanged`, which restores the clause AC-003-01 and AC-009-01 had to
+  drop at M5.8-pre2. It is the only form that needs the runner to hold state across
+  requests: the record is read once before the action and once after, and the two readings
+  are compared.
+- M5.11: the before read is the one thing in the runner that has to happen first, and the
+  ordering is load bearing rather than incidental. Proved by breaking it: moving the read
+  to after the action failed five tests, including the end to end one.
+- M5.11: the record is read as the configured state actor, never the acting one, for a
+  reason this criterion makes vivid. AC-003-01 acts as `anonymous`, who cannot read the
+  invoice at all, so reading state as the actor under test would report a scoping rule as
+  a state fact and the criterion could never be evaluated.
+- M5.11: a record present before and gone after is a violation, not an unreadable reading.
+  Deletion is the largest change a record can undergo and collapsing it into "could not
+  read" would lose the finding entirely.
+- M5.11: everything else that can go wrong is unevaluable, with the reason attached. No
+  state actor, no read route, a read that failed, a record that did not exist to begin
+  with, or a body that will not parse. Only two readable records that differ is a
+  violation, and the finding names the fields that moved.
+- M5.11: two byte-identical bodies that are not JSON count as unchanged, and two differing
+  ones do not count as changed. A difference between two unparseable bodies could be a
+  rendered timestamp, which is not evidence about the record.
+- M5.11 fixture change, flagged for review: an accepted write in `fixtures/ledger` now
+  actually writes. It did not before, so D3's catalog line, that an invoice can be modified
+  without credentials, was only half true, and the unchanged clause could never be false
+  against this fixture. The tool issues no request body, so the applied change is a fixed
+  increment to the total. The seed is untouched, so a restart is still the reset.
+- M2.8, resolving what M5.11 raised: `TargetConfig` now carries `stateActor`. It names a
+  configured actor, has no default, and naming an actor that is not configured fails the
+  load rather than leaving every state assertion quietly unevaluable. A cross-module edit
+  into M2's file, the same shape as M3.2 adding `resources`, and recorded in both module
+  files.
+- M2.8: neither candidate default was safe, which is why there is none. The acting actor is
+  frequently an identity that cannot read the record at all, and that is the point of the
+  criterion rather than an edge case. An actor scoped to its own organization counts only
+  what it can see, so a scoping bug would arrive dressed as a state bug.
+- M2.8 proved by breaking it: commenting `stateActor` out of `qai.config.yaml` and running
+  the demonstration against the repaired ledger turned AC-003-01 and AC-009-01 from pass to
+  unverified, 13 pass 0 fail 2 unverified becoming 11 pass 0 fail 4 unverified. The field is
+  load bearing, and its absence degrades honestly rather than passing quietly.
+- M2.8 limit worth stating: the fixture's `stateActor` is `owner`, which is scoped to org-1.
+  It is the right identity for the records these criteria compare and the wrong one in
+  general, since a count of an entity owned by another organization would come back short
+  rather than wrong. The config says so beside the field, and the corpus run will want an
+  unscoped reader.
+
+- M5.10, approved by the human on 2026-08-17 after the stage was otherwise complete: the
+  assertion table gained an actor reference on the right of an equality and an every row
+  form over a list. Both are what AC-002-01 needed, and it is now a real check rather than
+  a recorded gap. The fixture spec has no unexpressible `then` clause left, so
+  `validateAcceptanceCriteria` returns nothing and the demonstration reports 0 authoring
+  warnings where it reported 1.
+- M5.10: the demonstration numbers moved, and were re-run rather than adjusted on paper.
+  15 criteria plan where 14 did, defects on gives 6 failures where it gave 5, and defects
+  off gives 13 passes where it gave 12. The finding text is the part worth reading:
+  `1 of 2 Invoice row(s) without org_id equal to actor.org_id, which is "org-2": INV-1001`.
+  It names the row, which is what makes a scoping finding actionable.
+- M5.10: three rules keep the new forms from being a way to guess. An unconfigured actor
+  attribute is unevaluable, never violated, since a finding there would be about the
+  configuration. An empty list is unevaluable, not vacuously satisfied, which is Q5's
+  answer held to in a second place. A row that was read and found wanting is a violation
+  and is named.
+- M5.10: a literal keeps the strict comparison it always had, and an actor attribute is
+  compared loosely across string and number exactly as `evaluateCondition` compares.
+  Configuration can only hold strings, so a strict comparison against a numeric field would
+  fail every time and the failure would look like a finding.
+- M5.10: `body-equals` now carries `expected: AssertionValue` rather than `value:
+  LiteralValue`, so both equality forms share one comparison path. Two ways to spell
+  equality in the AST would have been two code paths in the runner forever.
+- M5.10 gap that remains: AC-011-01, which needs a configured actor holding a token
+  belonging to no user. That is a target configuration question and no assertion form
+  closes it. The three narrowed criteria would need a before and after state form and a
+  cross-request comparison, both larger extensions than these two, since they need the
+  runner to hold state across requests rather than read one response.
+
+- M5.8: the integration test reads the real `fixtures/ledger/spec/ledger.spec.yaml` rather
+  than a spec written inside the test. A hand-built spec would only prove the runner agrees
+  with something the test invented; what is worth asserting is that the file a user would
+  write turns into checks that catch what is wrong with the application it describes.
+- M5.8: both directions are pinned as whole verdict maps, not as one lookup each. Defects
+  on gives 5 fails, 2 inconclusive, 7 pass; defects off gives 0 fails and the same 14
+  criteria. A runner that always failed or always passed breaks one of the two, and the
+  same checks run in both so the runs compare.
+- M5.8: D1 costs two failures, AC-001-01 and AC-013-01. The second is the one that says a
+  refusal must not confirm the invoice exists, and with D1 on the read simply succeeds, so
+  both criteria are reporting the same defect from different angles.
+- M5.8: AC-006-01 is inconclusive in both directions and always will be. D6 is the entity
+  the spec declares and the application never built, so there is nowhere to count records
+  and nothing is claimed either way. That is invariant I4 doing its job rather than a gap
+  in the runner.
+- M5.8: the fuzzy criterion is the only result carrying `deterministic: false`, so
+  `modelAssistedCheckCount` is 1 for a run in which no model was consulted at all. That is
+  the M5.7 judgment call showing up in a real run, and it is the number a reviewer should
+  look at first.
+
+- M5.7 crossed a task boundary by one function, flagged rather than hidden:
+  `planBehavioralChecks` used to refuse every fuzzy criterion with `capability-unavailable`,
+  which made the S5 exit criterion unreachable, since a criterion that never plans can
+  never run under Playwright. Fuzzy criteria now plan through the `when` vocabulary with no
+  assertions, and the capability question moved to the runner where it belongs. Planning is
+  M5.9's task; the decision to move it is M5.7's.
+- M5.7: a fuzzy criterion's `then` deliberately does not go through the assertion table.
+  Parsing it would refuse the criterion for being exactly what it declares itself to be.
+  Planning with an empty assertion list is also what makes the deterministic runner decline
+  it, since that runner already reports a plan with nothing to assert as inconclusive.
+- M5.7: the browser capability is resolved once per run rather than per capture, so twelve
+  fuzzy criteria attempt the optional import once, and a missing browser is a fact about the
+  run that is phrased in one place instead of rediscovered in twelve.
+- M5.7: `capability-unavailable` and `model-inconclusive` are kept apart. Nothing looked at
+  the page and a model looked and was unsure are different facts, the contract keeps
+  separate reasons for them, and only the first is fixable by installing something. Proved
+  by breaking it: dropping the capability branch reclassified a skipped criterion as
+  `model-inconclusive` and exactly one test failed.
+- M5.7: the reason travels beside the results, not inside them. `CheckResult` has no field
+  for an unverified reason and adding one would be a contract change, so
+  `runBehavioralChecks` returns `{results, unverified}`, the same widening
+  `planBehavioralChecks` made with `unplannable`.
+- M5.7 judgment call, worth a review: a fuzzy criterion skipped for a missing browser is
+  recorded `deterministic: false`, so it counts toward `modelAssistedCheckCount` although no
+  model was consulted. The alternative claims a deterministic check produced the result.
+  Overstating how much of a run was not deterministic is the safer error here.
+- M5.7: the degradation is two layers deep, which the break test made visible. Even with the
+  capability check removed, `capturePage` still returns `unavailable` and the criterion is
+  still inconclusive with the install line attached. Only the classification was wrong.
+- M5.7: the M5 Definition of Done lost its second command rather than gaining a replacement.
+  `--no-playwright` was never a vitest option, and an environment variable would put core in
+  the environment against rule R6. The launcher is injected by the caller and absent by
+  default, and this repository genuinely lacking Playwright is what exercises the absent
+  path. A test asserts that premise so the day the dependency lands, the suite says so.
+
+- M5.8-pre2: the fixture spec now reads through both vocabularies. 13 of 16 criteria plan,
+  and the three that do not are recorded gaps rather than silence: AC-002-01 whose `then`
+  compares a field on every row against a caller attribute, AC-011-01 whose `when` needs an
+  actor holding a token belonging to no user, and AC-005-02 which is the fuzzy one. The
+  spec hash moved to `sha256:63c0096716d3...`; nothing pinned the old one.
+- M5.8-pre2, the honest cost of the rewrite: two criteria lost a clause. "and the invoice
+  is unchanged" in AC-003-01 and AC-009-01 needs the record read before and after the
+  action, and the vocabulary offers only a count. Keeping the sentence whole would have
+  left D3 and N2 with no behavioral coverage at all, so the clause was dropped with a
+  comment in the spec rather than left to fail the whole criterion. The criteria now assert
+  less than the sentences they replaced, which is a real reduction and belongs in a review.
+- M5.8-pre2: AC-013-01 traded generality for expressibility. It compared the status of two
+  different requests, which nothing can state, and now names 404 as a literal because
+  REQ-012 pins the absent-invoice status at 404. If REQ-012 ever changes, this literal has
+  to change with it and nothing enforces that.
+- M5.8-pre2: AC-014-01 was one universal over every endpoint and every actor, and is now
+  two criteria naming two routes. An endpoint added later is not covered until somebody
+  adds a criterion for it. That is worse than the sentence it replaces and is the shape of
+  the tradeoff every rewrite here made: what the tool can check is narrower than what an
+  author can say.
+- M5.8-pre2: AC-005-02 was added as the one `mode: fuzzy` criterion in the fixture, since
+  the S5 exit criterion needs a fuzzy criterion to run and the file had none. It asks
+  whether the index page offers an administrative route, which is a judgment rather than an
+  assertion. `planBehavioralChecks` refuses fuzzy criteria today with
+  `capability-unavailable`, so M5.7 owns what happens to it when Playwright is present.
+- M5.8-pre2: no actor was added to the spec. `fixture-spec.test.ts` asserts the actor list
+  is exactly owner, outsider, anonymous, and a fourth actor for AC-011-01 would need a
+  credential in `qai.config.yaml` that resolves to a token belonging to no user. That is a
+  target configuration question, not a vocabulary one, so the criterion stays a gap.
+- M5.8-pre2: `fixture-criteria.test.ts` builds its planning context from the repository's
+  own `qai.config.yaml` rather than a literal, so the claim under test is that this spec
+  plans against this target. A hand-built context would assert only that the spec plans
+  against something the test invented, and could not fail when config drifts.
+- M5.8-pre2: the planning result was read by running it, not inferred from a green suite.
+  13 planned, 3 unplannable, and every route, actor, method and assertion kind was printed
+  and checked by eye before the test was believed.
+
+- M5.8-pre1: D4 is now implemented in `fixtures/ledger` behind `LEDGER_DEFECT_D4`, with
+  ledger level tests holding it in both directions, the same shape D5 took at M4.9. The
+  catalog now has D1, D2, D3, D4, D5 and both negative controls. D6 stays unimplemented on
+  purpose and D7 is still deferred.
+- M5.8-pre1: the switch is scoped to the list. REQ-004 says notes are omitted from list
+  responses, so a single invoice read returns the field whichever way the switch is set.
+  Covering the read as well would put two defects behind one toggle and would change what
+  D1 leaks, which several S0 to S3 assertions are written against.
+- M5.8-pre1: the redacted row is spelled out field by field against `Omit<Invoice,'notes'>`
+  rather than copied and pruned, so a field added to `Invoice` later fails to compile
+  instead of quietly disappearing from list responses.
+- M5.8-pre1 consequence to watch at M5.8: with D4 off the crawler no longer sees `notes` in
+  the list, so `diffSpecObservation` can report a field mismatch against an entity the spec
+  declares the field on. No test asserts `fieldMismatches` for the defects-off probe today,
+  so nothing breaks, but a spec declaring a field and a requirement asking for it to be
+  withheld from one response are not in conflict and the diff cannot currently tell.
+
+- M5.6, the invariant I1 rule in code: a deterministic failure decides the verdict whatever the model answered; `satisfied` with nothing failing is `pass`; `not-satisfied` and `uncertain` are both `inconclusive`. The only `fail` in the file is reached without consulting the answer at all, and a test iterates the whole answer union asserting none of them produces one.
+- M5.6: the same rule runs the other way, and that direction is the more tempting mistake. A model answering `satisfied` cannot erase a deterministic failure. A check a model can talk out of failing is worth nothing, and there is a test for it.
+- M5.6: a fuzzy result carries the deterministic result's evidence and records none of its own. That is not a gap in invariant I3: the only verdict this path can produce that is a finding is `fail`, which arrives from the deterministic side already carrying a request and a response. `pass` and `inconclusive` are not findings.
+- M5.6: the model's answer is quoted in the detail behind the words "Model assisted", and on the failing row the deterministic observation is stated first so nobody reads the model as having decided. Every result sets `deterministic: false`, which is what drives `modelAssistedCheckCount`.
+- M5.6: `fuzzy.test.ts` declares its own judges rather than importing `scriptedJudge` from `llm/`. Rule R1 forbids anything under `checks/` importing that directory, and lint enforces it for tests as much as for runners. A boundary a test may cross is not a boundary. The duplication is small and the alternative weakens the rule.
+- M5.6: `BehavioralPlan` gained `given` and `when`, so a fuzzy check shows the model the whole criterion rather than a fragment, and `BehavioralContext` gained `browser`, which keeps `runFuzzyCheck` to the three arguments the module's Public API names plus an optional deterministic result.
+
+- M5.5: `capturePage` reads `innerText('body')`, the rendered text of the document, and never a class, a tag structure, an nth-child position, or a generated identifier. Invariant I6 holds by construction rather than by review, and a test reads the source with comments stripped to assert no such API is called. The first version of that test failed against the words in its own doc comment, which is a fair warning about grepping prose for a policy.
+- M5.5 judgment call, needs review: **screenshots are off by default.** The module says a fuzzy check captures one, and a screenshot cannot be redacted the way a JSON body can, so a field marked `sensitive: true` is plainly readable in the image while rule R8 says never write an unredacted response to disk. The image is captured only when a caller passes a path; the accessible text, which does go through redaction, is the default evidence. If the intent was that screenshots are always taken, that is a conflict between the module and R8 rather than a local choice.
+- M5.5: Playwright is loaded through a specifier held in a variable, so TypeScript does not try to resolve a module this project does not depend on, and a failed import is a returned undefined rather than a throw. The absent-Playwright path is not faked in tests: this repository genuinely lacks Playwright, so `loadLauncher` is exercised against reality and returns undefined.
+- M5.5 limit worth stating: the real Playwright path is unexercised. Every capture test drives a fake launcher, which defines the shape this code expects rather than proving Playwright provides it. The first run against a real browser will be the first real test, and it belongs with M5.8 or the corpus run.
+- M5.5: a page authenticates through `extraHTTPHeaders`, which the caller supplies. `ActorSession` deliberately does not expose its credential, so nothing in this file can reach one; whoever assembles a fuzzy run has to pass headers explicitly. A cookie-authenticated actor is not covered and needs `context.addCookies`, which nothing calls yet.
+
+- M5.4 deviation, flagged in the module: the `Judge` interface lives in `checks/behavioral/judge.ts`, not in `llm/` where the task puts it. R1's lint rule forbids `checks/**` importing `**/llm/**` with `allowTypeImports: false`, and the fuzzy runner is a check, so a `Judge` declared in `llm/` would be unimportable by its only consumer. The port sits beside the consumer and `llm/` holds the implementations. The alternative, relaxing `allowTypeImports`, weakens the invariant and is not a local call.
+- M5.4: the boundary is proved by a type sweep over everything `llm/` exports rather than by naming functions one at a time, so a function added later is covered without anyone remembering to extend the test. Verified by probe, not by reading: adding `export function leakyVerdict(): 'pass'` to `llm/` made `pnpm typecheck` fail with "Type '\"pass\"' does not satisfy the constraint 'never'", and removing it made it pass. A proof that cannot fail proves nothing.
+- M5.4: `unavailableJudge` answers `uncertain` every time, including when the page text contains an instruction telling it to answer satisfied. That is not cleverness, it is the shape of the boundary: with no model configured nothing looked at the page, and `uncertain` maps to `inconclusive`. A test drives an injection string through it.
+- M5.4: `scriptedJudge` lives in `llm/` rather than in a test helper, for the reason `fixedDeps` does. M5.6 has to test adversarial model output, and two suites with two different fakes would eventually disagree about what the boundary permits.
+- M5.4: no model client is imported and none can be until a dependency is approved, since the list in 04-CONVENTIONS.md has no model SDK on it. A test reads the source and asserts no client import appears, so the day someone adds one it is a decision rather than an accident.
+
+- M5.3: the state read is issued after the action, as a separate request, and its evidence id joins the action's on the result. Two requests, both recorded, which is what makes a state claim reviewable.
+- M5.3: state is read as a configured state actor rather than as the acting one, per the module's line about the owner actor. An actor scoped to their own organization would count only what they can see, so a scoping bug would arrive dressed as a state bug. Absent configuration leaves the count unevaluable rather than falling back to the acting actor.
+- M5.3: every way a count can fail to be produced is unevaluable, never zero. No list route, no state actor, a transport failure, a refusal, or a body whose rows cannot be found all report why. `extractRows` from M3.6 already separates an unreadable shape from an empty list, and reusing it is what keeps that distinction from being re-derived differently here.
+- M5.3: where to read an entity back is resolved at planning time, so the runner knows nothing about configuration and route resolution stays in one place. An entity with no list route still plans, because the clause is expressible and it is the target that offers nowhere to look, which is a capability gap rather than an authoring mistake.
+- M5.3: two clauses counting the same entity read it once. A test asserts the request list, since a second read after the first would be counting a different moment.
+
+- M5.9, resolving the M5.2 gap: the user chose a `when` vocabulary over reusing access rules or changing the contract, so the module now carries a request table beside the assertion table. Seven forms, same discipline as `then`: canonical, mechanically tolerant, refusing rather than guessing.
+- M5.9: the instance id is optional on a read and required on an update or delete. A read of any record is still a read, while updating one record means naming which, and picking for the author would be the tool inventing a target's shape. A read may also name an id so a criterion about a record that does not exist can say which.
+- M5.9: routes resolve exactly as they do for access rules, Observation first then configured route then nothing, reusing M3's `resolvePath` and `PlanningContext`. No spec needs to carry target data, since the instance comes from config unless the criterion names one.
+- M5.9: `planBehavioralChecks` returns `{plans, unplannable}` where the module's Public API says `BehavioralPlan[]`, the same widening M3 made and for the same reason. A criterion that vanished from the plan would read as coverage that does not exist, so each one comes back with a reason from the contract's closed set.
+- M5.9: create and update send no request body, matching what access checks do. A criterion needing one is outside the table and needs approval, which is recorded in the module.
+- M5.9 repeat of the M5.1 trap, worth stating plainly: the type predicate was written over an intersection rather than a named union member, so narrowing failed on the negative branch and 958 tests passed while `pnpm typecheck` failed. Writing the note at M5.1 did not stop it happening again at M5.9. The rule to follow mechanically is that a predicate names a member of the union, never a shape that merely matches one.
+- M5.9: fixing the narrowing immediately surfaced dead code the compiler could not see before, a ternary for a `path` action that had already returned. Better types find more than they cost.
+
+- M5.2 gap, needs a decision before M5.8: nothing turns a criterion's `when` clause into a request. An access rule carries actor, action, and resource as fields, so M3 could plan one; an acceptance criterion states `when` in prose and the module gives a vocabulary for `then` only. `BehavioralPlan` therefore carries its request rather than deriving one, and `planBehavioralChecks` from the module's public API is not implemented. Three ways out: a `when` vocabulary mirroring the `then` table, reusing the requirement's access rules to supply the request where one exists, or adding structured fields to the criterion, which is a contract change. Recorded in the M5 Open questions.
+- M5.2: assertion evaluation is three-valued, satisfied, violated, or unevaluable, and a definite violation outranks an unevaluable assertion. If one clause is proven false the criterion did not hold, whatever could not be read about the rest. A criterion whose assertions are all unevaluable is `inconclusive`, never a pass.
+- M5.2: a body that is not JSON makes a field or value assertion unevaluable, but a JSON body missing the asserted path is a violation. Not being able to read the body and reading it to find the value absent are different facts.
+- M5.2: a violated `response time under` assertion fails at info severity, per the module's line that latency is informational. When latency is only one of several failures the criterion keeps its own severity, since something other than speed was wrong. Both directions have tests.
+- M5.2: the runner reuses `resourceFieldsIn` from M3's verdict table rather than writing a second field matcher. Two implementations of "is this field in the body" would eventually disagree, and the one in access checks is already the one findings are written against.
+- M5.2: `record count of <Entity> is <n>` is unevaluable here and says so in the finding text. It needs the follow-up read that M5.3 adds, and reporting anything else would be a verdict about state nobody read.
+- M5.2: the mutating interlock is the same shape as M3.7, permission passed in rather than recomputed, absent means refused. A refused mutating criterion issues no request at all, asserted by a test on the recorded request list.
+
+- M5.1: the vocabulary is strict and its tolerance is mechanical only. A leading `the`, a leading `response`, a trailing period, and `and` between clauses are absorbed; nothing else. A parser that decided "the body reports status ok" means `body.status equals "ok"` would be guessing, and a wrong guess here becomes a confident verdict about somebody's application. Eight tests assert the refusals, using the real unparseable clauses from the fixture spec.
+- M5.1: a criterion is all or nothing. If one clause of three falls outside the table the whole criterion is unsupported, because asserting the two that parsed and reporting `pass` claims the criterion was verified while a third of it was never tested. That is the quiet green run invariant I2 exists to stop.
+- M5.1: `validateAcceptanceCriteria` lives in M5 and is called by whoever assembles a run, though the module calls its output a load-time warning. M1 does not depend on M5, and having `loadSpec` emit M5's diagnostics would invert that dependency for the sake of the word.
+- M5.1 trap, a new variant of an old one: 44 tests passed while `pnpm typecheck` failed. The type predicate `isSupported` named a structurally equivalent shape rather than a member of the union, so TypeScript would not narrow on the negative branch and rejected a `.reason` access that could only be reached with an unsupported result. Vitest strips types, so the suite never saw it. A predicate has to name the union member.
+- M5.1: `splitClauses` splits on `and` outside quotes, so `body.message equals "created and sent"` stays one clause, and it matches whole words, so `"android"` is not split.
 
 - M4.4 resolved 2026-08-16: the user chose to read `schema.prisma` textually and add no dependency. The plan was corrected rather than the approved list widened, so the module implementation note now says so. The adapter reads `model` and `view` blocks with the same glob and regex posture as the other two.
 - M4.4: relation fields are dropped. A relation is a link to another model, not necessarily a field in any response, and recording one would produce an undeclared field finding against a spec that was right. Enums are read but are not entities, and a field typed by an enum stays, because an enum is a value.
@@ -365,7 +755,7 @@ Surprises worth recording:
 
 ## Known issues, not blocking
 
-- `--no-playwright` in the M5 Definition of Done is not a vitest option. pnpm forwards it and vitest exits with `Unknown option --no-playwright`, so that command cannot work as written. Fixing the `--` does not fix this. How the playwright-absent path gets exercised is an M5 decision, most likely an environment variable the test reads, and it is recorded in the M5 Open questions.
+- Resolved at M5.7: `--no-playwright` was removed from the M5 Definition of Done rather than replaced. It was never a vitest option, and an environment variable would have put core in the environment against rule R6. The launcher is injected by the caller and absent by default.
 
 - The Definition of Done test command was corrected in every module file, M2 through M9, not only M4. Each carried a `--` before its filter names, which pnpm forwards to the script so vitest reads them as passthrough arguments and filters nothing. Verified for the two modules that have tests today: `test target evidence` runs 151 tests, `test access` runs 159, where the old form ran the whole suite of 850.
 

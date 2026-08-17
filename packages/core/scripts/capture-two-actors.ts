@@ -14,7 +14,11 @@ import { systemDeps } from '../src/target/deps.ts';
  *   PORT=3000 pnpm --filter ledger dev
  *
  * and set the credentials the config names:
- *   LEDGER_OWNER_TOKEN, LEDGER_OUTSIDER_TOKEN
+ *   LEDGER_OWNER_TOKEN, LEDGER_OUTSIDER_TOKEN, LEDGER_UNKNOWN_TOKEN
+ *
+ * Every configured actor must resolve or the run stops at exit code 2, so the third
+ * variable is required since `impostor` was configured at M5.13. It holds a token
+ * matching no seeded user.
  */
 
 function repositoryRoot(): string {

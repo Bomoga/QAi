@@ -22,6 +22,7 @@ async function start(
   overrides: Partial<{
     d2UnscopedInvoiceList: boolean;
     d3UnauthenticatedMutation: boolean;
+    d4NotesInInvoiceList: boolean;
     d5UndeclaredDebugEndpoint: boolean;
   }> = {},
 ): Promise<string> {
@@ -31,6 +32,7 @@ async function start(
       d1CrossOrgInvoiceRead,
       d2UnscopedInvoiceList: overrides.d2UnscopedInvoiceList ?? true,
       d3UnauthenticatedMutation: overrides.d3UnauthenticatedMutation ?? true,
+      d4NotesInInvoiceList: overrides.d4NotesInInvoiceList ?? true,
       d5UndeclaredDebugEndpoint: overrides.d5UndeclaredDebugEndpoint ?? true,
     },
   });
@@ -203,6 +205,67 @@ describe('PATCH /api/invoices/:id', () => {
       headers: { authorization: `Bearer ${OWNER_TOKEN}` },
     });
     expect(response.status).toBe(200);
+  });
+
+  /**
+   * An accepted write has to actually write, or D3's catalog line is only half true and
+   * a criterion saying the invoice is unchanged could never be false. Added at M5.11 with
+   * the before and after assertion form that needs it.
+   */
+  it('D3 on: the unauthenticated write actually changes the record', async () => {
+    const baseUrl = await start(true);
+
+    const before = (await (
+      await fetch(`${baseUrl}/api/invoices/INV-1001`, asActor(OWNER_TOKEN))
+    ).json()) as { total_cents: number };
+
+    await fetch(`${baseUrl}/api/invoices/INV-1001`, { method: 'PATCH' });
+
+    const after = (await (
+      await fetch(`${baseUrl}/api/invoices/INV-1001`, asActor(OWNER_TOKEN))
+    ).json()) as { total_cents: number };
+
+    expect(after.total_cents).not.toBe(before.total_cents);
+  });
+
+  it('D3 off: the refused write leaves the record alone', async () => {
+    const baseUrl = await start(true, { d3UnauthenticatedMutation: false });
+
+    const read = async (): Promise<unknown> =>
+      (await fetch(`${baseUrl}/api/invoices/INV-1001`, asActor(OWNER_TOKEN))).json();
+
+    const before = await read();
+    const refused = await fetch(`${baseUrl}/api/invoices/INV-1001`, { method: 'PATCH' });
+    expect(refused.status).toBe(401);
+
+    expect(await read()).toEqual(before);
+  });
+
+  it('N2: a refused cross-organization write leaves the record alone', async () => {
+    const baseUrl = await start(true);
+
+    const read = async (): Promise<unknown> =>
+      (await fetch(`${baseUrl}/api/invoices/INV-1001`, asActor(OWNER_TOKEN))).json();
+
+    const before = await read();
+    await fetch(`${baseUrl}/api/invoices/INV-1001`, {
+      method: 'PATCH',
+      headers: { authorization: `Bearer ${OUTSIDER_TOKEN}` },
+    });
+
+    expect(await read()).toEqual(before);
+  });
+
+  it('leaves the seed alone, so the next server starts where this one did', async () => {
+    const first = await start(true);
+    await fetch(`${first}/api/invoices/INV-1001`, { method: 'PATCH' });
+
+    const moved = (await (
+      await fetch(`${first}/api/invoices/INV-1001`, asActor(OWNER_TOKEN))
+    ).json()) as { total_cents: number };
+
+    expect(moved.total_cents).toBe(125_001);
+    expect(seedLedger().invoices[0]?.total_cents).toBe(125_000);
   });
 });
 

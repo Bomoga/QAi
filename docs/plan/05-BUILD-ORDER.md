@@ -50,7 +50,9 @@ Modules: M4. Depends on M1, M2.
 
 Deterministic HTTP criteria first. Browser and fuzzy criteria second, behind an optional dependency.
 
-**Exit:** deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report. Skipping Playwright installation degrades to `unverified` with reason, never to an error.
+**Exit:** deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built, bounded by invariant I1 so no model output can reach a `fail`, and a fuzzy criterion is labeled model assisted wherever it appears. Skipping Playwright installation degrades to `unverified` with reason, never to an error.
+
+**Restated 2026-08-17, at the S5 boundary.** The clause was "at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report". Playwright can be installed, but no model SDK is on the approved list in `04-CONVENTIONS.md`, so the only judge available is a scripted one. That satisfies the word "runs" while making the words "model assisted" untrue in the output, which is the kind of green run invariant I2 exists to prevent. The stage therefore exits on the path being built and bounded rather than on a model having been consulted. A fuzzy criterion running against a real browser with a real judge belongs to the first stage that has both, and is recorded in the M5 Open questions.
 
 Modules: M5. Depends on M1, M2, M3 registry.
 

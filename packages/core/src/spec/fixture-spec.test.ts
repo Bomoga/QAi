@@ -32,9 +32,13 @@ describe('fixtures/ledger/spec/ledger.spec.yaml', () => {
     expect(loadFixture().spec.requirements).toHaveLength(15);
   });
 
-  it('declares the two actors cross-organization access needs, plus anonymous', () => {
+  it('declares the two actors cross-organization access needs, plus the two refusal cases', () => {
     const ids = loadFixture().spec.actors.map((actor) => actor.id);
-    expect(ids).toEqual(['owner', 'outsider', 'anonymous']);
+
+    // `anonymous` presents nothing and `impostor` presents a credential belonging to
+    // nobody. A target can refuse the first and accept the second, so they are two
+    // actors rather than one.
+    expect(ids).toEqual(['owner', 'outsider', 'anonymous', 'impostor']);
   });
 
   it('parses every condition it declares', () => {

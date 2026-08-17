@@ -55,9 +55,26 @@ actors:
     auth:
       kind: bearer
       tokenEnv: LEDGER_OUTSIDER_TOKEN
+stateActor: owner             # who persisted state is read as; no default
 redaction:
   extraPatterns: ["(?i)api[_-]?key"]
 ```
+
+**The state actor**, added at M2.8 by decision on 2026-08-17, driven by M5. Two behavioral
+assertion forms read persisted state, the record count and the before and after
+comparison, and both need an identity to read it as. It names a configured actor and
+carries no credentials of its own; naming one that is not configured fails the load rather
+than leaving every state assertion quietly unevaluable.
+
+It has no default, and neither candidate default is safe. The acting actor is frequently
+an identity that cannot read the record at all, which is precisely what the criterion is
+about: a criterion asserting that an unauthenticated write changed nothing has to be read
+by somebody who can see the record. And an actor scoped to its own organization counts
+only what it can see, so a scoping bug would arrive dressed as a state bug. Absent, state
+assertions are unevaluable, which is honest and visible.
+
+Two actors are still the hard requirement; a state actor is a third role that one of them
+may fill, not a third actor.
 
 **Two actors are a hard requirement for access checking.** If fewer than two are configured, access checks are not run and every access-derived requirement is `unverified` with reason `actor-unavailable`. Say this clearly at startup rather than producing a quiet green run, since a quiet green run is the single most dangerous output this tool can produce.
 
@@ -78,6 +95,7 @@ redaction:
 5. **M2.5** Implement `ActorSession` for `bearer`, `cookie`, `header`, and `none` auth kinds.
 6. **M2.6** Implement seed and reset command execution with timeout, captured output, and the disposability gate.
 7. **M2.7** Implement the startup capability report: which actors resolved, whether source is present, whether fixtures are available. This is what gets printed before a run.
+8. **M2.8** Add `stateActor` to `TargetConfig`, validated to name a configured actor. Added 2026-08-17, after S2 merged, because M5's state assertions had no configured identity to read as and every caller was choosing one for itself.
 
 ## Definition of Done
 
