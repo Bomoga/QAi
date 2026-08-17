@@ -43,7 +43,8 @@ export function runFuzzyCheck(plan: BehavioralPlan, ctx: TargetContext, judge: J
 | `body.<path> equals actor.<attribute>` | Value equality against the acting actor |
 | `every <Entity> has <field> equal to <literal>` | Every row of a list response |
 | `every <Entity> has <field> equal to actor.<attribute>` | Every row, against the acting actor |
-| `every endpoint omits field <Entity>.<field>` | Every endpoint an Observation holds |
+| `every endpoint omits field <Entity>.<field>` | Every endpoint an Observation holds, as the acting actor |
+| the same, followed by `as every actor` | The same, as every configured actor |
 | `record count of <Entity> is <n>` | Persisted state via a subsequent read |
 | `record <Entity> is unchanged`, optionally naming an instance | The record, read before the action and again after |
 | `response time under <ms>` | Latency, informational severity only |
@@ -129,10 +130,26 @@ The quantifier is the risk, and it is bounded by three rules that can only cost 
 Only GET and HEAD are swept and a path with an unresolved parameter is skipped, so the
 sweep cannot write and cannot request a route the target does not serve.
 
+**The actor axis was added 2026-08-17 as M5.12c**, closing the second half of AC-014-01's
+sentence. It is written out in the criterion rather than implied, because it multiplies
+the request count: three actors across four observed endpoints is twelve readings from one
+criterion, and an author should meet that number in the spec rather than in a run.
+
+- The sweep runs as every actor in the session map, which holds the actors whose
+  credentials resolved. One that did not is simply absent, so the result names the actors
+  it swept as and a reader can see that the sweep covered who it could reach.
+- With the axis and no actors at all, the assertion is unevaluable, on the same rule as an
+  empty endpoint list.
+- It earns the cost: a field the outsider can see and the owner cannot is invisible to a
+  single-actor sweep. Verified by making the fixture hand a token to org-2 only, where the
+  criterion without the axis passes over four clean readings and with it fails naming
+  `/health as outsider`.
+
 The honest limitation, which no rule removes: coverage is the crawl's coverage. An
-endpoint the probe never reached was never checked, and the criterion says how many it
-saw rather than claiming the application has no others. The structural diff is what
-reports an endpoint nobody specified; this reports a field nobody should return.
+endpoint the probe never reached was never checked, and the criterion says how many
+readings it took rather than claiming the application has no other endpoints. The
+structural diff is what reports an endpoint nobody specified; this reports a field nobody
+should return.
 
 **Request vocabulary for `when` clauses**, a closed set on the same terms, added
 2026-08-16 by decision. `then` had a vocabulary and `when` had none, so nothing could
@@ -185,7 +202,8 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 10. **M5.10** Add the actor reference and the every row assertion forms, closing the coverage gaps M5.8-pre2 recorded. Approved 2026-08-17, after the stage was otherwise complete.
 11. **M5.11** Add the before and after state form, restoring the clause two criteria had to drop. Approved 2026-08-17. Includes making an accepted write in `fixtures/ledger` actually write, without which the form's violated branch could never fire against the fixture.
 12. **M5.12** Add the cross-request status comparison, restoring what AC-013-01 originally claimed. Approved 2026-08-17. The reference is stated in the `when` vocabulary and must not mutate.
-13. **M5.12b** Add the endpoint sweep, closing AC-014-01. Approved 2026-08-17. It quantifies over an Observation and is unevaluable without one, so a run with no probe cannot pass it by checking nothing.
+13. **M5.12b** Add the endpoint sweep, closing AC-014-01 over endpoints. Approved 2026-08-17. It quantifies over an Observation and is unevaluable without one, so a run with no probe cannot pass it by checking nothing.
+14. **M5.12c** Add the actor axis to the sweep, closing the rest of AC-014-01. Approved 2026-08-17. Written out in the criterion, since it multiplies the request count by the number of configured actors.
 
 ## Definition of Done
 
@@ -241,16 +259,16 @@ than passing over a path it stopped covering.
   | AC-003-01 | "and the invoice is unchanged", which needs before and after state | **Closed at M5.11.** The clause is restored and the criterion asserts it |
   | AC-009-01 | The same clause | **Closed at M5.11**, same form |
   | AC-013-01 | A comparison against the status another request returns | **Closed at M5.12.** The criterion claims indistinguishability again, not a literal |
-  | AC-014-01 | A universal over every endpoint and every actor | **Closed at M5.12b** over endpoints, unevaluable without a probe. Still one actor per criterion |
+  | AC-014-01 | A universal over every endpoint and every actor | **Closed at M5.12b and M5.12c**, both axes, unevaluable without a probe |
 
-  One thing remains, and it is not about the vocabulary at all: AC-011-01 needs a
-  configured actor holding a token belonging to no user, which is target configuration.
+  Nothing in this table is now a vocabulary gap. AC-011-01 is the one criterion still
+  unplannable, and what it needs is a configured actor holding a token belonging to no
+  user, which is target configuration rather than a form.
 
-  The endpoint sweep closed the universal over endpoints and deliberately did not close
-  the universal over actors. A criterion names one actor, and "every actor" would mean
-  re-running the sweep per configured identity, which reads as thoroughness and is really
-  a loop the author cannot see the cost of. Writing one criterion per actor keeps the
-  request count visible in the spec.
+  Every criterion this file narrowed at M5.8-pre2 has been restored to what it originally
+  claimed. That is worth stating plainly because it was not the plan: the gaps were
+  recorded as permanent-looking coverage losses, and closing them one at a time turned out
+  to be five assertion forms and one config field.
 - **Resolved 2026-08-17 as M2.8:** `TargetConfig` now carries `stateActor`, validated to name a configured actor, with no default. Raised here at M5.11 because two assertion forms read persisted state and every caller was choosing an identity for itself. The field is M2's and the edit is recorded in that module; this note stays so the reason it exists is readable from the side that needed it.
 - **Raised at M5.11: an accepted write in `fixtures/ledger` now actually writes.** It did not before, which made D3's catalog line only half true and meant a criterion saying the invoice is unchanged could never be false. The request carries no body, since the vocabulary issues none, so the applied change is a fixed increment to the total. If the catalog intended D3 to be an accepted write that changes nothing, this is a fixture change worth reverting, and the criterion should go back to asserting the status alone.
 - **The real fuzzy path is still unexercised, decided at the S5 boundary 2026-08-17.** Every capture test drives an injected launcher, which defines the shape this code expects rather than proving Playwright provides it, and no judge has ever been backed by a model. The stage exit criterion was restated rather than met with a scripted judge, since a run labeled model assisted with no model in it is exactly the false green this tool exists to stop. The first run against a real browser with a real judge needs two things this repository does not have: Playwright installed, which is approved and merely absent, and a model SDK, which is not approved. See `05-BUILD-ORDER.md` under S5.
