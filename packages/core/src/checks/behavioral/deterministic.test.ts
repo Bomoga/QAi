@@ -562,6 +562,156 @@ describe('comparing a record before and after the action', () => {
   });
 });
 
+/**
+ * The cross-request form. The session answers with a different status per call, so the
+ * action and the reference can disagree, which a single canned response cannot express.
+ */
+describe('comparing the status against another request', () => {
+  const reference: Assertion = {
+    kind: 'status-matches',
+    phrase: 'actor owner reads Invoice INV-9999',
+    reference: {
+      actorId: 'owner',
+      action: 'read',
+      entity: 'Invoice',
+      instanceId: 'INV-9999',
+      mutates: false,
+    },
+  };
+
+  function stagedStatuses(statuses: number[], sent: RequestSpec[] = []) {
+    let call = -1;
+    const session = {
+      id: 'owner',
+      attributes: {},
+      request(spec: RequestSpec) {
+        call += 1;
+        sent.push(spec);
+        return Promise.resolve({
+          outcome: {
+            kind: 'response' as const,
+            response: response({ status: statuses[call] ?? 200 }),
+          },
+          evidenceId: `EV-00000${call + 1}`,
+          evidence: {} as never,
+        });
+      },
+    };
+
+    return new Map([['owner', session]]);
+  }
+
+  function matchingPlan(overrides: Partial<BehavioralPlan> = {}): BehavioralPlan {
+    return plan({
+      assertions: [reference],
+      then: 'status matches actor owner reads Invoice INV-9999',
+      referenceRequests: [
+        {
+          phrase: 'actor owner reads Invoice INV-9999',
+          actorId: 'owner',
+          request: { method: 'GET', path: '/api/invoices/INV-9999' },
+        },
+      ],
+      ...overrides,
+    });
+  }
+
+  it('passes when both requests answer the same', async () => {
+    const result = await runDeterministicCheck(matchingPlan(), context(stagedStatuses([404, 404])));
+
+    expect(result.verdict).toBe('pass');
+  });
+
+  it('fails when they differ, naming both statuses', async () => {
+    const result = await runDeterministicCheck(matchingPlan(), context(stagedStatuses([200, 404])));
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('status 200');
+    expect(result.detail).toContain('returned 404');
+  });
+
+  it('issues the reference after the action, as the actor the phrase names', async () => {
+    const sent: RequestSpec[] = [];
+    await runDeterministicCheck(matchingPlan(), context(stagedStatuses([200, 404], sent)));
+
+    expect(sent).toEqual([
+      { method: 'GET', path: '/api/invoices/INV-9999' },
+      { method: 'GET', path: '/api/invoices/INV-9999' },
+    ]);
+  });
+
+  it('records the reference request as evidence, since a claim rests on it', async () => {
+    const result = await runDeterministicCheck(matchingPlan(), context(stagedStatuses([404, 404])));
+
+    expect(result.evidence).toEqual(['EV-000001', 'EV-000002']);
+  });
+
+  it('is unevaluable when the reference resolved to no route', async () => {
+    const withoutRoute = plan({
+      assertions: [reference],
+      then: 'status matches actor owner reads Invoice INV-9999',
+    });
+
+    const result = await runDeterministicCheck(withoutRoute, context(stagedStatuses([404])));
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('no route is known');
+  });
+
+  it('is unevaluable when the reference names an actor that is not configured', async () => {
+    const otherActor = matchingPlan({
+      referenceRequests: [
+        {
+          phrase: 'actor owner reads Invoice INV-9999',
+          actorId: 'admin',
+          request: { method: 'GET', path: '/api/invoices/INV-9999' },
+        },
+      ],
+    });
+
+    const result = await runDeterministicCheck(otherActor, context(stagedStatuses([404])));
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('actor admin is not configured');
+  });
+
+  it('is unevaluable when the reference request could not be completed', async () => {
+    let call = -1;
+    const session = {
+      id: 'owner',
+      attributes: {},
+      request() {
+        call += 1;
+        return Promise.resolve(
+          call === 0
+            ? {
+                outcome: { kind: 'response' as const, response: response({ status: 404 }) },
+                evidenceId: 'EV-000001',
+                evidence: {} as never,
+              }
+            : {
+                outcome: {
+                  kind: 'transport-error' as const,
+                  message: 'socket hang up',
+                  durationMs: 1,
+                },
+                evidenceId: 'EV-000002',
+                evidence: {} as never,
+              },
+        );
+      },
+    };
+
+    const result = await runDeterministicCheck(
+      matchingPlan(),
+      context(new Map([['owner', session]])),
+    );
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('socket hang up');
+  });
+});
+
 describe('the acting actor reaches the assertion', () => {
   it('resolves an actor attribute from the session that issued the request', async () => {
     const sessions = sessionReturning(

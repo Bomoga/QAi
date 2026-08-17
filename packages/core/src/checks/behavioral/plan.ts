@@ -5,6 +5,7 @@ import {
   BEHAVIORAL_SEVERITY,
   type BehavioralPlan,
   type RecordRead,
+  type ReferenceRequest,
   type StateRead,
 } from './types.ts';
 import {
@@ -149,6 +150,46 @@ function recordReadsFor(
   return reads;
 }
 
+/**
+ * Resolves each `status matches` reference into a request that can be issued.
+ *
+ * A reference resolves exactly as an action does, through the same route table and the
+ * same instance rules, because it is written in the same vocabulary. One that resolves to
+ * nothing is left out and the runner reports the assertion unevaluable, naming the phrase
+ * the author wrote.
+ */
+function referenceRequestsFor(
+  assertions: readonly Assertion[],
+  observation: Observation | null,
+  context: PlanningContext,
+): ReferenceRequest[] {
+  const references: ReferenceRequest[] = [];
+
+  for (const assertion of assertions) {
+    if (assertion.kind !== 'status-matches') continue;
+    if (references.some((entry) => entry.phrase === assertion.phrase)) continue;
+
+    const reference = assertion.reference;
+    const template = routeFor(reference, observation, context);
+    if (template === undefined) continue;
+
+    const instanceId = instanceFor(reference, context);
+    const needsInstance = template.includes('{id}') || template.includes(':id');
+    if (needsInstance && instanceId === undefined) continue;
+
+    references.push({
+      phrase: assertion.phrase,
+      actorId: reference.actorId,
+      request: {
+        method: METHOD_FOR_WHEN[reference.action],
+        path: needsInstance ? resolvePath(template, instanceId ?? '') : template,
+      },
+    });
+  }
+
+  return references;
+}
+
 function handlerRefFor(request: WhenRequest, observation: Observation | null): string | undefined {
   if (request.entity === undefined) return undefined;
 
@@ -236,6 +277,7 @@ export function planBehavioralChecks(
       const handlerRef = handlerRefFor(when, observation);
       const stateReads = stateReadsFor(assertions, observation, context);
       const recordReads = recordReadsFor(assertions, when, instanceId, observation, context);
+      const referenceRequests = referenceRequestsFor(assertions, observation, context);
 
       plans.push({
         identity: {
@@ -259,6 +301,7 @@ export function planBehavioralChecks(
         ...(handlerRef === undefined ? {} : { locationRef: handlerRef }),
         ...(stateReads.length === 0 ? {} : { stateReads }),
         ...(recordReads.length === 0 ? {} : { recordReads }),
+        ...(referenceRequests.length === 0 ? {} : { referenceRequests }),
       });
     });
   }

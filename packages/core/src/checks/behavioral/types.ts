@@ -38,6 +38,20 @@ export interface RecordRead {
   readonly path: string;
 }
 
+/**
+ * A second request whose status an assertion compares against.
+ *
+ * Resolved at planning time like the reads above. Never mutating, which the assertion
+ * parser refuses rather than the runner guarding: an assertion that changes the target
+ * would break invariant I7 from inside a verdict.
+ */
+export interface ReferenceRequest {
+  /** The authored phrase, which ties this back to the assertion that asked for it. */
+  readonly phrase: string;
+  readonly actorId: string;
+  readonly request: RequestSpec;
+}
+
 export interface BehavioralPlan extends CheckPlan {
   readonly requirementId: string;
   readonly criterionId: string;
@@ -56,6 +70,8 @@ export interface BehavioralPlan extends CheckPlan {
   readonly stateReads?: readonly StateRead[];
   /** One per record an `is unchanged` assertion names, where a route and instance resolved. */
   readonly recordReads?: readonly RecordRead[];
+  /** One per `status matches` assertion whose reference resolved to a route. */
+  readonly referenceRequests?: readonly ReferenceRequest[];
 }
 
 /**

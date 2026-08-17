@@ -109,6 +109,51 @@ describe('the value form', () => {
   });
 });
 
+describe('the status matches form', () => {
+  it('reads a reference stated in the request vocabulary', () => {
+    expect(assertionsOf('status matches actor outsider reads Invoice INV-9999')).toEqual([
+      {
+        kind: 'status-matches',
+        phrase: 'actor outsider reads Invoice INV-9999',
+        reference: {
+          actorId: 'outsider',
+          action: 'read',
+          entity: 'Invoice',
+          instanceId: 'INV-9999',
+          mutates: false,
+        },
+      },
+    ]);
+  });
+
+  it('reads a reference to a literal path', () => {
+    const [assertion] = assertionsOf('status matches actor anonymous requests /health');
+
+    expect(assertion).toMatchObject({ kind: 'status-matches' });
+  });
+
+  it('refuses a reference that would write, so an assertion cannot change the target', () => {
+    // Invariant I7 from inside a verdict. The criterion is unsupported rather than the
+    // runner being trusted to skip it.
+    expect(parseThen('status matches actor owner deletes Invoice INV-1001').kind).toBe(
+      'unsupported',
+    );
+    expect(parseThen('status matches actor owner updates Invoice INV-1001').kind).toBe(
+      'unsupported',
+    );
+    expect(parseThen('status matches actor owner creates Invoice').kind).toBe('unsupported');
+  });
+
+  it('refuses a reference that is not a request at all', () => {
+    expect(parseThen('status matches the one for a missing invoice').kind).toBe('unsupported');
+  });
+
+  it('leaves the ordinary status forms alone', () => {
+    expect(assertionsOf('status is 404')).toEqual([{ kind: 'status', codes: [404] }]);
+    expect(assertionsOf('status in 401, 403')).toEqual([{ kind: 'status', codes: [401, 403] }]);
+  });
+});
+
 describe('the unchanged form', () => {
   it('reads a record named by instance', () => {
     expect(assertionsOf('record Invoice INV-1001 is unchanged')).toEqual([

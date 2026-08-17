@@ -313,6 +313,37 @@ describe('what cannot be planned comes back with a reason', () => {
     expect(plans[0]?.recordReads).toBeUndefined();
   });
 
+  it('resolves a status matches reference through the same route table', () => {
+    const spec = specWith([
+      {
+        when: 'actor outsider reads Invoice INV-1001',
+        then: 'status matches actor outsider reads Invoice INV-9999',
+      },
+    ]);
+    const { plans } = planBehavioralChecks(spec, null, CONTEXT);
+
+    expect(plans[0]?.referenceRequests).toEqual([
+      {
+        phrase: 'actor outsider reads Invoice INV-9999',
+        actorId: 'outsider',
+        request: { method: 'GET', path: '/api/invoices/INV-9999' },
+      },
+    ]);
+  });
+
+  it('plans the criterion anyway when the reference resolves to no route', () => {
+    const spec = specWith([
+      {
+        when: 'actor owner reads Invoice INV-1001',
+        then: 'status matches actor owner reads AuditLog AUD-1',
+      },
+    ]);
+    const { plans, unplannable } = planBehavioralChecks(spec, null, CONTEXT);
+
+    expect(unplannable).toEqual([]);
+    expect(plans[0]?.referenceRequests).toBeUndefined();
+  });
+
   it('keeps planning after one criterion it could not read', () => {
     const spec = specWith([
       { when: 'the owner updates the invoice', then: 'status is 200' },

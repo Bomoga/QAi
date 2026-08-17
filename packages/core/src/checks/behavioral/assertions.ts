@@ -1,5 +1,6 @@
 import type { Spec } from '../../contracts/index.ts';
 import { type LoadDiagnostic, warning } from '../../spec/diagnostics.ts';
+import { isRequest, parseWhen, type WhenRequest } from './when.ts';
 
 /**
  * The assertion vocabulary for deterministic acceptance criteria.
@@ -9,6 +10,7 @@ import { type LoadDiagnostic, warning } from '../../spec/diagnostics.ts';
  *
  *   status is 404
  *   status in 401, 403
+ *   status matches actor outsider reads Invoice INV-9999
  *   body contains field Invoice.org_id
  *   body omits field Invoice.notes
  *   body.status equals "ok"
@@ -67,6 +69,21 @@ export type Assertion =
       readonly field: string;
       readonly expected: AssertionValue;
     }
+  /**
+   * The status equals the status another request returns. Added 2026-08-17 with approval,
+   * and the first assertion that issues traffic of its own.
+   *
+   * The reference is stated in the `when` request vocabulary rather than a second grammar,
+   * so a reader learns one table and a reference resolves its route and instance exactly
+   * as an action does. It must not mutate, refused at parse time: an assertion that
+   * changes the target would break invariant I7 from inside a verdict.
+   */
+  | {
+      readonly kind: 'status-matches';
+      readonly reference: WhenRequest;
+      /** The phrase as authored, quoted in findings and used to match the planned request. */
+      readonly phrase: string;
+    }
   | { readonly kind: 'record-count'; readonly entity: string; readonly count: number }
   /**
    * The record is the same after the action as it was before it. Added 2026-08-17 with
@@ -107,6 +124,7 @@ const RECORD_COUNT = /^record\s+count\s+of\s+([A-Za-z_][\w]*)\s+is\s+(\d+)$/iu;
 const RESPONSE_TIME = /^time\s+under\s+(\d+)\s*(?:ms)?$/iu;
 const EVERY_ROW = /^every\s+([A-Za-z_][\w]*)\s+has\s+([A-Za-z_][\w]*)\s+equal\s+to\s+(.+)$/iu;
 const RECORD_UNCHANGED = /^record\s+([A-Za-z_][\w]*)(?:\s+(\S+))?\s+is\s+unchanged$/iu;
+const STATUS_MATCHES = /^status\s+matches\s+(.+)$/iu;
 const ACTOR_REF = /^actor\.([A-Za-z_][\w]*)$/iu;
 
 const STATUS_CODE = /^[1-5]\d{2}$/u;
@@ -183,6 +201,38 @@ function parseStatusCodes(raw: string): number[] | undefined {
 
 function parseClause(clause: string): Assertion | undefined {
   const text = clause.replace(LEADING_FILLER, '').trim();
+
+  // Tried before the status form, whose `is|in` cannot match `matches` either way. The
+  // order is stated rather than relied on, since both begin with the same word.
+  const matching = STATUS_MATCHES.exec(text);
+  if (matching?.[1] !== undefined) {
+    const phrase = matching[1].trim();
+    const reference = parseWhen(phrase);
+
+    if (!isRequest(reference)) return undefined;
+
+    // A reference that writes would make an assertion change the target, which is
+    // invariant I7 broken from inside a verdict. Refused here rather than guarded in the
+    // runner, so the criterion is reported unsupported with the clause named.
+    if (reference.mutates) return undefined;
+
+    // The parse discriminator belongs to the parse result, not to the request, so the
+    // request is rebuilt field by field. An AST carrying a stray `kind: "request"` inside
+    // another `kind` reads like a bug the first time somebody serializes or compares one,
+    // and spelling the fields out makes a future addition to `WhenRequest` visible here.
+    return {
+      kind: 'status-matches',
+      phrase,
+      reference: {
+        actorId: reference.actorId,
+        action: reference.action,
+        mutates: reference.mutates,
+        ...(reference.entity === undefined ? {} : { entity: reference.entity }),
+        ...(reference.instanceId === undefined ? {} : { instanceId: reference.instanceId }),
+        ...(reference.path === undefined ? {} : { path: reference.path }),
+      },
+    };
+  }
 
   const status = STATUS.exec(text);
   if (status?.[1] !== undefined) {
@@ -288,6 +338,7 @@ export function isSupported(parsed: ParsedThen): parsed is ThenAssertions {
 /** The forms, spelled out for an error message a reader can act on. */
 export const ASSERTION_FORMS: readonly string[] = [
   'status is <code>, or status in <code>, <code>',
+  'status matches <a non-mutating request in the when vocabulary>',
   'body contains field <Entity>.<field>',
   'body omits field <Entity>.<field>',
   'body.<path> equals <literal>, or equals actor.<attribute>',

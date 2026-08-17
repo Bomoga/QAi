@@ -11,10 +11,15 @@ import type { BehavioralContext, BehavioralPlan, RecordRead } from './types.ts';
 /**
  * The deterministic behavioral runner.
  *
- * One criterion, one request, one verdict, with the evidence captured before anything is
- * decided. Every assertion in the vocabulary is evaluated against the response that came
- * back, and nothing here consults a model: this is the bulk of M5's value precisely
+ * One criterion, one action, one verdict, with the evidence captured before anything is
+ * decided. Nothing here consults a model: this is the bulk of M5's value precisely
  * because it cannot be talked into an answer.
+ *
+ * Most assertions are a pure function of the response the action returned. Three are not,
+ * and each says so in its own form: a record count reads the entity back, an unchanged
+ * record is read before the action and again after, and a status match issues the
+ * reference request the criterion names. Every one of those is a read, and every request
+ * any of them makes is recorded as evidence.
  *
  * Three-valued by construction. An assertion is satisfied, violated, or unevaluable, and
  * the last is not a failure. A body that is not JSON, or a persisted state assertion that
@@ -287,6 +292,15 @@ export function evaluateAssertion(
         assertion,
         state: 'unevaluable',
         observed: `whether ${assertion.entity} changed, which is read before and after separately`,
+      };
+    }
+
+    case 'status-matches': {
+      // Needs a second request, issued in `evaluateStatusMatches`.
+      return {
+        assertion,
+        state: 'unevaluable',
+        observed: `the status of ${assertion.phrase}, which is requested separately`,
       };
     }
 
@@ -572,6 +586,63 @@ async function evaluateRecordUnchanged(
   };
 }
 
+/**
+ * Issues the reference request and compares its status against the action's.
+ *
+ * The comparison is of status codes only, which is what the form claims and all it
+ * claims. Comparing two whole responses would be a far larger assertion wearing the same
+ * words, and widening it is a separate approval.
+ *
+ * The request is issued after the action, as the actor the phrase names. It cannot mutate,
+ * refused by the parser, so issuing it changes nothing about what the action did.
+ */
+async function evaluateStatusMatches(
+  assertion: Extract<Assertion, { kind: 'status-matches' }>,
+  plan: BehavioralPlan,
+  context: BehavioralContext,
+  response: CapturedResponse,
+): Promise<{ outcome: AssertionOutcome; evidenceId?: string }> {
+  const unevaluable = (observed: string, evidenceId?: string) => ({
+    outcome: { assertion, state: 'unevaluable' as const, observed },
+    ...(evidenceId === undefined ? {} : { evidenceId }),
+  });
+
+  const reference = plan.referenceRequests?.find((entry) => entry.phrase === assertion.phrase);
+  if (reference === undefined) {
+    return unevaluable(`no route is known for "${assertion.phrase}", so no status was compared`);
+  }
+
+  const session = context.sessions.get(reference.actorId);
+  if (session === undefined) {
+    return unevaluable(
+      `actor ${reference.actorId} is not configured, so "${assertion.phrase}" was not requested`,
+    );
+  }
+
+  const { outcome, evidenceId } = await session.request(reference.request);
+
+  if (isTransportError(outcome)) {
+    return unevaluable(
+      `"${assertion.phrase}" could not be completed: ${outcome.message}`,
+      evidenceId,
+    );
+  }
+
+  const other = outcome.response.status;
+
+  return {
+    outcome: {
+      assertion,
+      state: response.status === other ? 'satisfied' : 'violated',
+      observed:
+        response.status === other
+          ? `status ${response.status}, the same as ${reference.request.method} ${reference.request.path}`
+          : `status ${response.status} where ${reference.request.method} ${reference.request.path} as actor ${reference.actorId} returned ${other}`,
+    },
+    evidenceId,
+  };
+}
+
 /** Latency is informational, per the module. A slow answer is not a wrong answer. */
 function severityFor(violations: readonly AssertionOutcome[], plan: BehavioralPlan): Severity {
   const allLatency = violations.every((outcome) => outcome.assertion.kind === 'response-time');
@@ -661,6 +732,13 @@ export async function runDeterministicCheck(
       const compared = await evaluateRecordUnchanged(assertion, plan, context, before);
       evidence.push(...compared.evidenceIds);
       outcomes.push(compared.outcome);
+      continue;
+    }
+
+    if (assertion.kind === 'status-matches') {
+      const matched = await evaluateStatusMatches(assertion, plan, context, outcome.response);
+      if (matched.evidenceId !== undefined) evidence.push(matched.evidenceId);
+      outcomes.push(matched.outcome);
       continue;
     }
 
