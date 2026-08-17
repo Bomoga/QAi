@@ -1,6 +1,6 @@
 # M4: Probe and Structural Diff
 
-**Status:** complete, except M4.4, which is blocked on the dependency decision in Open questions
+**Status:** complete
 **Owns:** `packages/core/src/probe/`, `packages/core/src/diff/spec-observation.ts`
 **Depends on:** M1, M2
 **Depended on by:** M7
@@ -34,7 +34,7 @@ export function diffSpecObservation(spec: Spec, obs: Observation): StructuralBlo
 
 **Source adapters, pending Q1.** MVP targets: Next.js App Router route handlers, Express routers, and Prisma schema. Start with regex and glob heuristics over `fast-glob`; the patterns in generated code are extremely regular. Escalate to `ts-morph` only where a specific case demands resolution, and record that escalation as a note in the module rather than adopting AST parsing wholesale.
 
-For Prisma, prefer `@prisma/internals` to parse the schema properly rather than reading it with regex.
+For Prisma, read `schema.prisma` textually, the same way the route adapters read source. **Corrected 2026-08-16.** This line previously said to prefer `@prisma/internals` to parse the schema properly rather than reading it with regex. That package is not on the approved dependency list in `04-CONVENTIONS.md`, and the decision was to correct the plan rather than widen the list: the block grammar is regular, the adapter reads `model` and `view` blocks, and a schema it cannot read produces a note rather than a guess.
 
 Every source-derived endpoint carries `handlerRef` in `path:line` form. That reference is what makes a finding actionable and what SARIF needs for inline annotation.
 
@@ -53,7 +53,7 @@ Every source-derived endpoint carries `handlerRef` in `path:line` form. That ref
 1. **M4.1** Define the probe interfaces and the adapter registration shape.
 2. **M4.2** Implement the Next.js App Router adapter: enumerate route files, extract methods, resolve dynamic segments, produce `handlerRef`.
 3. **M4.3** Implement the Express adapter.
-4. **M4.4** Implement the Prisma schema adapter producing entities and fields with `origin: "schema"`.
+4. **M4.4** Implement the Prisma schema adapter producing entities and fields with `origin: "schema"`, reading the schema textually.
 5. **M4.5** Implement the black box crawler, read-only, with a page and depth budget.
 6. **M4.6** Implement endpoint identity normalization, with tests for collision and stability.
 7. **M4.7** Implement source and black box merge with confidence and disagreement notes.
@@ -83,8 +83,5 @@ pnpm --filter @qai/cli exec qai probe --config fixtures/ledger/qai.config.yaml -
 ## Open questions
 
 - Q1: adapter list at MVP. Proposal above.
-- M4.4 is blocked on a dependency decision. The implementation notes say to prefer `@prisma/internals` to parse `schema.prisma` rather than reading it with regex, but `@prisma/internals` is not in the approved runtime dependency list in `04-CONVENTIONS.md` and is not installed. Adding it needs human approval, per that file's rule that no dependency is added without one. Three ways out, in the order they seem worth taking:
-  1. Approve `@prisma/internals` as a runtime dependency of `@qai/core`. It is what the module asks for and it parses the real grammar, but it is a large transitive tree for one adapter, and it is a runtime dependency of a tool whose whole value is being cheap to run in CI.
-  2. Approve it as an optional dependency, imported lazily the way `playwright` is in M5, so a repository with no Prisma schema never loads it. Falls back to a note when it is absent.
-  3. Correct the plan to read `schema.prisma` textually, the same posture as the Next.js and Express adapters. The block grammar is regular: `model X { ... }` with one field per line. This adds no dependency and matches what M4.2 and M4.3 already do, at the cost of not resolving attributes and type aliases properly.
-  Nothing else in M4 depends on M4.4, so M4.5 onward can proceed once a decision is made.
+- **Resolved 2026-08-16, M4.4 dependency.** The implementation notes said to prefer `@prisma/internals`, which is not on the approved runtime dependency list in `04-CONVENTIONS.md`. Three options were put up: approve it as a runtime dependency, approve it as a lazily imported optional one, or correct the plan to read the schema textually. The decision was to read it textually and add nothing. The implementation note above has been corrected to match.
+- Raised at M4.4, not blocking: the adapter reports `model` and `view` blocks as entities and ignores `enum` and composite `type` blocks. A composite type is embedded in a response but is not a top level entity, so a spec that declares one would see it as specified and not observed. No fixture exercises that today.
