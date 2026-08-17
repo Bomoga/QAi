@@ -250,14 +250,30 @@ describe('what cannot be planned comes back with a reason', () => {
     expect(unplannable[0]?.detail).toContain('AuditLog');
   });
 
-  it('hands a fuzzy criterion to the browser runner rather than planning it here', () => {
+  it('refuses a fuzzy criterion whose when clause names no page to open', () => {
     const spec = specWith([
       { when: 'the page shows the invoice', then: 'it looks right', mode: 'fuzzy' },
     ]);
     const { plans, unplannable } = planBehavioralChecks(spec, null, CONTEXT);
 
     expect(plans).toEqual([]);
-    expect(unplannable[0]?.reason).toBe('capability-unavailable');
+    expect(unplannable[0]?.reason).toBe('unsupported-condition');
+    expect(unplannable[0]?.detail).toContain('when clause');
+  });
+
+  it('plans a fuzzy criterion with no assertions, since its then is not the table', () => {
+    const spec = specWith([
+      {
+        when: 'actor owner requests /invoices',
+        then: 'the page shows nothing that looks administrative',
+        mode: 'fuzzy',
+      },
+    ]);
+    const { plans, unplannable } = planBehavioralChecks(spec, null, CONTEXT);
+
+    expect(unplannable).toEqual([]);
+    expect(plans[0]).toMatchObject({ mode: 'fuzzy', assertions: [] });
+    expect(plans[0]?.request).toEqual({ method: 'GET', path: '/invoices' });
   });
 
   it('keeps planning after one criterion it could not read', () => {

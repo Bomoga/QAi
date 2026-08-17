@@ -130,25 +130,30 @@ export function planBehavioralChecks(
         unplannable.push({ requirementId: requirement.id, criterionId, reason, detail });
       };
 
-      // Fuzzy criteria are the browser path and do not go through either vocabulary.
-      if (criterion.mode !== 'deterministic') {
-        refuse('capability-unavailable', 'the criterion is fuzzy and needs the browser runner');
-        return;
-      }
-
       const when = parseWhen(criterion.when);
       if (!isRequest(when)) {
         refuse('unsupported-condition', `its when clause could not be read: ${when.reason}`);
         return;
       }
 
-      const then = parseThen(criterion.then);
-      if (!isSupported(then)) {
-        refuse(
-          'unsupported-condition',
-          `its then clause could not be read: "${then.clause}" ${then.reason}`,
-        );
-        return;
+      // A fuzzy criterion still needs a page to open, so its `when` goes through the
+      // request vocabulary like any other. Its `then` does not: the assertion table is
+      // not the contract for a clause a model reads, and parsing it would refuse the
+      // criterion for being exactly what it declares itself to be. It plans with no
+      // assertions, which is also what makes the deterministic runner decline it if one
+      // is ever handed there by mistake.
+      let assertions: readonly Assertion[] = [];
+
+      if (criterion.mode === 'deterministic') {
+        const then = parseThen(criterion.then);
+        if (!isSupported(then)) {
+          refuse(
+            'unsupported-condition',
+            `its then clause could not be read: "${then.clause}" ${then.reason}`,
+          );
+          return;
+        }
+        assertions = then.assertions;
       }
 
       if (!context.actorIds.has(when.actorId)) {
@@ -179,7 +184,7 @@ export function planBehavioralChecks(
       const path = needsInstance ? resolvePath(template, instanceId ?? '') : template;
       const method = METHOD_FOR_WHEN[when.action];
       const handlerRef = handlerRefFor(when, observation);
-      const stateReads = stateReadsFor(then.assertions, observation, context);
+      const stateReads = stateReadsFor(assertions, observation, context);
 
       plans.push({
         identity: {
@@ -195,7 +200,7 @@ export function planBehavioralChecks(
         criterionId,
         actorId: when.actorId,
         request: { method, path },
-        assertions: then.assertions,
+        assertions,
         mode: criterion.mode,
         given: criterion.given,
         when: criterion.when,

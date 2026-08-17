@@ -31,9 +31,10 @@ const RECORDED_GAPS = {
   unexpressibleThen: 'AC-002-01',
   /** Needs an actor holding a token belonging to no user, which config does not have. */
   unexpressibleWhen: 'AC-011-01',
-  /** The browser path, which does not go through either vocabulary. */
-  fuzzy: 'AC-005-02',
 } as const;
+
+/** The one fuzzy criterion. It plans, and the browser decides whether it can run. */
+const FUZZY = 'AC-005-02';
 
 function fixture(): ReturnType<typeof loadSpec> {
   return loadSpec([SPEC_PATH], { cwd: ROOT });
@@ -77,17 +78,16 @@ describe('the fixture spec read through the assertion vocabulary', () => {
 });
 
 describe('the fixture spec read through the request vocabulary', () => {
-  it('plans every deterministic criterion but the two recorded gaps', () => {
+  it('plans every criterion but the two recorded gaps', () => {
     const { plans, unplannable } = planned();
 
-    const deterministic = loadFixture()
-      .spec.requirements.flatMap((requirement) => requirement.acceptanceCriteria)
-      .filter((criterion) => criterion.mode === 'deterministic');
+    const criteria = loadFixture().spec.requirements.flatMap(
+      (requirement) => requirement.acceptanceCriteria,
+    );
 
-    expect(plans).toHaveLength(deterministic.length - 2);
+    expect(plans).toHaveLength(criteria.length - 2);
     expect(unplannable.map((entry) => entry.criterionId).sort()).toEqual([
       RECORDED_GAPS.unexpressibleThen,
-      RECORDED_GAPS.fuzzy,
       RECORDED_GAPS.unexpressibleWhen,
     ]);
   });
@@ -97,7 +97,16 @@ describe('the fixture spec read through the request vocabulary', () => {
 
     expect(byId.get(RECORDED_GAPS.unexpressibleThen)?.detail).toContain('then clause');
     expect(byId.get(RECORDED_GAPS.unexpressibleWhen)?.detail).toContain('when clause');
-    expect(byId.get(RECORDED_GAPS.fuzzy)?.reason).toBe('capability-unavailable');
+  });
+
+  it('plans the fuzzy criterion as a page to open with nothing to assert', () => {
+    const plan = planned().plans.find((candidate) => candidate.criterionId === FUZZY);
+
+    // Its `then` never goes through the assertion table, which is the whole meaning of
+    // `mode: fuzzy`. What planning owes it is a page and an actor.
+    expect(plan?.mode).toBe('fuzzy');
+    expect(plan?.assertions).toEqual([]);
+    expect(plan?.request).toEqual({ method: 'GET', path: '/' });
   });
 
   it('turns the D4 criterion into a list request asserting the sensitive field is absent', () => {
