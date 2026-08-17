@@ -44,6 +44,31 @@ export function runFuzzyCheck(plan: BehavioralPlan, ctx: TargetContext, judge: J
 
 Anything a criterion needs that this table cannot express is a load-time warning suggesting either a rewrite or `mode: fuzzy`, never a silent skip.
 
+**Request vocabulary for `when` clauses**, a closed set on the same terms, added
+2026-08-16 by decision. `then` had a vocabulary and `when` had none, so nothing could
+turn a criterion into a request: an access rule carries `actor`, `action`, and `resource`
+as fields, while a criterion states `when` in prose.
+
+| Form | Issues |
+|---|---|
+| `actor <id> reads <Entity>` | GET on the resource's read route, against its first configured instance |
+| `actor <id> reads <Entity> <instanceId>` | GET on the read route, against the named instance |
+| `actor <id> lists <Entity>` | GET on the list route |
+| `actor <id> creates <Entity>` | POST on the create route |
+| `actor <id> updates <Entity> <instanceId>` | PATCH on the update route |
+| `actor <id> deletes <Entity> <instanceId>` | DELETE on the delete route |
+| `actor <id> requests <path>` | GET on a literal path, for a route that belongs to no entity |
+
+Routes and instances resolve exactly as they do for access rules: an Observation endpoint
+first, then a configured route, then nothing. A `when` the table cannot express is the
+same load-time warning as an unexpressible `then`, and the criterion is unplannable rather
+than skipped.
+
+The instance id is optional for reads so that a spec need not carry target data, and
+available so that a criterion about a record that does not exist can name one. Create and
+update send no body, matching what access checks already do; a criterion that needs a
+request body is outside this table and needs approval to add.
+
 **Fuzzy checks, and the boundary.** A fuzzy check drives Playwright, captures a screenshot and the accessible text of the page, and asks a model whether the `then` clause is satisfied. The model returns one of `satisfied`, `not-satisfied`, `uncertain`, with a one sentence reason. Mapping is fixed: `satisfied` becomes `pass`, `uncertain` becomes `inconclusive`, and `not-satisfied` becomes `inconclusive` unless a deterministic assertion in the same criterion also failed, in which case the deterministic result decides.
 
 Read that last mapping carefully. A model alone can never produce `fail`. This is invariant I1 expressed in code, and it means the worst a hallucination can do is under-report. Every fuzzy result sets `deterministic: false` and increments `modelAssistedCheckCount` so the report can state the extent of model involvement plainly.
@@ -64,6 +89,7 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 6. **M5.6** Implement the verdict mapping above, with one test per mapping row, including the case that proves a model cannot produce `fail`.
 7. **M5.7** Implement graceful degradation when Playwright is absent.
 8. **M5.8** Integration test against `fixtures/ledger` covering defect D4.
+9. **M5.9** Implement the `when` vocabulary above and `planBehavioralChecks`. Added 2026-08-16; numbered last to leave the existing task ids alone, but it has to land before M5.8, which needs plans to run.
 
 ## Definition of Done
 
@@ -100,5 +126,5 @@ since vitest has no flag for it. Recorded in Open questions.
 ## Open questions
 
 - None blocking. Flag any acceptance criterion in the fixture spec that the assertion vocabulary cannot express.
-- **Raised at M5.2, needs a decision before M5.8.** Nothing in the plan turns a criterion's `when` clause into a request. An access rule carries `actor`, `action`, and `resource` as fields, which is how M3 plans one; an acceptance criterion states `when` in prose, and the vocabulary above covers `then` only. `BehavioralPlan` therefore carries its request rather than deriving one, and `planBehavioralChecks` from the Public API above is not implemented. Three ways out: define a `when` vocabulary mirroring the `then` table; reuse the requirement's access rules to supply the request where the requirement has one; or add structured fields to the acceptance criterion, which is a contract change and a stop condition.
+- **Resolved 2026-08-16, the `when` gap raised at M5.2.** Nothing turned a criterion's `when` clause into a request. Three options were put up: a `when` vocabulary mirroring the `then` table, reusing the requirement's access rules, or adding structured fields to the criterion, which would be a contract change. The decision was the vocabulary, now in Implementation notes above and implemented by M5.9. No contract changed.
 - Raised 2026-08-16 while correcting the Definition of Done commands: `--no-playwright` is not a vitest option, and vitest exits with `Unknown option --no-playwright` when it is passed. The capability-unavailable path still has to be exercised somehow; an environment variable the test reads is the obvious shape. Decide when M5 is implemented, and correct the command above to match.
