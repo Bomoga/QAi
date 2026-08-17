@@ -167,9 +167,10 @@ Surprises worth recording:
 - Four probe tests wrote a synthetic Express file with no `import express`, so detection
   correctly said no and the source half never ran. Three of them passed anyway. A fixture
   that does not trip detection tests nothing about the adapter.
-- The M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` does not
-  filter anything. The `--` reaches vitest as a positional and the filters are dropped.
-  Same family as the M1.2 trap.
+- The M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` filtered
+  nothing, because pnpm forwards the `--` to the script and vitest reads what follows as
+  passthrough rather than as filename filters. Corrected in the module. Same family as the
+  M1.2 trap, and the same wrong form appears in six other module files.
 - Endpoint identity turned out to be the highest stakes small function in the module.
   M6 diffs runs on that string, so widening what counts as a record identifier renames
   every endpoint in every stored run.
@@ -237,7 +238,7 @@ Surprises worth recording:
 - M4.5: a JSON body is scanned for string values that look like same-origin paths, so an API index listing its own routes is followed. Without that a JSON-only target stops at the seed, since there are no links to follow.
 - M4.5: the crawl takes a narrow `CrawlSession` rather than the whole `ActorSession`. An `ActorSession` satisfies it structurally, and nothing in the probe should be able to reach a credential.
 - M4.5: exhausting the page budget produces a warn note naming the ceiling and how many paths were left. An Observation that stopped early and does not say so reads as an application with nothing more in it.
-- M4.3: the M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` does not filter anything. The `--` reaches vitest as a positional and the filters are dropped, so it runs the whole core suite, 26 files. `pnpm --filter @qai/core exec vitest run probe diff` is the form that actually filters, 3 files and 84 tests at M4.3. Same class as the M1.2 trap: a Definition of Done command that quietly does not do what it says. Both were run.
+- M4.3, corrected in the plan at the stage boundary: the M4 Definition of Done command was `pnpm --filter @qai/core test -- probe diff` and filtered nothing. pnpm forwards the `--` to the script, so vitest runs as `vitest run "--" "probe" "diff"` and reads everything after it as passthrough rather than as filename filters. The whole core suite ran instead, 32 files and 794 tests. Dropping the `--` filters correctly, 9 files and 283 tests, and the module now says so. Same class as the M1.2 trap: a Definition of Done command that quietly does not do what it says. Both forms were run at every task in this stage.
 - M4.3: mount prefixes are resolved across files. A router declaring `/invoices` that the app mounts at `/api` is recorded as `/api/invoices`, because recording the declared path alone puts an endpoint in the Observation the target does not serve, and that costs two structural findings rather than one: the specified path missing and the wrong path undeclared.
 - M4.3: a router file nothing mounts still contributes its endpoints, with an info note saying the path may be missing a prefix. Dropping it would hide a route that exists; claiming a prefix nobody could find would be a guess.
 - M4.3: a receiver counts as a router when it was assigned from `express()` or `Router()` in the same file, or when its last dotted segment is `app` or `router`, which covers `function routes(app)` and `this.app`. A registration also has to pass a handler argument, so `client.get('/api/invoices', config)` and `request(app).get('/x')` are not routes. Both forms have tests.
@@ -363,6 +364,8 @@ Surprises worth recording:
 - The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
 
 ## Known issues, not blocking
+
+- Six other module files carry the Definition of Done command form that does not filter: M2, M3, M5, M6, M7, and M9 all write `pnpm --filter @qai/core test -- <name>`. Only M4 was corrected, since that is the module this stage owns. The fix is dropping the `--`. M5's variant, `test -- behavioral --no-playwright`, is worth checking by hand when M5 lands, since the trailing flag is meant for vitest.
 
 - The GitHub CLI was installed during S4, `gh` 2.97.0 via winget, user scope. It authenticates as `Bomoga` with a fine-grained token whose repository access had to be widened twice, first to include this private repository at all, then to give Pull requests read and write. The token has no Checks permission, so `gh pr checks` fails and CI status has to be read on the pull request page.
 

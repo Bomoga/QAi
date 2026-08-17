@@ -63,9 +63,18 @@ Every source-derived endpoint carries `handlerRef` in `path:line` form. That ref
 ## Definition of Done
 
 ```
-pnpm --filter @qai/core test -- probe diff
+pnpm --filter @qai/core test probe diff
 pnpm --filter @qai/cli exec qai probe --config fixtures/ledger/qai.config.yaml --json
 ```
+
+**Corrected 2026-08-16.** The first command was written `test -- probe diff` and filtered
+nothing. pnpm forwards the `--` to the script, so vitest is invoked as
+`vitest run "--" "probe" "diff"` and reads everything after the `--` as passthrough
+arguments rather than as filename filters. The whole core suite ran, 32 files, and a
+Definition of Done that passes by running something other than what it names is the same
+trap as the vitest config one at M1.2. Without the `--` it filters to 9 files and 283
+tests. `pnpm --filter @qai/core exec vitest run probe diff` is the explicit equivalent and
+does not depend on how the package's `test` script is defined.
 
 - Every entity and endpoint in `fixtures/ledger` appears in the Observation with correct `origin`, which for this fixture means `origin: "blackbox"` and reduced confidence. **Corrected 2026-08-16.** The line previously implied a source reading. The adapters above target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies, so no adapter recognizes it and no entity in its Observation comes from a schema. The adapters are built and tested against synthetic source trees instead. Rejected: a `node:http` adapter, which is outside Q1's list and covers a framework no real user has, and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in `06-TESTING.md`.
 - D5, the undeclared debug endpoint, appears in `observedNotSpecified` at medium severity.
