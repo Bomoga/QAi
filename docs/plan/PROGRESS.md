@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T12:05:00Z
-Current stage: S5
-Next task: S5 stage boundary
+Updated: 2026-08-17T12:20:00Z
+Current stage: S5 complete, pull request open, awaiting review
+Next task: S6, modules M7 and M8, after the merge decision
 
 ## S0. Skeleton
 
@@ -189,8 +189,44 @@ Surprises worth recording:
 - [x] M5.8-pre2 the fixture spec rewritten into both vocabularies (commits 5dc6c8b and bc93686)
 - [x] M5.7 graceful degradation when Playwright is absent (commits e086e1a, af65b47, c2fd391)
 - [x] M5.8 integration test over D4 (commit backfilled below)
-- Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
+- Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
+- **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
+- **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
+- Exit criterion: **met as restated**, verified 2026-08-17 via `packages/core/scripts/check-behavior-ledger.ts` against a live ledger, both directions. Defective: 14 criteria planned, 7 pass, 5 fail, 2 unverified, exit 1, with D4 reported at medium severity carrying request evidence. Repaired: 12 pass, 0 fail, 2 unverified, exit 0. The same 14 checks run in both, so the runs compare. With Playwright absent, `AC-005-02` is unverified with reason `capability-unavailable` and the install line, and the exit code is unaffected in both directions. `qai check` is M8 and lands in S6, so the command itself does not exist yet.
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
+
+### S5 summary
+
+Built: the assertion vocabulary and its authoring warnings, the deterministic HTTP
+runner, the `when` request vocabulary and `planBehavioralChecks`, persisted state
+assertions through follow-up reads, the judge boundary proved by type sweep, page capture
+with a lazily imported Playwright, the fuzzy verdict mapping that makes invariant I1
+executable, the batch runner that degrades to unverified when no browser is there, D4 in
+the fixture, the fixture spec rewritten into both vocabularies, and an integration run
+over the live ledger. 1043 tests pass across 47 files.
+
+Deferred: a fuzzy criterion judged by a real model, which needs a model SDK nobody has
+approved, and a run against a real browser, which needs Playwright installed. Both are
+recorded in the M5 Open questions rather than papered over. Two coverage gaps in the
+fixture spec stay in prose, and three criteria assert less than the sentences they
+replaced; the table in the module names all six.
+
+Surprises worth recording:
+
+- The stage found its own blocker before the demonstration did. `planBehavioralChecks`
+  refused every fuzzy criterion, which made the exit criterion unreachable by
+  construction: a criterion that never plans can never run under a browser. Four tasks had
+  passed over it because each one tested its own half.
+- The fixture spec was the real work. Ten of fourteen criteria could not be read at all,
+  and rewriting them turned up something worth more than the rewrite: what the tool can
+  check is narrower than what an author can say, and every criterion that lost a clause is
+  a small argument for two more assertion forms.
+- Verifying by breaking kept paying. Removing the capability branch left the run working
+  and only the reason wrong, which is exactly the failure a passing suite hides. One test
+  caught it.
+- The demonstration disagreed with nothing this time, which is itself worth noting after
+  S2 and S4 both found faults there. The integration test was written to pin whole verdict
+  maps in both directions first, and the script found no eighth thing.
 
 ## S6. Report and CI (M7, M8)
 
@@ -534,7 +570,7 @@ Surprises worth recording:
 
 ## Known issues, not blocking
 
-- `--no-playwright` in the M5 Definition of Done is not a vitest option. pnpm forwards it and vitest exits with `Unknown option --no-playwright`, so that command cannot work as written. Fixing the `--` does not fix this. How the playwright-absent path gets exercised is an M5 decision, most likely an environment variable the test reads, and it is recorded in the M5 Open questions.
+- Resolved at M5.7: `--no-playwright` was removed from the M5 Definition of Done rather than replaced. It was never a vitest option, and an environment variable would have put core in the environment against rule R6. The launcher is injected by the caller and absent by default.
 
 - The Definition of Done test command was corrected in every module file, M2 through M9, not only M4. Each carried a `--` before its filter names, which pnpm forwards to the script so vitest reads them as passthrough arguments and filters nothing. Verified for the two modules that have tests today: `test target evidence` runs 151 tests, `test access` runs 159, where the old form ran the whole suite of 850.
 
