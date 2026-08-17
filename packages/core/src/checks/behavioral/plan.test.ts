@@ -272,3 +272,42 @@ describe('what cannot be planned comes back with a reason', () => {
     expect(unplannable).toHaveLength(1);
   });
 });
+
+describe('planning a persisted state read', () => {
+  const withAuditRoutes: PlanningContext = {
+    ...CONTEXT,
+    resources: [
+      ...CONTEXT.resources,
+      { name: 'AuditLog', routes: { list: '/api/audit-logs' }, instances: [] },
+    ],
+  };
+
+  it('resolves where the counted entity can be read back', () => {
+    const spec = specWith([
+      { when: 'actor owner lists Invoice', then: 'record count of AuditLog is 1' },
+    ]);
+    const { plans } = planBehavioralChecks(spec, null, withAuditRoutes);
+
+    expect(plans[0]?.stateReads).toEqual([{ entity: 'AuditLog', path: '/api/audit-logs' }]);
+  });
+
+  it('plans the criterion anyway when the entity has no list route', () => {
+    const spec = specWith([
+      { when: 'actor owner lists Invoice', then: 'record count of AuditLog is 1' },
+    ]);
+    const { plans, unplannable } = planBehavioralChecks(spec, null, CONTEXT);
+
+    // The clause is expressible; the target offers nowhere to look. That is a capability
+    // gap the runner reports as inconclusive, not an authoring mistake.
+    expect(plans).toHaveLength(1);
+    expect(plans[0]?.stateReads).toBeUndefined();
+    expect(unplannable).toEqual([]);
+  });
+
+  it('carries no state read for a criterion that counts nothing', () => {
+    const spec = specWith([{ when: 'actor owner lists Invoice', then: 'status is 200' }]);
+    const { plans } = planBehavioralChecks(spec, null, withAuditRoutes);
+
+    expect(plans[0]?.stateReads).toBeUndefined();
+  });
+});

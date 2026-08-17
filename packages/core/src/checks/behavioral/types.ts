@@ -13,6 +13,17 @@ import type { Assertion } from './assertions.ts';
  * decides what to issue; this module runs what it is handed and asserts on the answer.
  * The gap is recorded in the module's Open questions.
  */
+/**
+ * Where to look to count an entity's records after the action has been taken.
+ *
+ * Resolved at planning time rather than in the runner, so route resolution stays in one
+ * place and the runner needs to know nothing about configuration.
+ */
+export interface StateRead {
+  readonly entity: string;
+  readonly path: string;
+}
+
 export interface BehavioralPlan extends CheckPlan {
   readonly requirementId: string;
   readonly criterionId: string;
@@ -24,6 +35,8 @@ export interface BehavioralPlan extends CheckPlan {
   readonly then: string;
   /** A file reference when a probe supplied one, so a finding cites source. */
   readonly locationRef?: string;
+  /** One per entity a `record count of` assertion names, where a route was found. */
+  readonly stateReads?: readonly StateRead[];
 }
 
 /**
@@ -33,6 +46,13 @@ export interface BehavioralPlan extends CheckPlan {
  */
 export interface BehavioralContext {
   readonly sessions: ReadonlyMap<string, ActorSession>;
+  /**
+   * The actor persisted state is read as, after the action under test. The module calls
+   * it the configured owner actor: counting records needs an identity allowed to see
+   * them, and using the acting actor would make a scoping bug look like a state bug.
+   * Absent means record counts stay unevaluable rather than being guessed at.
+   */
+  readonly stateActorId?: string;
   /**
    * Mutation permission, decided by the M2 disposability gate and passed in. Absent
    * means refused, so the safe answer is the default rather than something a caller has

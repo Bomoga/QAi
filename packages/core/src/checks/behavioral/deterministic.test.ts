@@ -153,12 +153,14 @@ describe('evaluating one assertion', () => {
     expect(evaluateAssertion(assertion, response({ body: '{}' })).state).toBe('violated');
   });
 
-  it('cannot evaluate a record count without the follow-up read M5.3 adds', () => {
+  it('sees nothing about persisted state in the response to the action', () => {
     const assertion: Assertion = { kind: 'record-count', entity: 'AuditLog', count: 1 };
     const outcome = evaluateAssertion(assertion, response());
 
+    // The count is read by a second request, in the runner. This function is pure and
+    // only ever sees the response to the action itself.
     expect(outcome.state).toBe('unevaluable');
-    expect(outcome.observed).toContain('follow-up read');
+    expect(outcome.observed).toContain('read separately');
   });
 
   it('reads response time against the measured duration', () => {
@@ -345,5 +347,162 @@ describe('running a check', () => {
     for (const term of FORBIDDEN_FINDING_TERMS) {
       expect(text).not.toContain(term);
     }
+  });
+});
+
+describe('counting persisted records', () => {
+  /** A session whose answers depend on the path, so the action and the state read differ. */
+  function sessionsByPath(
+    answers: Readonly<Record<string, CapturedResponse>>,
+    sent: RequestSpec[] = [],
+  ): ReadonlyMap<string, ActorSession> {
+    let counter = 0;
+    const make = (id: string): ActorSession => ({
+      id,
+      attributes: {},
+      request(spec: RequestSpec) {
+        sent.push(spec);
+        counter += 1;
+        return Promise.resolve({
+          outcome: {
+            kind: 'response' as const,
+            response: answers[spec.path] ?? response({ status: 404, body: '{}' }),
+          },
+          evidenceId: `EV-${counter}`,
+          evidence: {} as never,
+        });
+      },
+    });
+
+    return new Map([
+      ['owner', make('owner')],
+      ['auditor', make('auditor')],
+    ]);
+  }
+
+  const counting = (count: number): BehavioralPlan =>
+    plan({
+      assertions: [{ kind: 'record-count', entity: 'AuditLog', count }],
+      then: `record count of AuditLog is ${count}`,
+      stateReads: [{ entity: 'AuditLog', path: '/api/audit-logs' }],
+    });
+
+  it('reads the records back after the action and passes on the expected count', async () => {
+    const sent: RequestSpec[] = [];
+    const sessions = sessionsByPath(
+      {
+        '/api/invoices/INV-9999': response({ status: 404 }),
+        '/api/audit-logs': response({ body: '{"logs":[{"id":"AL-1"}]}' }),
+      },
+      sent,
+    );
+
+    const result = await runDeterministicCheck(counting(1), { sessions, stateActorId: 'auditor' });
+
+    expect(result.verdict).toBe('pass');
+    expect(sent.map((entry) => entry.path)).toEqual(['/api/invoices/INV-9999', '/api/audit-logs']);
+  });
+
+  it('fails when the count is not what the criterion states', async () => {
+    const sessions = sessionsByPath({ '/api/audit-logs': response({ body: '[]' }) });
+    const result = await runDeterministicCheck(counting(1), { sessions, stateActorId: 'auditor' });
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('0 AuditLog record(s)');
+  });
+
+  it('carries the evidence of both requests', async () => {
+    const sessions = sessionsByPath({ '/api/audit-logs': response({ body: '[]' }) });
+    const result = await runDeterministicCheck(counting(1), { sessions, stateActorId: 'auditor' });
+
+    expect(result.evidence).toHaveLength(2);
+  });
+
+  it('reads state as the configured actor, not as the acting one', async () => {
+    const sent: RequestSpec[] = [];
+    const sessions = sessionsByPath({ '/api/audit-logs': response({ body: '[]' }) }, sent);
+
+    const acting: string[] = [];
+    const watched = new Map(
+      [...sessions].map(([id, session]) => [
+        id,
+        {
+          ...session,
+          request(spec: RequestSpec) {
+            acting.push(id);
+            return session.request(spec);
+          },
+        } as ActorSession,
+      ]),
+    );
+
+    await runDeterministicCheck(counting(0), { sessions: watched, stateActorId: 'auditor' });
+
+    expect(acting).toEqual(['owner', 'auditor']);
+  });
+
+  it('cannot count when no state actor is configured, and says so', async () => {
+    const sessions = sessionsByPath({ '/api/audit-logs': response({ body: '[]' }) });
+    const result = await runDeterministicCheck(counting(1), { sessions });
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('no actor is configured for reading persisted state');
+  });
+
+  it('cannot count when nothing knows where to look', async () => {
+    const sessions = sessionsByPath({});
+    const result = await runDeterministicCheck(
+      plan({
+        assertions: [{ kind: 'record-count', entity: 'AuditLog', count: 1 }],
+        then: 'record count of AuditLog is 1',
+      }),
+      { sessions, stateActorId: 'auditor' },
+    );
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('no route for listing AuditLog');
+  });
+
+  it('cannot count a body whose rows it could not find, rather than counting zero', async () => {
+    const sessions = sessionsByPath({
+      '/api/audit-logs': response({ body: '{"total": 7}' }),
+    });
+
+    const result = await runDeterministicCheck(counting(0), { sessions, stateActorId: 'auditor' });
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('rows could not be read');
+  });
+
+  it('cannot count when the state read was refused', async () => {
+    const sessions = sessionsByPath({
+      '/api/audit-logs': response({ status: 403, body: '{}' }),
+    });
+
+    const result = await runDeterministicCheck(counting(0), { sessions, stateActorId: 'auditor' });
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('status 403');
+  });
+
+  it('reads the records once when two clauses count the same entity', async () => {
+    const sent: RequestSpec[] = [];
+    const sessions = sessionsByPath(
+      { '/api/audit-logs': response({ body: '[{"id":"AL-1"}]' }) },
+      sent,
+    );
+
+    await runDeterministicCheck(
+      plan({
+        assertions: [
+          { kind: 'status', codes: [404] },
+          { kind: 'record-count', entity: 'AuditLog', count: 1 },
+        ],
+        stateReads: [{ entity: 'AuditLog', path: '/api/audit-logs' }],
+      }),
+      { sessions, stateActorId: 'auditor' },
+    );
+
+    expect(sent.filter((entry) => entry.path === '/api/audit-logs')).toHaveLength(1);
   });
 });

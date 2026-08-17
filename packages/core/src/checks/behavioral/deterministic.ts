@@ -1,5 +1,6 @@
 import type { CapturedResponse } from '../../target/request.ts';
 import { isTransportError } from '../../target/request.ts';
+import { extractRows } from '../access/list.ts';
 import { resourceFieldsIn } from '../access/verdict.ts';
 import { fail, inconclusive, pass } from '../result.ts';
 import type { CheckResult } from '../types.ts';
@@ -134,12 +135,12 @@ export function evaluateAssertion(
     }
 
     case 'record-count': {
-      // Persisted state needs a second request as the owning actor, which is M5.3.
-      // Reporting anything else here would be a verdict about state nobody read.
+      // Persisted state is read by a second request after the action, in
+      // `evaluateRecordCount`. Nothing about it can be seen in this response.
       return {
         assertion,
         state: 'unevaluable',
-        observed: `the number of ${assertion.entity} records, which needs a follow-up read this runner does not yet perform`,
+        observed: `the number of ${assertion.entity} records, which is read separately`,
       };
     }
 
@@ -152,6 +153,77 @@ export function evaluateAssertion(
       };
     }
   }
+}
+
+/**
+ * Counts an entity's records by reading them back after the action.
+ *
+ * Read as the configured state actor rather than as the acting one, per the module. An
+ * actor scoped to their own organization would count only what they can see, and a
+ * scoping bug would then read as a state bug.
+ *
+ * Every way this can fail to produce a number is unevaluable, never a count of zero. A
+ * body whose rows cannot be found and a list that is genuinely empty are different facts,
+ * which is why `extractRows` distinguishes them and this does too.
+ */
+async function evaluateRecordCount(
+  assertion: Extract<Assertion, { kind: 'record-count' }>,
+  plan: BehavioralPlan,
+  context: BehavioralContext,
+): Promise<{ outcome: AssertionOutcome; evidenceId?: string }> {
+  const unevaluable = (observed: string, evidenceId?: string) => ({
+    outcome: { assertion, state: 'unevaluable' as const, observed },
+    ...(evidenceId === undefined ? {} : { evidenceId }),
+  });
+
+  const read = plan.stateReads?.find(
+    (entry) => entry.entity.toLowerCase() === assertion.entity.toLowerCase(),
+  );
+  if (read === undefined) {
+    return unevaluable(`no route for listing ${assertion.entity}, so its records were not counted`);
+  }
+
+  const actorId = context.stateActorId;
+  if (actorId === undefined) {
+    return unevaluable(
+      `no actor is configured for reading persisted state, so ${assertion.entity} records were not counted`,
+    );
+  }
+
+  const session = context.sessions.get(actorId);
+  if (session === undefined) {
+    return unevaluable(`actor ${actorId} is not configured, so records were not counted`);
+  }
+
+  const { outcome, evidenceId } = await session.request({ method: 'GET', path: read.path });
+
+  if (isTransportError(outcome)) {
+    return unevaluable(`${read.path} could not be reached: ${outcome.message}`, evidenceId);
+  }
+
+  if (outcome.response.status >= 400) {
+    return unevaluable(
+      `GET ${read.path} as actor ${actorId} returned status ${outcome.response.status}, so records were not counted`,
+      evidenceId,
+    );
+  }
+
+  const rows = extractRows(outcome.response.body);
+  if (rows === undefined) {
+    return unevaluable(
+      `GET ${read.path} returned a body whose rows could not be read, so records were not counted`,
+      evidenceId,
+    );
+  }
+
+  return {
+    outcome: {
+      assertion,
+      state: rows.length === assertion.count ? 'satisfied' : 'violated',
+      observed: `${rows.length} ${assertion.entity} record(s) at ${read.path}`,
+    },
+    evidenceId,
+  };
 }
 
 /** Latency is informational, per the module. A slow answer is not a wrong answer. */
@@ -217,9 +289,22 @@ export async function runDeterministicCheck(
     });
   }
 
-  const outcomes = plan.assertions.map((assertion) =>
-    evaluateAssertion(assertion, outcome.response),
-  );
+  // The state read comes after the action, which is the whole point of asserting on
+  // persisted state: what the target holds once the request has been made.
+  const evidence = [evidenceId];
+  const outcomes: AssertionOutcome[] = [];
+
+  for (const assertion of plan.assertions) {
+    if (assertion.kind === 'record-count') {
+      const counted = await evaluateRecordCount(assertion, plan, context);
+      if (counted.evidenceId !== undefined) evidence.push(counted.evidenceId);
+      outcomes.push(counted.outcome);
+      continue;
+    }
+
+    outcomes.push(evaluateAssertion(assertion, outcome.response));
+  }
+
   const violations = outcomes.filter((entry) => entry.state === 'violated');
   const unevaluable = outcomes.filter((entry) => entry.state === 'unevaluable');
 
@@ -233,7 +318,7 @@ export async function runDeterministicCheck(
     return fail(
       {
         ...input,
-        evidence: [evidenceId],
+        evidence,
         detail: `${requestLine(plan)} returned ${observed}. The criterion requires: ${plan.then}.${unread}`,
       },
       severityFor(violations, plan),
@@ -243,14 +328,14 @@ export async function runDeterministicCheck(
   if (unevaluable.length > 0) {
     return inconclusive({
       ...input,
-      evidence: [evidenceId],
+      evidence,
       detail: `${requestLine(plan)} returned ${unevaluable[0]?.observed ?? 'a response this runner could not read'}, so ${plan.criterionId} could not be decided.`,
     });
   }
 
   return pass({
     ...input,
-    evidence: [evidenceId],
+    evidence,
     detail: `${requestLine(plan)} returned ${outcomes.map((entry) => entry.observed).join(', ')}.`,
   });
 }

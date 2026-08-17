@@ -1,8 +1,14 @@
 import type { Observation, Spec, UnverifiedReason } from '../../contracts/index.ts';
 import { resolvePath, type PlanningContext } from '../access/plan.ts';
-import { isSupported, parseThen } from './assertions.ts';
-import { BEHAVIORAL_SEVERITY, type BehavioralPlan } from './types.ts';
-import { isRequest, METHOD_FOR_WHEN, parseWhen, type WhenRequest } from './when.ts';
+import { isSupported, parseThen, type Assertion } from './assertions.ts';
+import { BEHAVIORAL_SEVERITY, type BehavioralPlan, type StateRead } from './types.ts';
+import {
+  isRequest,
+  METHOD_FOR_WHEN,
+  parseWhen,
+  type WhenAction,
+  type WhenRequest,
+} from './when.ts';
 
 /**
  * Turning acceptance criteria into checks.
@@ -30,6 +36,30 @@ export interface BehavioralPlanResult {
   readonly unplannable: readonly UnplannableCriterion[];
 }
 
+/** Resolution order, matching access rules: an observed endpoint, then config, then nothing. */
+function routeTemplateFor(
+  entity: string,
+  action: Exclude<WhenAction, 'path'>,
+  observation: Observation | null,
+  context: PlanningContext,
+): string | undefined {
+  const method = METHOD_FOR_WHEN[action];
+  const collection = action === 'list' || action === 'create';
+
+  const observed = observation?.endpoints.find(
+    (endpoint) =>
+      endpoint.responseShape?.entity?.toLowerCase() === entity.toLowerCase() &&
+      endpoint.method.toUpperCase() === method &&
+      (collection ? !endpoint.path.includes(':') : endpoint.path.includes(':')),
+  );
+
+  const configured = context.resources.find(
+    (entry) => entry.name.toLowerCase() === entity.toLowerCase(),
+  )?.routes[action];
+
+  return observed?.path ?? configured;
+}
+
 function routeFor(
   request: WhenRequest,
   observation: Observation | null,
@@ -38,22 +68,35 @@ function routeFor(
   if (request.action === 'path') return request.path;
   if (request.entity === undefined) return undefined;
 
-  const method = METHOD_FOR_WHEN[request.action];
-  const collection = request.action === 'list' || request.action === 'create';
+  return routeTemplateFor(request.entity, request.action, observation, context);
+}
 
-  const observed = observation?.endpoints.find(
-    (endpoint) =>
-      endpoint.responseShape?.entity?.toLowerCase() === request.entity?.toLowerCase() &&
-      endpoint.method.toUpperCase() === method &&
-      (collection ? !endpoint.path.includes(':') : endpoint.path.includes(':')),
-  );
+/**
+ * Where each counted entity's records can be read after the action.
+ *
+ * An entity with no list route contributes nothing, and the runner reports the count as
+ * unevaluable rather than the criterion as unplannable. The clause is expressible; it is
+ * the target that offers nowhere to look, and that is a capability gap rather than an
+ * authoring mistake.
+ */
+function stateReadsFor(
+  assertions: readonly Assertion[],
+  observation: Observation | null,
+  context: PlanningContext,
+): StateRead[] {
+  const reads: StateRead[] = [];
 
-  // `path` returned above, so what is left maps one to one onto an access action.
-  const configured = context.resources.find(
-    (entry) => entry.name.toLowerCase() === request.entity?.toLowerCase(),
-  )?.routes[request.action];
+  for (const assertion of assertions) {
+    if (assertion.kind !== 'record-count') continue;
+    if (reads.some((read) => read.entity.toLowerCase() === assertion.entity.toLowerCase())) {
+      continue;
+    }
 
-  return observed?.path ?? configured;
+    const path = routeTemplateFor(assertion.entity, 'list', observation, context);
+    if (path !== undefined) reads.push({ entity: assertion.entity, path });
+  }
+
+  return reads;
 }
 
 function handlerRefFor(request: WhenRequest, observation: Observation | null): string | undefined {
@@ -136,6 +179,7 @@ export function planBehavioralChecks(
       const path = needsInstance ? resolvePath(template, instanceId ?? '') : template;
       const method = METHOD_FOR_WHEN[when.action];
       const handlerRef = handlerRefFor(when, observation);
+      const stateReads = stateReadsFor(then.assertions, observation, context);
 
       plans.push({
         identity: {
@@ -155,6 +199,7 @@ export function planBehavioralChecks(
         mode: criterion.mode,
         then: criterion.then,
         ...(handlerRef === undefined ? {} : { locationRef: handlerRef }),
+        ...(stateReads.length === 0 ? {} : { stateReads }),
       });
     });
   }

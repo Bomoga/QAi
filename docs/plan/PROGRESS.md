@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T03:10:00Z
+Updated: 2026-08-17T03:35:00Z
 Current stage: S5
-Next task: M5.3
+Next task: M5.4
 
 ## S0. Skeleton
 
@@ -181,7 +181,7 @@ Surprises worth recording:
 - [x] M5.1 assertion vocabulary parser and validation warnings (commit 2ecf6f2)
 - [x] M5.2 deterministic HTTP runner with evidence capture (commits 45fc681, 0a75029, 16c8501)
 - [x] M5.9 the `when` vocabulary and planBehavioralChecks (commits 4fd00c1 and the one backfilled below), added by decision, out of order because M5.8 needs it
-- [ ] M5.3 persisted state assertions via follow-up reads
+- [x] M5.3 persisted state assertions via follow-up reads (commit backfilled below)
 - [ ] M5.4 the Judge interface in llm/
 - [ ] M5.5 Playwright fuzzy runner with the selector policy
 - [ ] M5.6 verdict mapping, one test per row
@@ -207,6 +207,12 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.3: the state read is issued after the action, as a separate request, and its evidence id joins the action's on the result. Two requests, both recorded, which is what makes a state claim reviewable.
+- M5.3: state is read as a configured state actor rather than as the acting one, per the module's line about the owner actor. An actor scoped to their own organization would count only what they can see, so a scoping bug would arrive dressed as a state bug. Absent configuration leaves the count unevaluable rather than falling back to the acting actor.
+- M5.3: every way a count can fail to be produced is unevaluable, never zero. No list route, no state actor, a transport failure, a refusal, or a body whose rows cannot be found all report why. `extractRows` from M3.6 already separates an unreadable shape from an empty list, and reusing it is what keeps that distinction from being re-derived differently here.
+- M5.3: where to read an entity back is resolved at planning time, so the runner knows nothing about configuration and route resolution stays in one place. An entity with no list route still plans, because the clause is expressible and it is the target that offers nowhere to look, which is a capability gap rather than an authoring mistake.
+- M5.3: two clauses counting the same entity read it once. A test asserts the request list, since a second read after the first would be counting a different moment.
 
 - M5.9, resolving the M5.2 gap: the user chose a `when` vocabulary over reusing access rules or changing the contract, so the module now carries a request table beside the assertion table. Seven forms, same discipline as `then`: canonical, mechanically tolerant, refusing rather than guessing.
 - M5.9: the instance id is optional on a read and required on an update or delete. A read of any record is still a read, while updating one record means naming which, and picking for the author would be the tool inventing a target's shape. A read may also name an id so a criterion about a record that does not exist can say which.
