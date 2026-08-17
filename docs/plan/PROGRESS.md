@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T04:00:00Z
+Updated: 2026-08-17T04:30:00Z
 Current stage: S5
-Next task: M5.5
+Next task: M5.6
 
 ## S0. Skeleton
 
@@ -183,7 +183,7 @@ Surprises worth recording:
 - [x] M5.9 the `when` vocabulary and planBehavioralChecks (commits 4fd00c1 and the one backfilled below), added by decision, out of order because M5.8 needs it
 - [x] M5.3 persisted state assertions via follow-up reads (commit backfilled below)
 - [x] M5.4 the Judge interface in llm/ (commit backfilled below)
-- [ ] M5.5 Playwright fuzzy runner with the selector policy
+- [x] M5.5 browser capture, lazy Playwright, selector policy (commit backfilled below)
 - [ ] M5.6 verdict mapping, one test per row
 - [ ] M5.7 graceful degradation when Playwright is absent
 - [ ] M5.8 integration test over D4, needs the fixture spec rewritten into both vocabularies first
@@ -207,6 +207,12 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.5: `capturePage` reads `innerText('body')`, the rendered text of the document, and never a class, a tag structure, an nth-child position, or a generated identifier. Invariant I6 holds by construction rather than by review, and a test reads the source with comments stripped to assert no such API is called. The first version of that test failed against the words in its own doc comment, which is a fair warning about grepping prose for a policy.
+- M5.5 judgment call, needs review: **screenshots are off by default.** The module says a fuzzy check captures one, and a screenshot cannot be redacted the way a JSON body can, so a field marked `sensitive: true` is plainly readable in the image while rule R8 says never write an unredacted response to disk. The image is captured only when a caller passes a path; the accessible text, which does go through redaction, is the default evidence. If the intent was that screenshots are always taken, that is a conflict between the module and R8 rather than a local choice.
+- M5.5: Playwright is loaded through a specifier held in a variable, so TypeScript does not try to resolve a module this project does not depend on, and a failed import is a returned undefined rather than a throw. The absent-Playwright path is not faked in tests: this repository genuinely lacks Playwright, so `loadLauncher` is exercised against reality and returns undefined.
+- M5.5 limit worth stating: the real Playwright path is unexercised. Every capture test drives a fake launcher, which defines the shape this code expects rather than proving Playwright provides it. The first run against a real browser will be the first real test, and it belongs with M5.8 or the corpus run.
+- M5.5: a page authenticates through `extraHTTPHeaders`, which the caller supplies. `ActorSession` deliberately does not expose its credential, so nothing in this file can reach one; whoever assembles a fuzzy run has to pass headers explicitly. A cookie-authenticated actor is not covered and needs `context.addCookies`, which nothing calls yet.
 
 - M5.4 deviation, flagged in the module: the `Judge` interface lives in `checks/behavioral/judge.ts`, not in `llm/` where the task puts it. R1's lint rule forbids `checks/**` importing `**/llm/**` with `allowTypeImports: false`, and the fuzzy runner is a check, so a `Judge` declared in `llm/` would be unimportable by its only consumer. The port sits beside the consumer and `llm/` holds the implementations. The alternative, relaxing `allowTypeImports`, weakens the invariant and is not a local call.
 - M5.4: the boundary is proved by a type sweep over everything `llm/` exports rather than by naming functions one at a time, so a function added later is covered without anyone remembering to extend the test. Verified by probe, not by reading: adding `export function leakyVerdict(): 'pass'` to `llm/` made `pnpm typecheck` fail with "Type '\"pass\"' does not satisfy the constraint 'never'", and removing it made it pass. A proof that cannot fail proves nothing.

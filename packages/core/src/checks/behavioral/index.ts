@@ -14,6 +14,7 @@
  * verdict mapping, and graceful degradation.
  */
 export * from './assertions.ts';
+export * from './browser.ts';
 export * from './deterministic.ts';
 export * from './judge.ts';
 export * from './plan.ts';
