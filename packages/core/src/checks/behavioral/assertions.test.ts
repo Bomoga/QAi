@@ -112,8 +112,23 @@ describe('the value form', () => {
 describe('the every endpoint form', () => {
   it('reads a field that no endpoint may return', () => {
     expect(assertionsOf('every endpoint omits field User.token')).toEqual([
-      { kind: 'every-endpoint-omits', entity: 'User', field: 'token' },
+      { kind: 'every-endpoint-omits', entity: 'User', field: 'token', actors: 'acting' },
     ]);
+  });
+
+  it('reads the actor axis only when the criterion asks for it', () => {
+    expect(assertionsOf('every endpoint omits field User.token as every actor')).toEqual([
+      { kind: 'every-endpoint-omits', entity: 'User', field: 'token', actors: 'all' },
+    ]);
+  });
+
+  it('refuses a half-written actor axis rather than reading past it', () => {
+    // Multiplying the request count by the actor list is not something to infer from a
+    // sentence that trails off.
+    expect(parseThen('every endpoint omits field User.token as every').kind).toBe('unsupported');
+    expect(parseThen('every endpoint omits field User.token for every actor').kind).toBe(
+      'unsupported',
+    );
   });
 
   it('does not collide with the every row form', () => {

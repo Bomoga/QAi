@@ -722,6 +722,7 @@ describe('sweeping every observed endpoint', () => {
     kind: 'every-endpoint-omits',
     entity: 'User',
     field: 'token',
+    actors: 'acting',
   };
 
   function sweepPlan(
@@ -833,6 +834,113 @@ describe('sweeping every observed endpoint', () => {
       '/api/invoices',
     ]);
     expect(result.evidence).toHaveLength(3);
+  });
+});
+
+/**
+ * The actor axis, which multiplies the request count and therefore has to be asked for in
+ * the criterion rather than assumed. What these assert is that the multiplication happens,
+ * that it is visible in the result, and that it cannot quietly cover fewer actors than it
+ * claims.
+ */
+describe('sweeping every endpoint as every actor', () => {
+  const assertion: Assertion = {
+    kind: 'every-endpoint-omits',
+    entity: 'User',
+    field: 'token',
+    actors: 'all',
+  };
+
+  const sweep = [
+    { method: 'GET' as const, path: '/health' },
+    { method: 'GET' as const, path: '/api/invoices' },
+  ];
+
+  function sweepPlan(): BehavioralPlan {
+    return plan({
+      assertions: [assertion],
+      then: 'every endpoint omits field User.token as every actor',
+      endpointSweep: sweep,
+    });
+  }
+
+  function actorsReturning(
+    bodyFor: (actorId: string, path: string) => string,
+    sent: { actorId: string; path: string }[] = [],
+  ): ReadonlyMap<string, ActorSession> {
+    const make = (actorId: string) => ({
+      id: actorId,
+      attributes: {},
+      request(spec: RequestSpec) {
+        sent.push({ actorId, path: spec.path });
+        return Promise.resolve({
+          outcome: {
+            kind: 'response' as const,
+            response: response({ body: bodyFor(actorId, spec.path) }),
+          },
+          evidenceId: `EV-${actorId}-${spec.path}`,
+          evidence: {} as never,
+        });
+      },
+    });
+
+    return new Map([
+      ['owner', make('owner')],
+      ['outsider', make('outsider')],
+      ['anonymous', make('anonymous')],
+    ]);
+  }
+
+  it('requests every endpoint as every configured actor', async () => {
+    const sent: { actorId: string; path: string }[] = [];
+    await runDeterministicCheck(sweepPlan(), context(actorsReturning(() => '{}', sent)));
+
+    // The action as owner, then two endpoints for each of three actors.
+    const swept = sent.filter((entry) => entry.path !== '/api/invoices/INV-9999');
+    expect(swept).toHaveLength(6);
+    expect(new Set(swept.map((entry) => entry.actorId))).toEqual(
+      new Set(['owner', 'outsider', 'anonymous']),
+    );
+  });
+
+  it('names the actors it swept as, so the claim states its own scope', async () => {
+    const result = await runDeterministicCheck(sweepPlan(), context(actorsReturning(() => '{}')));
+
+    expect(result.verdict).toBe('pass');
+    expect(result.detail).toContain('anonymous, outsider, owner');
+    expect(result.detail).toContain('6 reading(s)');
+  });
+
+  it('catches a field one actor sees and the others do not', async () => {
+    const result = await runDeterministicCheck(
+      sweepPlan(),
+      context(
+        actorsReturning((actorId, path) =>
+          actorId === 'outsider' && path === '/api/invoices' ? '{"token":"leaked"}' : '{}',
+        ),
+      ),
+    );
+
+    // The whole point of the actor axis. A sweep as the owner alone would pass here.
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('/api/invoices as outsider');
+  });
+
+  it('covers only actors that resolved, and says which those were', async () => {
+    const sessions = new Map([...actorsReturning(() => '{}')].filter(([id]) => id !== 'anonymous'));
+
+    const result = await runDeterministicCheck(sweepPlan(), context(sessions));
+
+    // An actor whose credential never resolved is not in the map. Naming who was swept is
+    // what keeps that from reading as coverage the run did not have.
+    expect(result.detail).toContain('outsider, owner');
+    expect(result.detail).not.toContain('anonymous');
+  });
+
+  it('is unevaluable when no actor is configured at all', async () => {
+    const result = await runDeterministicCheck(sweepPlan(), context(new Map()));
+
+    expect(result.verdict).toBe('inconclusive');
   });
 });
 

@@ -634,44 +634,64 @@ async function evaluateEveryEndpoint(
     );
   }
 
-  const session = context.sessions.get(plan.actorId);
-  if (session === undefined) {
-    return unevaluable(`actor ${plan.actorId} is not configured, so no endpoint was swept`);
+  /**
+   * Who the sweep runs as. The acting actor by default; every configured one when the
+   * criterion says so in as many words. An actor whose credential did not resolve is not
+   * in this map, so the sweep covers who could actually be reached and the result names
+   * them rather than claiming a coverage the run did not have.
+   */
+  const actorIds =
+    assertion.actors === 'all' ? [...context.sessions.keys()].sort() : [plan.actorId];
+
+  if (assertion.actors === 'all' && actorIds.length === 0) {
+    return unevaluable(`no actors are configured, so no endpoint was swept`);
   }
 
   const returning: string[] = [];
   const unread: string[] = [];
 
-  for (const request of sweep) {
-    const { outcome, evidenceId } = await session.request(request);
-    evidenceIds.push(evidenceId);
-
-    if (isTransportError(outcome)) {
-      unread.push(`${request.path} (${outcome.message})`);
-      continue;
+  for (const actorId of actorIds) {
+    const session = context.sessions.get(actorId);
+    if (session === undefined) {
+      // Reachable only for the acting actor, since the other list comes from the map.
+      return unevaluable(`actor ${actorId} is not configured, so no endpoint was swept`);
     }
 
-    const body = outcome.response.body;
+    for (const request of sweep) {
+      const { outcome, evidenceId } = await session.request(request);
+      evidenceIds.push(evidenceId);
 
-    // An empty body carries no field, which is a reading rather than a failure to read.
-    if (body.trim() === '') continue;
+      const where = `${request.path} as ${actorId}`;
 
-    if (!parseBody(body).ok) {
-      unread.push(`${request.path} (not JSON)`);
-      continue;
+      if (isTransportError(outcome)) {
+        unread.push(`${where} (${outcome.message})`);
+        continue;
+      }
+
+      const body = outcome.response.body;
+
+      // An empty body carries no field, which is a reading rather than a failure to read.
+      if (body.trim() === '') continue;
+
+      if (!parseBody(body).ok) {
+        unread.push(`${where} (not JSON)`);
+        continue;
+      }
+
+      if (resourceFieldsIn(body, [assertion.field]).length > 0) returning.push(where);
     }
-
-    if (resourceFieldsIn(body, [assertion.field]).length > 0) returning.push(request.path);
   }
 
   const field = `${assertion.entity}.${assertion.field}`;
+  const scope = `${sweep.length} observed endpoint(s) as ${actorIds.join(', ')}`;
+  const requests = sweep.length * actorIds.length;
 
   if (returning.length > 0) {
     return {
       outcome: {
         assertion,
         state: 'violated',
-        observed: `${field} in the body of ${returning.join(', ')}, across ${sweep.length} observed endpoint(s)`,
+        observed: `${field} in the body of ${returning.join(', ')}, across ${scope}`,
       },
       evidenceIds,
     };
@@ -679,7 +699,7 @@ async function evaluateEveryEndpoint(
 
   if (unread.length > 0) {
     return unevaluable(
-      `${unread.length} of ${sweep.length} observed endpoint(s) could not be read, so ${field} cannot be ruled out: ${unread.join(', ')}`,
+      `${unread.length} of ${requests} reading(s) could not be read, so ${field} cannot be ruled out: ${unread.join(', ')}`,
     );
   }
 
@@ -687,7 +707,7 @@ async function evaluateEveryEndpoint(
     outcome: {
       assertion,
       state: 'satisfied',
-      observed: `no ${field} in any of ${sweep.length} observed endpoint(s) as actor ${plan.actorId}`,
+      observed: `no ${field} in ${requests} reading(s) across ${scope}`,
     },
     evidenceIds,
   };
