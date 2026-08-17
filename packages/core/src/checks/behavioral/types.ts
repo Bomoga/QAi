@@ -1,5 +1,6 @@
 import type { CriterionMode } from '../../contracts/index.ts';
 import type { PageCaptureOptions } from './browser.ts';
+import type { Judge } from './judge.ts';
 import type { ActorSession } from '../../target/session.ts';
 import type { RequestSpec } from '../../target/request.ts';
 import type { CheckPlan } from '../types.ts';
@@ -63,6 +64,14 @@ export interface BehavioralContext {
   readonly sessions: ReadonlyMap<string, ActorSession>;
   /** Absent means fuzzy criteria report unverified rather than failing the run. */
   readonly browser?: FuzzyBrowserContext;
+  /**
+   * Who answers a fuzzy criterion. Absent is the ordinary case, since no model client is
+   * approved as a dependency yet, and it degrades exactly as an absent browser does: the
+   * criterion is unverified for a capability reason rather than assumed either way.
+   * `runFuzzyCheck` still takes a judge as an argument, per the module's Public API; this
+   * is how the batch runner finds one.
+   */
+  readonly judge?: Judge;
   /**
    * The actor persisted state is read as, after the action under test. The module calls
    * it the configured owner actor: counting records needs an identity allowed to see

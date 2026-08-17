@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T11:50:00Z
+Updated: 2026-08-17T12:00:00Z
 Current stage: S5
-Next task: M5.7
+Next task: M5.8
 
 ## S0. Skeleton
 
@@ -186,8 +186,8 @@ Surprises worth recording:
 - [x] M5.5 browser capture, lazy Playwright, selector policy (commit c2e1c02)
 - [x] M5.6 verdict mapping, one test per row (commit 7774ab4)
 - [x] M5.8-pre1 D4 in fixtures/ledger, the switch M5.8 has to toggle (commit ccd7892)
-- [x] M5.8-pre2 the fixture spec rewritten into both vocabularies (commit backfilled below)
-- [ ] M5.7 graceful degradation when Playwright is absent
+- [x] M5.8-pre2 the fixture spec rewritten into both vocabularies (commits 5dc6c8b and bc93686)
+- [x] M5.7 graceful degradation when Playwright is absent (commit backfilled below)
 - [ ] M5.8 integration test over D4
 - Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
@@ -209,6 +209,41 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.7 crossed a task boundary by one function, flagged rather than hidden:
+  `planBehavioralChecks` used to refuse every fuzzy criterion with `capability-unavailable`,
+  which made the S5 exit criterion unreachable, since a criterion that never plans can
+  never run under Playwright. Fuzzy criteria now plan through the `when` vocabulary with no
+  assertions, and the capability question moved to the runner where it belongs. Planning is
+  M5.9's task; the decision to move it is M5.7's.
+- M5.7: a fuzzy criterion's `then` deliberately does not go through the assertion table.
+  Parsing it would refuse the criterion for being exactly what it declares itself to be.
+  Planning with an empty assertion list is also what makes the deterministic runner decline
+  it, since that runner already reports a plan with nothing to assert as inconclusive.
+- M5.7: the browser capability is resolved once per run rather than per capture, so twelve
+  fuzzy criteria attempt the optional import once, and a missing browser is a fact about the
+  run that is phrased in one place instead of rediscovered in twelve.
+- M5.7: `capability-unavailable` and `model-inconclusive` are kept apart. Nothing looked at
+  the page and a model looked and was unsure are different facts, the contract keeps
+  separate reasons for them, and only the first is fixable by installing something. Proved
+  by breaking it: dropping the capability branch reclassified a skipped criterion as
+  `model-inconclusive` and exactly one test failed.
+- M5.7: the reason travels beside the results, not inside them. `CheckResult` has no field
+  for an unverified reason and adding one would be a contract change, so
+  `runBehavioralChecks` returns `{results, unverified}`, the same widening
+  `planBehavioralChecks` made with `unplannable`.
+- M5.7 judgment call, worth a review: a fuzzy criterion skipped for a missing browser is
+  recorded `deterministic: false`, so it counts toward `modelAssistedCheckCount` although no
+  model was consulted. The alternative claims a deterministic check produced the result.
+  Overstating how much of a run was not deterministic is the safer error here.
+- M5.7: the degradation is two layers deep, which the break test made visible. Even with the
+  capability check removed, `capturePage` still returns `unavailable` and the criterion is
+  still inconclusive with the install line attached. Only the classification was wrong.
+- M5.7: the M5 Definition of Done lost its second command rather than gaining a replacement.
+  `--no-playwright` was never a vitest option, and an environment variable would put core in
+  the environment against rule R6. The launcher is injected by the caller and absent by
+  default, and this repository genuinely lacking Playwright is what exercises the absent
+  path. A test asserts that premise so the day the dependency lands, the suite says so.
 
 - M5.8-pre2: the fixture spec now reads through both vocabularies. 13 of 16 criteria plan,
   and the three that do not are recorded gaps rather than silence: AC-002-01 whose `then`

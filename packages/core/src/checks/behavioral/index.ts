@@ -9,8 +9,9 @@
  * as an argument.
  *
  * Present: both vocabularies, planning, the deterministic runner with persisted state
- * reads, the judge boundary, page capture, and the fuzzy verdict mapping.
- * Pending: graceful degradation end to end, and the integration test.
+ * reads, the judge boundary, page capture, the fuzzy verdict mapping, and the batch
+ * runner that degrades to unverified when the browser is absent.
+ * Pending: the integration test.
  */
 export * from './assertions.ts';
 export * from './browser.ts';
@@ -18,5 +19,6 @@ export * from './deterministic.ts';
 export * from './fuzzy.ts';
 export * from './judge.ts';
 export * from './plan.ts';
+export * from './run.ts';
 export * from './types.ts';
 export * from './when.ts';

@@ -81,6 +81,33 @@ export async function loadLauncher(): Promise<BrowserLauncher | undefined> {
   }
 }
 
+/**
+ * Whether this run can drive a browser at all, decided once.
+ *
+ * Resolved ahead of the checks rather than inside each capture, for two reasons. A run
+ * with twelve fuzzy criteria should attempt the optional import once, and the answer is
+ * something the report states plainly: fuzzy criteria are unverified with reason
+ * `capability-unavailable`, and the reader is told in one line how to enable them.
+ */
+export type BrowserCapability =
+  | { readonly kind: 'available'; readonly launcher: BrowserLauncher }
+  | { readonly kind: 'unavailable'; readonly detail: string };
+
+export async function resolveBrowserCapability(
+  injected?: BrowserLauncher,
+): Promise<BrowserCapability> {
+  const launcher = injected ?? (await loadLauncher());
+
+  if (launcher === undefined) {
+    return {
+      kind: 'unavailable',
+      detail: `Playwright is not installed, so no page could be opened. ${PLAYWRIGHT_REMEDY}`,
+    };
+  }
+
+  return { kind: 'available', launcher };
+}
+
 export interface PageCaptureOptions {
   /** Headers the page is loaded with, which is how an actor's credential reaches it. */
   readonly headers?: Readonly<Record<string, string>>;
