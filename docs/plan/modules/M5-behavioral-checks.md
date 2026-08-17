@@ -95,7 +95,6 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 
 ```
 pnpm --filter @qai/core test behavioral
-pnpm --filter @qai/core test behavioral --no-playwright
 ```
 
 **Corrected 2026-08-16.** These commands previously carried a `--` before the filter
@@ -105,11 +104,19 @@ than as filename filters, which runs the whole core suite and passes for the wro
 reason. Without it the filter applies. `pnpm --filter @qai/core exec vitest run <name>`
 is the explicit equivalent.
 
-**`--no-playwright` is not a vitest option.** pnpm forwards it, and vitest then exits with
-`Unknown option --no-playwright`, so the second command cannot work as written whatever is
-done about the `--`. Verified 2026-08-16. Deciding how the playwright-absent path is
-exercised belongs to M5; an environment variable read by the test is the obvious shape,
-since vitest has no flag for it. Recorded in Open questions.
+**The second command was removed at M5.7, and here is what replaced it.** It read
+`pnpm --filter @qai/core test behavioral --no-playwright`. That is not a vitest option;
+pnpm forwards it and vitest exits with `Unknown option --no-playwright`, so the command
+could never have passed. Verified 2026-08-16.
+
+No flag replaced it, and no environment variable either. Core never reads the
+environment, per rule R6, so a switch would have to be read by the test and handed in,
+which is what the tests already do: `run.test.ts` drives the absent path by configuring
+no launcher, and drives the present path by injecting one. The absent path is not
+simulated in the ordinary case, because this repository genuinely does not have
+Playwright installed and `loadLauncher` is exercised against that. A test asserts that
+premise, so the day the dependency is added, the suite says the premise changed rather
+than passing over a path it stopped covering.
 
 - D4 produces a medium severity deterministic finding.
 - A fuzzy criterion runs, is labeled model assisted in the RunResult, and cannot produce `fail` under any tested model output, including adversarial ones.
@@ -150,4 +157,6 @@ since vitest has no flag for it. Recorded in Open questions.
   when Playwright is absent and the wrong one when it is present. M5.7 owns that.
 - **Raised at M5.4, decided here, worth confirming.** The task says to implement `Judge` in `llm/`, and rule R1's lint enforcement forbids anything under `checks/` importing `llm/` by path with `allowTypeImports: false`. The fuzzy runner is a check and needs the type, so a `Judge` declared in `llm/` is unimportable by its only consumer. The interface therefore lives in `checks/behavioral/judge.ts`, beside the consumer, and `llm/` holds the implementations that satisfy it. Neither rule was weakened. The alternative was relaxing `allowTypeImports`, which is not a local decision.
 - **Resolved 2026-08-16, the `when` gap raised at M5.2.** Nothing turned a criterion's `when` clause into a request. Three options were put up: a `when` vocabulary mirroring the `then` table, reusing the requirement's access rules, or adding structured fields to the criterion, which would be a contract change. The decision was the vocabulary, now in Implementation notes above and implemented by M5.9. No contract changed.
-- Raised 2026-08-16 while correcting the Definition of Done commands: `--no-playwright` is not a vitest option, and vitest exits with `Unknown option --no-playwright` when it is passed. The capability-unavailable path still has to be exercised somehow; an environment variable the test reads is the obvious shape. Decide when M5 is implemented, and correct the command above to match.
+- **Resolved at M5.7:** `--no-playwright` is not a vitest option and the command was removed rather than replaced. No environment variable was introduced either, since rule R6 keeps core out of the environment; the launcher is injected by the caller, absent by default, and this repository's genuine lack of Playwright is what exercises the absent path. See the note under Definition of Done.
+- **Raised at M5.7, worth confirming.** `planBehavioralChecks` used to refuse every fuzzy criterion with `capability-unavailable`, which made the S5 exit criterion unreachable: a criterion that never plans can never run under Playwright. Fuzzy criteria now plan through the `when` vocabulary with no assertions, and the capability decision moved to the runner, where the browser either is or is not there. The task list gives M5.7 "graceful degradation" and gives planning to M5.9, so this crosses a task boundary by one function.
+- **Raised at M5.7, a judgment call in the report's numbers.** A fuzzy criterion skipped for a missing browser is recorded with `deterministic: false`, so it counts toward `modelAssistedCheckCount` even though no model was consulted. The alternative claims a deterministic check produced the result, which is equally untrue and misleads in the dangerous direction. Overstating how much of a run was not deterministic is the safe error for a tool whose trust argument is invariant I1.
