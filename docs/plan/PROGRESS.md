@@ -194,12 +194,13 @@ Surprises worth recording:
 - [x] M5.11 the before and after state form (commits 83b86ca, 0d26083, f47327e, ad9ed65), approved 2026-08-17
 - [x] M5.12 the cross-request status comparison (commits 049e8b3, d986c5e, 06eb606), approved 2026-08-17
 - [x] M5.12b the endpoint sweep (commits 0e126b0, 284ed8c, c93c02b), approved 2026-08-17
-- [x] M5.12c the actor axis on the sweep, closing the last vocabulary gap (commit backfilled below), approved 2026-08-17
+- [x] M5.12c the actor axis on the sweep (commits adcff2a, 8199d07, aa954c5), approved 2026-08-17
+- [x] M5.13 the impostor actor, closing the last criterion in the fixture spec (commit backfilled below), approved 2026-08-17
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
 - Pull request #7 opened into `dev` on 2026-08-17, 22 commits, not squashed. Awaiting review; the merge decision is the human's.
-- Exit criterion: **met as restated**, verified 2026-08-17 via `packages/core/scripts/check-behavior-ledger.ts` against a live ledger, both directions, and re-run after M5.10 changed the counts. Defective: 15 criteria planned, 7 pass, 6 fail, 2 unverified, exit 1, with D4 reported at medium severity carrying request evidence. Repaired: 13 pass, 0 fail, 2 unverified, exit 0. The same 15 checks run in both, so the runs compare. With Playwright absent, `AC-005-02` is unverified with reason `capability-unavailable` and the install line, and the exit code is unaffected in both directions. Authoring warnings went from 1 to 0 when M5.10 closed the last unexpressible `then`. M5.11 did not move the counts, since AC-003-01 was already failing on its status clause; what changed is what the finding says, which now reads `status 200, Invoice INV-1001 changed across the action: total_cents`. `qai check` is M8 and lands in S6, so the command itself does not exist yet.
+- Exit criterion: **met as restated**, verified 2026-08-17 via `packages/core/scripts/check-behavior-ledger.ts` against a live ledger, both directions, and re-run after M5.10 changed the counts. Defective: 15 criteria planned, 7 pass, 6 fail, 2 unverified, exit 1, with D4 reported at medium severity carrying request evidence. Repaired: 13 pass, 0 fail, 2 unverified, exit 0. The same 15 checks run in both, so the runs compare. With Playwright absent, `AC-005-02` is unverified with reason `capability-unavailable` and the install line, and the exit code is unaffected in both directions. Re-run after M5.13, which closed the last criterion: 16 criteria planned and 0 not, giving 8 pass, 6 fail, 2 unverified, exit 1 defective, and 14 pass, 0 fail, 2 unverified, exit 0 repaired. The two unverified are the fuzzy criterion with no Playwright and the audit log the application never built. Authoring warnings went from 1 to 0 when M5.10 closed the last unexpressible `then`. M5.11 did not move the counts, since AC-003-01 was already failing on its status clause; what changed is what the finding says, which now reads `status 200, Invoice INV-1001 changed across the action: total_cents`. `qai check` is M8 and lands in S6, so the command itself does not exist yet.
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
 
 ### S5 summary
@@ -215,9 +216,9 @@ with the state actor field M2.8 added to carry them. 1137 tests pass across 47 f
 
 Deferred: a fuzzy criterion judged by a real model, which needs a model SDK nobody has
 approved, and a run against a real browser, which needs Playwright installed. Both are
-recorded in the M5 Open questions rather than papered over. One coverage gap is left in the
-fixture spec, AC-011-01, and it is not a vocabulary gap: it needs a configured actor
-holding a token belonging to no user, which is target configuration.
+recorded in the M5 Open questions rather than papered over. The fixture spec has no
+coverage gap left at all: all 16 criteria plan, and every one narrowed at M5.8-pre2 says
+what it originally said.
 
 Surprises worth recording:
 
@@ -253,6 +254,32 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.13, approved by the human on 2026-08-17: `qai.config.yaml` configures an `impostor`
+  actor carrying a bearer token that matches no seeded user, which closes AC-011-01. Every
+  criterion in the fixture spec now plans, 16 of 16, and the file has no recorded gap left.
+- M5.13, the thing worth remembering: this was never a vocabulary problem, and no assertion
+  form would ever have closed it. A spec can only ask about identities the target is
+  configured to present. That is a limit on coverage no grammar reaches, and the honest
+  signal was the criterion staying unplannable with its `when` clause named rather than
+  being quietly rewritten into a claim about `anonymous`.
+- M5.13: `anonymous` and `impostor` are two actors on purpose. One presents nothing and the
+  other presents a credential belonging to nobody, and a target can refuse the first while
+  accepting the second. Collapsing them would have made REQ-010 and REQ-011 the same check.
+- M5.13 consequence for every script: `resolveCredentials` treats an unresolved credential
+  as fatal, so a fourth configured actor makes `LEDGER_UNKNOWN_TOKEN` mandatory for all
+  four scripts in `packages/core/scripts/`, not just the behavioral one. Their run recipes
+  say so now. Without it a run stops at exit code 2 naming the variable, which is the right
+  failure and still a new one.
+- M5.13: the loader caught something the change would otherwise have hidden. Adding the
+  actor produced a second load warning, that `impostor` is referenced by no access rule,
+  which pointed straight at AR-011-01 naming `anonymous` for a requirement about
+  unrecognized tokens. The rule now names the impostor and says what REQ-011 says. It stays
+  unplannable, since the target serves no `User` route, exactly as it was before.
+- M5.13 follow-up worth considering: AR-011-01 could point at `Invoice`, which has routes,
+  and REQ-011 would then be checked on the access side as well as the behavioral one. Left
+  alone here because it changes what the S3 demonstration script reports, and that evidence
+  is recorded against a run nobody has repeated.
 
 - M5.12c, approved by the human on 2026-08-17: `as every actor` on the endpoint sweep
   closes the second half of AC-014-01. Every criterion the fixture spec narrowed at

@@ -204,6 +204,7 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 12. **M5.12** Add the cross-request status comparison, restoring what AC-013-01 originally claimed. Approved 2026-08-17. The reference is stated in the `when` vocabulary and must not mutate.
 13. **M5.12b** Add the endpoint sweep, closing AC-014-01 over endpoints. Approved 2026-08-17. It quantifies over an Observation and is unevaluable without one, so a run with no probe cannot pass it by checking nothing.
 14. **M5.12c** Add the actor axis to the sweep, closing the rest of AC-014-01. Approved 2026-08-17. Written out in the criterion, since it multiplies the request count by the number of configured actors.
+15. **M5.13** Configure an `impostor` actor carrying a token belonging to no user, closing AC-011-01. Approved 2026-08-17. A target change rather than a vocabulary one, and it makes a third credential variable mandatory for every script.
 
 ## Definition of Done
 
@@ -255,20 +256,23 @@ than passing over a path it stopped covering.
   | Criterion | What cannot be expressed | How it stands now |
   |---|---|---|
   | AC-002-01 | A per-row comparison of a field against a caller attribute | **Closed at M5.10.** Both forms were approved and added, and the criterion now checks what the prose said |
-  | AC-011-01 | A caller holding a token belonging to no user | Left in prose, unplannable, needs a fourth configured actor |
+  | AC-011-01 | A caller holding a token belonging to no user | **Closed at M5.13** by configuring the actor, not by adding a form |
   | AC-003-01 | "and the invoice is unchanged", which needs before and after state | **Closed at M5.11.** The clause is restored and the criterion asserts it |
   | AC-009-01 | The same clause | **Closed at M5.11**, same form |
   | AC-013-01 | A comparison against the status another request returns | **Closed at M5.12.** The criterion claims indistinguishability again, not a literal |
   | AC-014-01 | A universal over every endpoint and every actor | **Closed at M5.12b and M5.12c**, both axes, unevaluable without a probe |
 
-  Nothing in this table is now a vocabulary gap. AC-011-01 is the one criterion still
-  unplannable, and what it needs is a configured actor holding a token belonging to no
-  user, which is target configuration rather than a form.
-
-  Every criterion this file narrowed at M5.8-pre2 has been restored to what it originally
-  claimed. That is worth stating plainly because it was not the plan: the gaps were
+  The table is closed. Every criterion this file narrowed or could not read at M5.8-pre2
+  says what it originally said, and all 16 plan. That was not the plan: the gaps were
   recorded as permanent-looking coverage losses, and closing them one at a time turned out
-  to be five assertion forms and one config field.
+  to be five assertion forms, one config field, and one configured actor.
+
+  The last one is the one worth remembering, because it was never a vocabulary problem.
+  AC-011-01 needed a caller holding a credential that belongs to nobody, and no such actor
+  existed. Adding forms would never have closed it. A spec can only ask about identities
+  the target is configured to present, which is a limit on coverage that no grammar
+  reaches, and the honest signal was that the criterion stayed unplannable and said which
+  half it could not read.
 - **Resolved 2026-08-17 as M2.8:** `TargetConfig` now carries `stateActor`, validated to name a configured actor, with no default. Raised here at M5.11 because two assertion forms read persisted state and every caller was choosing an identity for itself. The field is M2's and the edit is recorded in that module; this note stays so the reason it exists is readable from the side that needed it.
 - **Raised at M5.11: an accepted write in `fixtures/ledger` now actually writes.** It did not before, which made D3's catalog line only half true and meant a criterion saying the invoice is unchanged could never be false. The request carries no body, since the vocabulary issues none, so the applied change is a fixed increment to the total. If the catalog intended D3 to be an accepted write that changes nothing, this is a fixture change worth reverting, and the criterion should go back to asserting the status alone.
 - **The real fuzzy path is still unexercised, decided at the S5 boundary 2026-08-17.** Every capture test drives an injected launcher, which defines the shape this code expects rather than proving Playwright provides it, and no judge has ever been backed by a model. The stage exit criterion was restated rather than met with a scripted judge, since a run labeled model assisted with no model in it is exactly the false green this tool exists to stop. The first run against a real browser with a real judge needs two things this repository does not have: Playwright installed, which is approved and merely absent, and a model SDK, which is not approved. See `05-BUILD-ORDER.md` under S5.
