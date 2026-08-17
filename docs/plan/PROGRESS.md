@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T03:35:00Z
+Updated: 2026-08-17T04:00:00Z
 Current stage: S5
-Next task: M5.4
+Next task: M5.5
 
 ## S0. Skeleton
 
@@ -182,7 +182,7 @@ Surprises worth recording:
 - [x] M5.2 deterministic HTTP runner with evidence capture (commits 45fc681, 0a75029, 16c8501)
 - [x] M5.9 the `when` vocabulary and planBehavioralChecks (commits 4fd00c1 and the one backfilled below), added by decision, out of order because M5.8 needs it
 - [x] M5.3 persisted state assertions via follow-up reads (commit backfilled below)
-- [ ] M5.4 the Judge interface in llm/
+- [x] M5.4 the Judge interface in llm/ (commit backfilled below)
 - [ ] M5.5 Playwright fuzzy runner with the selector policy
 - [ ] M5.6 verdict mapping, one test per row
 - [ ] M5.7 graceful degradation when Playwright is absent
@@ -207,6 +207,12 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.4 deviation, flagged in the module: the `Judge` interface lives in `checks/behavioral/judge.ts`, not in `llm/` where the task puts it. R1's lint rule forbids `checks/**` importing `**/llm/**` with `allowTypeImports: false`, and the fuzzy runner is a check, so a `Judge` declared in `llm/` would be unimportable by its only consumer. The port sits beside the consumer and `llm/` holds the implementations. The alternative, relaxing `allowTypeImports`, weakens the invariant and is not a local call.
+- M5.4: the boundary is proved by a type sweep over everything `llm/` exports rather than by naming functions one at a time, so a function added later is covered without anyone remembering to extend the test. Verified by probe, not by reading: adding `export function leakyVerdict(): 'pass'` to `llm/` made `pnpm typecheck` fail with "Type '\"pass\"' does not satisfy the constraint 'never'", and removing it made it pass. A proof that cannot fail proves nothing.
+- M5.4: `unavailableJudge` answers `uncertain` every time, including when the page text contains an instruction telling it to answer satisfied. That is not cleverness, it is the shape of the boundary: with no model configured nothing looked at the page, and `uncertain` maps to `inconclusive`. A test drives an injection string through it.
+- M5.4: `scriptedJudge` lives in `llm/` rather than in a test helper, for the reason `fixedDeps` does. M5.6 has to test adversarial model output, and two suites with two different fakes would eventually disagree about what the boundary permits.
+- M5.4: no model client is imported and none can be until a dependency is approved, since the list in 04-CONVENTIONS.md has no model SDK on it. A test reads the source and asserts no client import appears, so the day someone adds one it is a decision rather than an accident.
 
 - M5.3: the state read is issued after the action, as a separate request, and its evidence id joins the action's on the result. Two requests, both recorded, which is what makes a state claim reviewable.
 - M5.3: state is read as a configured state actor rather than as the acting one, per the module's line about the owner actor. An actor scoped to their own organization would count only what they can see, so a scoping bug would arrive dressed as a state bug. Absent configuration leaves the count unevaluable rather than falling back to the acting actor.

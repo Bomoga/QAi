@@ -15,6 +15,7 @@
  */
 export * from './assertions.ts';
 export * from './deterministic.ts';
+export * from './judge.ts';
 export * from './plan.ts';
 export * from './types.ts';
 export * from './when.ts';
