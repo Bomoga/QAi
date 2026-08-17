@@ -67,10 +67,10 @@ pnpm --filter @qai/core test -- probe diff
 pnpm --filter @qai/cli exec qai probe --config fixtures/ledger/qai.config.yaml --json
 ```
 
-- Every entity and endpoint in `fixtures/ledger` appears in the Observation with correct `origin`.
+- Every entity and endpoint in `fixtures/ledger` appears in the Observation with correct `origin`, which for this fixture means `origin: "blackbox"` and reduced confidence. **Corrected 2026-08-16.** The line previously implied a source reading. The adapters above target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies, so no adapter recognizes it and no entity in its Observation comes from a schema. The adapters are built and tested against synthetic source trees instead. Rejected: a `node:http` adapter, which is outside Q1's list and covers a framework no real user has, and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in `06-TESTING.md`.
 - D5, the undeclared debug endpoint, appears in `observedNotSpecified` at medium severity.
 - D6, the unimplemented audit entity, appears in `specifiedNotObserved` at low severity.
-- Removing `sourceRoot` from config degrades to black box mode and still finds every endpoint the crawler can reach, with `origin: "inferred"` and reduced confidence.
+- Removing `sourceRoot` from config degrades to black box mode and still finds every endpoint the crawler can reach, with `origin: "blackbox"` and reduced confidence. **Corrected 2026-08-16.** This line said `origin: "inferred"`, which no endpoint can carry: `EndpointOrigin` in `03-CONTRACTS.md` is `source` or `blackbox`, while `inferred` is an entity and field origin, paired with `schema`.
 - No request issued by the probe uses a method other than GET or HEAD.
 
 ## Do Not
