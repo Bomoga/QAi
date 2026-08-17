@@ -191,7 +191,8 @@ Surprises worth recording:
 - [x] M5.7 graceful degradation when Playwright is absent (commits e086e1a, af65b47, c2fd391)
 - [x] M5.8 integration test over D4 (commits 7505312, 2c86e39, 03dc6fa)
 - [x] M5.10 the actor reference and every row assertion forms (commits d70cb04, 7e231ab, 079a08f), approved 2026-08-17 after the stage was otherwise complete
-- [x] M5.11 the before and after state form (commit backfilled below), approved 2026-08-17
+- [x] M5.11 the before and after state form (commits 83b86ca, 0d26083, f47327e, ad9ed65), approved 2026-08-17
+- [x] M5.12 the cross-request status comparison (commit backfilled below), approved 2026-08-17
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
@@ -207,14 +208,15 @@ assertions through follow-up reads, the judge boundary proved by type sweep, pag
 with a lazily imported Playwright, the fuzzy verdict mapping that makes invariant I1
 executable, the batch runner that degrades to unverified when no browser is there, D4 in
 the fixture, the fixture spec rewritten into both vocabularies, and an integration run
-over the live ledger, and three assertion forms added afterwards at M5.10 and M5.11.
-1095 tests pass across 47 files.
+over the live ledger, and four assertion forms added afterwards at M5.10 through M5.12,
+with the state actor field M2.8 added to carry them. 1114 tests pass across 47 files.
 
 Deferred: a fuzzy criterion judged by a real model, which needs a model SDK nobody has
 approved, and a run against a real browser, which needs Playwright installed. Both are
 recorded in the M5 Open questions rather than papered over. What is left of the fixture
-spec's coverage gaps is one criterion needing an actor the config does not have, and two
-that assert less than their original sentences; the table in the module names them.
+spec's coverage gaps is one criterion needing an actor the config does not have, and one
+universal over endpoints the spec does not enumerate; the table in the module names both,
+and says why the second is better left open than closed badly.
 
 Surprises worth recording:
 
@@ -250,6 +252,30 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.12, approved by the human on 2026-08-17: `status matches <request>` compares the
+  action's status against the status another request returns, which is what AC-013-01
+  claimed at M1.8 and lost at M5.8-pre2. The reference is written in the `when` vocabulary
+  rather than a second grammar, so it resolves its route, actor, and instance exactly as an
+  action does and a reader learns one table.
+- M5.12: a reference that mutates is refused at parse time and the criterion is reported
+  unsupported. An assertion that changed the target would break invariant I7 from inside a
+  verdict, and that is not a rule to leave in a runner for future callers to preserve.
+- M5.12 is worth more than the literal it replaced, and this was shown rather than argued.
+  Making the fixture answer 403 to both a cross-organization read and a read of a
+  nonexistent invoice keeps the criterion passing, where `status is 404` would have reported
+  a false finding against an application that was behaving correctly.
+- M5.12: only the status is compared. The form says status and claims nothing more.
+  Comparing two whole responses is a much larger assertion wearing the same words and would
+  need its own approval.
+- M5.12: this is the third form that issues its own traffic, after the record count and the
+  before and after comparison, so the runner's old framing of one criterion, one request is
+  no longer literally true. The header comment in `deterministic.ts` now says so. Every one
+  of the three is a read, and every request any of them makes is recorded as evidence.
+- M5.12: the parsed reference is rebuilt field by field rather than stored as the parser
+  returned it, so the parse discriminator does not travel into the assertion AST. A `kind`
+  nested inside another `kind` reads like a bug the first time somebody serializes one, and
+  a deep-equality test caught it immediately.
 
 - M5.11, approved by the human on 2026-08-17: the assertion table gained
   `record <Entity> is unchanged`, which restores the clause AC-003-01 and AC-009-01 had to

@@ -314,16 +314,15 @@ requirements:
     entities: [Invoice]
     tags: [access-control, data-exposure]
     acceptanceCriteria:
-      # The prose compared this status against the one another request returns,
-      # which no assertion form can state. REQ-012 pins the absent-invoice status
-      # at 404, so naming 404 here says the same thing about this application.
-      # It says it less generally: if REQ-012 ever changes, this literal has to
-      # change with it, and nothing enforces that.
+      # Rewritten to the literal 404 at M5.8-pre2 and restored at M5.12, when the
+      # cross-request form landed. The claim is that the two are indistinguishable,
+      # not that either is 404, and stating it this way means the criterion still
+      # holds if the application ever answers something else for both.
       - id: AC-013-01
         mode: deterministic
         given: 'an invoice belonging to another organization'
         when: 'actor outsider reads Invoice INV-1001'
-        then: 'status is 404'
+        then: 'status matches actor outsider reads Invoice INV-9999'
 
   - id: REQ-014
     statement: 'A user token is never returned in any response body'

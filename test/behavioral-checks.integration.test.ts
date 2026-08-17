@@ -286,6 +286,31 @@ describe('D3, the write that is accepted without credentials', () => {
   });
 });
 
+describe('REQ-013, the refusal that must not confirm the invoice exists', () => {
+  it('reports both statuses, so the reader sees what gave the record away', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-013-01');
+
+    expect(result?.verdict).toBe('fail');
+    expect(result?.detail).toContain('status 200');
+    expect(result?.detail).toContain('/api/invoices/INV-9999');
+    expect(result?.detail).toContain('returned 404');
+  });
+
+  it('carries the reference request as evidence alongside the action', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-013-01');
+
+    expect(result?.evidence).toHaveLength(2);
+  });
+
+  it('passes when the two are indistinguishable, without pinning either to a literal', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_OFF)).get('AC-013-01');
+
+    // The claim is that a cross-organization read looks exactly like a read of an invoice
+    // that was never created. It holds whatever status the application chooses for both.
+    expect(result?.verdict).toBe('pass');
+  });
+});
+
 describe('the repaired ledger', () => {
   it('reports no failure at all, and the same checks ran', async () => {
     const run = await runAgainst(ALL_DEFECTS_OFF);
