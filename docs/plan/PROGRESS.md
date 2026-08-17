@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T01:40:00Z
-Current stage: S4 complete, awaiting review
-Next task: S5, behavioral checks (M5)
+Updated: 2026-08-17T02:10:00Z
+Current stage: S5
+Next task: M5.2
 
 ## S0. Skeleton
 
@@ -137,6 +137,7 @@ Surprises worth recording:
 - Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
 - **Conflict raised at stage start, decided 2026-08-16: black box origin for the ledger.** M4's adapters target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. The Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" therefore holds with `origin: blackbox` and reduced confidence, not `origin: source`. Adapters are built and tested against synthetic source trees. Rejected: adding a `node:http` adapter, which is outside Q1's list and covers a framework no real user has; and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in 06-TESTING.md. The DoD line should be restated to say black box for this fixture.
 - D5, the undeclared debug endpoint, was added to the ledger at M4.9, the same way D2 and D3 were added during S3.
+- Merged into `dev` as `11e987a`, PR #6, 2026-08-17. Not squashed.
 - Exit criterion: **behavior met, command still M8**. Verified 2026-08-16 via `packages/core/scripts/probe-ledger.ts` against a live ledger, both directions. Defects on: 4 endpoints, every one `origin: blackbox` and `confidence: low` with one evidence id each, `GET /api/debug/state` reported in `observedNotSpecified` at medium, `AuditLog` in `specifiedNotObserved`, exit 1. D5 off: 3 endpoints, no medium finding, exit 0. The source adapters cannot be demonstrated against this fixture and are covered by their own tests, per the decision recorded at the top of this section.
 
 ### S4 summary
@@ -177,7 +178,16 @@ Surprises worth recording:
 
 ## S5. Behavioral checks (M5)
 
-- [ ] not started
+- [x] M5.1 assertion vocabulary parser and validation warnings (commit backfilled below)
+- [ ] M5.2 deterministic HTTP runner with evidence capture
+- [ ] M5.3 persisted state assertions via follow-up reads
+- [ ] M5.4 the Judge interface in llm/
+- [ ] M5.5 Playwright fuzzy runner with the selector policy
+- [ ] M5.6 verdict mapping, one test per row
+- [ ] M5.7 graceful degradation when Playwright is absent
+- [ ] M5.8 integration test over D4
+- Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
+- **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
 
 ## S6. Report and CI (M7, M8)
 
@@ -196,6 +206,12 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.1: the vocabulary is strict and its tolerance is mechanical only. A leading `the`, a leading `response`, a trailing period, and `and` between clauses are absorbed; nothing else. A parser that decided "the body reports status ok" means `body.status equals "ok"` would be guessing, and a wrong guess here becomes a confident verdict about somebody's application. Eight tests assert the refusals, using the real unparseable clauses from the fixture spec.
+- M5.1: a criterion is all or nothing. If one clause of three falls outside the table the whole criterion is unsupported, because asserting the two that parsed and reporting `pass` claims the criterion was verified while a third of it was never tested. That is the quiet green run invariant I2 exists to stop.
+- M5.1: `validateAcceptanceCriteria` lives in M5 and is called by whoever assembles a run, though the module calls its output a load-time warning. M1 does not depend on M5, and having `loadSpec` emit M5's diagnostics would invert that dependency for the sake of the word.
+- M5.1 trap, a new variant of an old one: 44 tests passed while `pnpm typecheck` failed. The type predicate `isSupported` named a structurally equivalent shape rather than a member of the union, so TypeScript would not narrow on the negative branch and rejected a `.reason` access that could only be reached with an unsupported result. Vitest strips types, so the suite never saw it. A predicate has to name the union member.
+- M5.1: `splitClauses` splits on `and` outside quotes, so `body.message equals "created and sent"` stays one clause, and it matches whole words, so `"android"` is not split.
 
 - M4.4 resolved 2026-08-16: the user chose to read `schema.prisma` textually and add no dependency. The plan was corrected rather than the approved list widened, so the module implementation note now says so. The adapter reads `model` and `view` blocks with the same glob and regex posture as the other two.
 - M4.4: relation fields are dropped. A relation is a link to another model, not necessarily a field in any response, and recording one would produce an undeclared field finding against a spec that was right. Enums are read but are not entities, and a field typed by an enum stays, because an enum is a value.
