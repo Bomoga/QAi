@@ -109,6 +109,30 @@ describe('the value form', () => {
   });
 });
 
+describe('the every endpoint form', () => {
+  it('reads a field that no endpoint may return', () => {
+    expect(assertionsOf('every endpoint omits field User.token')).toEqual([
+      { kind: 'every-endpoint-omits', entity: 'User', field: 'token' },
+    ]);
+  });
+
+  it('does not collide with the every row form', () => {
+    expect(assertionsOf('every Invoice has org_id equal to actor.org_id')).toEqual([
+      {
+        kind: 'every-row',
+        entity: 'Invoice',
+        field: 'org_id',
+        expected: { kind: 'actor', attribute: 'org_id' },
+      },
+    ]);
+  });
+
+  it('refuses the prose it replaced', () => {
+    expect(parseThen('no response body contains a token field').kind).toBe('unsupported');
+    expect(parseThen('every endpoint is fine').kind).toBe('unsupported');
+  });
+});
+
 describe('the status matches form', () => {
   it('reads a reference stated in the request vocabulary', () => {
     expect(assertionsOf('status matches actor outsider reads Invoice INV-9999')).toEqual([

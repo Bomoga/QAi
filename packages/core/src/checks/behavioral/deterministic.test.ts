@@ -712,6 +712,130 @@ describe('comparing the status against another request', () => {
   });
 });
 
+/**
+ * The endpoint sweep, whose quantifier is the whole risk. Every test here is about the
+ * scope of the claim rather than the mechanics of the request, because "every endpoint"
+ * is only worth saying if a reader can tell which endpoints it meant.
+ */
+describe('sweeping every observed endpoint', () => {
+  const assertion: Assertion = {
+    kind: 'every-endpoint-omits',
+    entity: 'User',
+    field: 'token',
+  };
+
+  function sweepPlan(
+    sweep: { method: 'GET' | 'HEAD'; path: string }[] | undefined,
+  ): BehavioralPlan {
+    return plan({
+      assertions: [assertion],
+      then: 'every endpoint omits field User.token',
+      ...(sweep === undefined ? {} : { endpointSweep: sweep }),
+    });
+  }
+
+  function bodiesFor(bodies: string[], sent: RequestSpec[] = []) {
+    let call = -1;
+    const session = {
+      id: 'owner',
+      attributes: {},
+      request(spec: RequestSpec) {
+        call += 1;
+        sent.push(spec);
+        return Promise.resolve({
+          outcome: {
+            kind: 'response' as const,
+            response: response({ body: bodies[call] ?? '{}' }),
+          },
+          evidenceId: `EV-00000${call + 1}`,
+          evidence: {} as never,
+        });
+      },
+    };
+
+    return new Map([['owner', session]]);
+  }
+
+  const sweep = [
+    { method: 'GET' as const, path: '/health' },
+    { method: 'GET' as const, path: '/api/invoices' },
+  ];
+
+  it('passes when no swept endpoint returns the field, and says how many it checked', async () => {
+    const result = await runDeterministicCheck(
+      sweepPlan(sweep),
+      context(bodiesFor(['{}', '{"status":"ok"}', '{"invoices":[]}'])),
+    );
+
+    expect(result.verdict).toBe('pass');
+  });
+
+  it('fails naming the endpoint that returned it', async () => {
+    const result = await runDeterministicCheck(
+      sweepPlan(sweep),
+      context(bodiesFor(['{}', '{"status":"ok"}', '{"token":"secret"}'])),
+    );
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('/api/invoices');
+    expect(result.detail).toContain('User.token');
+  });
+
+  it('is unevaluable when there is nothing to sweep, never vacuously satisfied', async () => {
+    // A universal over nothing was not asked, and a criterion that passed because a crawl
+    // stopped early is the false confidence this whole form has to avoid.
+    const result = await runDeterministicCheck(sweepPlan(undefined), context(bodiesFor(['{}'])));
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('no observed endpoints');
+  });
+
+  it('is unevaluable when one body could not be read, even if the rest were clean', async () => {
+    const result = await runDeterministicCheck(
+      sweepPlan(sweep),
+      context(bodiesFor(['{}', '{"status":"ok"}', '<html>hello</html>'])),
+    );
+
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('could not be read');
+    expect(result.detail).toContain('/api/invoices');
+  });
+
+  it('reads an empty body as carrying no field, which is a reading and not a failure', async () => {
+    const result = await runDeterministicCheck(
+      sweepPlan(sweep),
+      context(bodiesFor(['{}', '', ''])),
+    );
+
+    expect(result.verdict).toBe('pass');
+  });
+
+  it('lets a definite leak outrank an unreadable body, since the leak was seen', async () => {
+    const result = await runDeterministicCheck(
+      sweepPlan(sweep),
+      context(bodiesFor(['{}', '<html>hello</html>', '{"token":"secret"}'])),
+    );
+
+    expect(result.verdict).toBe('fail');
+  });
+
+  it('issues one request per swept endpoint and records each as evidence', async () => {
+    const sent: RequestSpec[] = [];
+    const result = await runDeterministicCheck(
+      sweepPlan(sweep),
+      context(bodiesFor(['{}', '{}', '{}'], sent)),
+    );
+
+    // The action, then the two swept endpoints.
+    expect(sent.map((request) => request.path)).toEqual([
+      '/api/invoices/INV-9999',
+      '/health',
+      '/api/invoices',
+    ]);
+    expect(result.evidence).toHaveLength(3);
+  });
+});
+
 describe('the acting actor reaches the assertion', () => {
   it('resolves an actor attribute from the session that issued the request', async () => {
     const sessions = sessionReturning(

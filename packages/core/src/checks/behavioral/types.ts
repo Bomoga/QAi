@@ -72,6 +72,12 @@ export interface BehavioralPlan extends CheckPlan {
   readonly recordReads?: readonly RecordRead[];
   /** One per `status matches` assertion whose reference resolved to a route. */
   readonly referenceRequests?: readonly ReferenceRequest[];
+  /**
+   * The endpoints an `every endpoint` assertion ranges over, taken from the Observation
+   * at planning time. Absent means there was no Observation or nothing readable in it,
+   * and the runner reports the assertion unevaluable rather than quantifying over nothing.
+   */
+  readonly endpointSweep?: readonly RequestSpec[];
 }
 
 /**

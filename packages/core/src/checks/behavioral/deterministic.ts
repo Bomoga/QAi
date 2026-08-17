@@ -304,6 +304,16 @@ export function evaluateAssertion(
       };
     }
 
+    case 'every-endpoint-omits': {
+      // Ranges over the observed endpoints, swept in `evaluateEveryEndpoint`. This
+      // response is one of many and settles nothing on its own.
+      return {
+        assertion,
+        state: 'unevaluable',
+        observed: `whether any endpoint returns ${assertion.entity}.${assertion.field}, which is swept separately`,
+      };
+    }
+
     case 'response-time': {
       const satisfied = response.durationMs <= assertion.maxMs;
       return {
@@ -587,6 +597,103 @@ async function evaluateRecordUnchanged(
 }
 
 /**
+ * Sweeps every observed endpoint looking for a field that should never be returned.
+ *
+ * The quantifier is the whole risk here, so three rules bound it and all three can only
+ * cost a pass, never invent one.
+ *
+ * **A universal over nothing is unevaluable.** No Observation, or an Observation with no
+ * readable endpoint, means the criterion was never asked rather than satisfied. A
+ * criterion that passed because a crawl stopped early is the false confidence invariant
+ * I2 exists to prevent.
+ *
+ * **A body that could not be read blocks a pass.** Reading four endpoints cleanly and
+ * failing to read a fifth does not establish that every endpoint omits the field, which
+ * is the same mistake M3.6 refused when it would not call a list of unreadable rows
+ * correctly scoped.
+ *
+ * **What was checked is stated.** The result names how many endpoints answered, so a
+ * reader can see the scope of the claim rather than inferring it from the word every.
+ */
+async function evaluateEveryEndpoint(
+  assertion: Extract<Assertion, { kind: 'every-endpoint-omits' }>,
+  plan: BehavioralPlan,
+  context: BehavioralContext,
+): Promise<{ outcome: AssertionOutcome; evidenceIds: string[] }> {
+  const sweep = plan.endpointSweep ?? [];
+  const evidenceIds: string[] = [];
+
+  const unevaluable = (observed: string) => ({
+    outcome: { assertion, state: 'unevaluable' as const, observed },
+    evidenceIds,
+  });
+
+  if (sweep.length === 0) {
+    return unevaluable(
+      `no observed endpoints to sweep for ${assertion.entity}.${assertion.field}, so nothing was checked`,
+    );
+  }
+
+  const session = context.sessions.get(plan.actorId);
+  if (session === undefined) {
+    return unevaluable(`actor ${plan.actorId} is not configured, so no endpoint was swept`);
+  }
+
+  const returning: string[] = [];
+  const unread: string[] = [];
+
+  for (const request of sweep) {
+    const { outcome, evidenceId } = await session.request(request);
+    evidenceIds.push(evidenceId);
+
+    if (isTransportError(outcome)) {
+      unread.push(`${request.path} (${outcome.message})`);
+      continue;
+    }
+
+    const body = outcome.response.body;
+
+    // An empty body carries no field, which is a reading rather than a failure to read.
+    if (body.trim() === '') continue;
+
+    if (!parseBody(body).ok) {
+      unread.push(`${request.path} (not JSON)`);
+      continue;
+    }
+
+    if (resourceFieldsIn(body, [assertion.field]).length > 0) returning.push(request.path);
+  }
+
+  const field = `${assertion.entity}.${assertion.field}`;
+
+  if (returning.length > 0) {
+    return {
+      outcome: {
+        assertion,
+        state: 'violated',
+        observed: `${field} in the body of ${returning.join(', ')}, across ${sweep.length} observed endpoint(s)`,
+      },
+      evidenceIds,
+    };
+  }
+
+  if (unread.length > 0) {
+    return unevaluable(
+      `${unread.length} of ${sweep.length} observed endpoint(s) could not be read, so ${field} cannot be ruled out: ${unread.join(', ')}`,
+    );
+  }
+
+  return {
+    outcome: {
+      assertion,
+      state: 'satisfied',
+      observed: `no ${field} in any of ${sweep.length} observed endpoint(s) as actor ${plan.actorId}`,
+    },
+    evidenceIds,
+  };
+}
+
+/**
  * Issues the reference request and compares its status against the action's.
  *
  * The comparison is of status codes only, which is what the form claims and all it
@@ -732,6 +839,13 @@ export async function runDeterministicCheck(
       const compared = await evaluateRecordUnchanged(assertion, plan, context, before);
       evidence.push(...compared.evidenceIds);
       outcomes.push(compared.outcome);
+      continue;
+    }
+
+    if (assertion.kind === 'every-endpoint-omits') {
+      const swept = await evaluateEveryEndpoint(assertion, plan, context);
+      evidence.push(...swept.evidenceIds);
+      outcomes.push(swept.outcome);
       continue;
     }
 

@@ -16,6 +16,7 @@ import { isRequest, parseWhen, type WhenRequest } from './when.ts';
  *   body.status equals "ok"
  *   body.org_id equals actor.org_id
  *   every Invoice has org_id equal to actor.org_id
+ *   every endpoint omits field User.token
  *   record count of AuditLog is 1
  *   record Invoice INV-1001 is unchanged
  *   response time under 500ms
@@ -84,6 +85,17 @@ export type Assertion =
       /** The phrase as authored, quoted in findings and used to match the planned request. */
       readonly phrase: string;
     }
+  /**
+   * No endpoint the probe observed returns the field. Added 2026-08-17 with approval.
+   *
+   * The quantifier is the dangerous part and is bounded deliberately. It ranges over the
+   * endpoints in the Observation, never over an idea of the application, and with no
+   * Observation or no endpoints it is unevaluable rather than vacuously satisfied. A
+   * criterion that passed because a crawl stopped early would be the exact false
+   * confidence invariant I2 exists to prevent, so the count of what was checked is stated
+   * in the result and an endpoint whose body could not be read blocks a pass.
+   */
+  | { readonly kind: 'every-endpoint-omits'; readonly entity: string; readonly field: string }
   | { readonly kind: 'record-count'; readonly entity: string; readonly count: number }
   /**
    * The record is the same after the action as it was before it. Added 2026-08-17 with
@@ -123,6 +135,9 @@ const BODY_EQUALS = /^body\.([A-Za-z_][\w.[\]]*)\s+equals\s+(.+)$/iu;
 const RECORD_COUNT = /^record\s+count\s+of\s+([A-Za-z_][\w]*)\s+is\s+(\d+)$/iu;
 const RESPONSE_TIME = /^time\s+under\s+(\d+)\s*(?:ms)?$/iu;
 const EVERY_ROW = /^every\s+([A-Za-z_][\w]*)\s+has\s+([A-Za-z_][\w]*)\s+equal\s+to\s+(.+)$/iu;
+/** `endpoint` is reserved here. An entity of that name cannot use the every row form. */
+const EVERY_ENDPOINT_OMITS =
+  /^every\s+endpoint\s+omits\s+field\s+([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)$/iu;
 const RECORD_UNCHANGED = /^record\s+([A-Za-z_][\w]*)(?:\s+(\S+))?\s+is\s+unchanged$/iu;
 const STATUS_MATCHES = /^status\s+matches\s+(.+)$/iu;
 const ACTOR_REF = /^actor\.([A-Za-z_][\w]*)$/iu;
@@ -256,6 +271,13 @@ function parseClause(clause: string): Assertion | undefined {
     return expected === undefined ? undefined : { kind: 'body-equals', path: equals[1], expected };
   }
 
+  // Before the every row form, which cannot match this anyway since it requires `has`.
+  // Stated as an order rather than left to two regexes agreeing forever.
+  const everyEndpoint = EVERY_ENDPOINT_OMITS.exec(text);
+  if (everyEndpoint?.[1] !== undefined && everyEndpoint[2] !== undefined) {
+    return { kind: 'every-endpoint-omits', entity: everyEndpoint[1], field: everyEndpoint[2] };
+  }
+
   const everyRow = EVERY_ROW.exec(text);
   if (everyRow?.[1] !== undefined && everyRow[2] !== undefined && everyRow[3] !== undefined) {
     const expected = parseAssertionValue(everyRow[3]);
@@ -343,6 +365,7 @@ export const ASSERTION_FORMS: readonly string[] = [
   'body omits field <Entity>.<field>',
   'body.<path> equals <literal>, or equals actor.<attribute>',
   'every <Entity> has <field> equal to <literal>, or equal to actor.<attribute>',
+  'every endpoint omits field <Entity>.<field>, over the endpoints a probe observed',
   'record count of <Entity> is <n>',
   'record <Entity> is unchanged, optionally naming an instance',
   'response time under <ms>',

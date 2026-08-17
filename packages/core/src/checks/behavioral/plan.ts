@@ -1,4 +1,5 @@
 import type { Observation, Spec, UnverifiedReason } from '../../contracts/index.ts';
+import type { RequestSpec } from '../../target/request.ts';
 import { resolvePath, type PlanningContext } from '../access/plan.ts';
 import { isSupported, parseThen, type Assertion } from './assertions.ts';
 import {
@@ -190,6 +191,38 @@ function referenceRequestsFor(
   return references;
 }
 
+/**
+ * The endpoints an `every endpoint` assertion ranges over.
+ *
+ * Taken from the Observation, which is the only enumeration of the application that
+ * exists. Two rules keep the quantifier honest. Only GET and HEAD are swept, so an
+ * assertion cannot write; and a path carrying an unresolved parameter is left out, since
+ * requesting `/api/invoices/:id` literally tests a route the target does not serve.
+ *
+ * An empty result means the runner reports the assertion unevaluable. A universal over
+ * nothing is not satisfied, it is unasked.
+ */
+function endpointSweepFor(
+  assertions: readonly Assertion[],
+  observation: Observation | null,
+): RequestSpec[] {
+  if (observation === null) return [];
+  if (!assertions.some((assertion) => assertion.kind === 'every-endpoint-omits')) return [];
+
+  const sweep: RequestSpec[] = [];
+
+  for (const endpoint of observation.endpoints) {
+    const method = endpoint.method.toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') continue;
+    if (endpoint.path.includes(':') || endpoint.path.includes('{')) continue;
+    if (sweep.some((entry) => entry.path === endpoint.path && entry.method === method)) continue;
+
+    sweep.push({ method, path: endpoint.path });
+  }
+
+  return sweep;
+}
+
 function handlerRefFor(request: WhenRequest, observation: Observation | null): string | undefined {
   if (request.entity === undefined) return undefined;
 
@@ -278,6 +311,7 @@ export function planBehavioralChecks(
       const stateReads = stateReadsFor(assertions, observation, context);
       const recordReads = recordReadsFor(assertions, when, instanceId, observation, context);
       const referenceRequests = referenceRequestsFor(assertions, observation, context);
+      const endpointSweep = endpointSweepFor(assertions, observation);
 
       plans.push({
         identity: {
@@ -302,6 +336,7 @@ export function planBehavioralChecks(
         ...(stateReads.length === 0 ? {} : { stateReads }),
         ...(recordReads.length === 0 ? {} : { recordReads }),
         ...(referenceRequests.length === 0 ? {} : { referenceRequests }),
+        ...(endpointSweep.length === 0 ? {} : { endpointSweep }),
       });
     });
   }
