@@ -43,6 +43,7 @@ export function runFuzzyCheck(plan: BehavioralPlan, ctx: TargetContext, judge: J
 | `body.<path> equals actor.<attribute>` | Value equality against the acting actor |
 | `every <Entity> has <field> equal to <literal>` | Every row of a list response |
 | `every <Entity> has <field> equal to actor.<attribute>` | Every row, against the acting actor |
+| `every endpoint omits field <Entity>.<field>` | Every endpoint an Observation holds |
 | `record count of <Entity> is <n>` | Persisted state via a subsequent read |
 | `record <Entity> is unchanged`, optionally naming an instance | The record, read before the action and again after |
 | `response time under <ms>` | Latency, informational severity only |
@@ -110,6 +111,29 @@ This is the third form that issues traffic, after the record count and the befor
 comparison, so a `then` clause is no longer always a pure function of one response. Every
 one of them is a read, and each names in its own words that it goes and looks.
 
+**The endpoint sweep was added 2026-08-17, with approval, and is M5.12b.** It closes the
+last of the fixture spec's gaps, AC-014-01, which claimed that no endpoint returns a user
+token and had been split into one criterion per endpoint because nothing could quantify.
+
+The quantifier is the risk, and it is bounded by three rules that can only cost a pass:
+
+- **It ranges over the endpoints in the Observation**, never over an idea of the
+  application. With no Observation, or none the sweep can read, the assertion is
+  unevaluable. A universal over nothing was not asked; it is not satisfied.
+- **An endpoint whose body could not be read blocks a pass.** Four clean readings and one
+  unparseable body do not establish that every endpoint omits the field, which is the same
+  refusal M3.6 made about a list of rows nobody could judge.
+- **The count is stated in the result**, so a reader sees the scope of the claim rather
+  than inferring it from the word every.
+
+Only GET and HEAD are swept and a path with an unresolved parameter is skipped, so the
+sweep cannot write and cannot request a route the target does not serve.
+
+The honest limitation, which no rule removes: coverage is the crawl's coverage. An
+endpoint the probe never reached was never checked, and the criterion says how many it
+saw rather than claiming the application has no others. The structural diff is what
+reports an endpoint nobody specified; this reports a field nobody should return.
+
 **Request vocabulary for `when` clauses**, a closed set on the same terms, added
 2026-08-16 by decision. `then` had a vocabulary and `when` had none, so nothing could
 turn a criterion into a request: an access rule carries `actor`, `action`, and `resource`
@@ -161,6 +185,7 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 10. **M5.10** Add the actor reference and the every row assertion forms, closing the coverage gaps M5.8-pre2 recorded. Approved 2026-08-17, after the stage was otherwise complete.
 11. **M5.11** Add the before and after state form, restoring the clause two criteria had to drop. Approved 2026-08-17. Includes making an accepted write in `fixtures/ledger` actually write, without which the form's violated branch could never fire against the fixture.
 12. **M5.12** Add the cross-request status comparison, restoring what AC-013-01 originally claimed. Approved 2026-08-17. The reference is stated in the `when` vocabulary and must not mutate.
+13. **M5.12b** Add the endpoint sweep, closing AC-014-01. Approved 2026-08-17. It quantifies over an Observation and is unevaluable without one, so a run with no probe cannot pass it by checking nothing.
 
 ## Definition of Done
 
@@ -216,14 +241,16 @@ than passing over a path it stopped covering.
   | AC-003-01 | "and the invoice is unchanged", which needs before and after state | **Closed at M5.11.** The clause is restored and the criterion asserts it |
   | AC-009-01 | The same clause | **Closed at M5.11**, same form |
   | AC-013-01 | A comparison against the status another request returns | **Closed at M5.12.** The criterion claims indistinguishability again, not a literal |
-  | AC-014-01 | A universal over every endpoint and every actor | Split into two criteria naming two routes |
+  | AC-014-01 | A universal over every endpoint and every actor | **Closed at M5.12b** over endpoints, unevaluable without a probe. Still one actor per criterion |
 
-  Two things remain, and only one of them is about the vocabulary. AC-011-01 needs a
+  One thing remains, and it is not about the vocabulary at all: AC-011-01 needs a
   configured actor holding a token belonging to no user, which is target configuration.
-  AC-014-01 is a universal over endpoints the spec does not enumerate, and closing it means
-  either enumerating them, which is what the two criteria now do, or letting a criterion
-  quantify over whatever a probe happened to find, which would make its coverage depend on
-  the crawl budget. That is a worse claim than the one it replaces, so it stays open.
+
+  The endpoint sweep closed the universal over endpoints and deliberately did not close
+  the universal over actors. A criterion names one actor, and "every actor" would mean
+  re-running the sweep per configured identity, which reads as thoroughness and is really
+  a loop the author cannot see the cost of. Writing one criterion per actor keeps the
+  request count visible in the spec.
 - **Resolved 2026-08-17 as M2.8:** `TargetConfig` now carries `stateActor`, validated to name a configured actor, with no default. Raised here at M5.11 because two assertion forms read persisted state and every caller was choosing an identity for itself. The field is M2's and the edit is recorded in that module; this note stays so the reason it exists is readable from the side that needed it.
 - **Raised at M5.11: an accepted write in `fixtures/ledger` now actually writes.** It did not before, which made D3's catalog line only half true and meant a criterion saying the invoice is unchanged could never be false. The request carries no body, since the vocabulary issues none, so the applied change is a fixed increment to the total. If the catalog intended D3 to be an accepted write that changes nothing, this is a fixture change worth reverting, and the criterion should go back to asserting the status alone.
 - **The real fuzzy path is still unexercised, decided at the S5 boundary 2026-08-17.** Every capture test drives an injected launcher, which defines the shape this code expects rather than proving Playwright provides it, and no judge has ever been backed by a model. The stage exit criterion was restated rather than met with a scripted judge, since a run labeled model assisted with no model in it is exactly the false green this tool exists to stop. The first run against a real browser with a real judge needs two things this repository does not have: Playwright installed, which is approved and merely absent, and a model SDK, which is not approved. See `05-BUILD-ORDER.md` under S5.
