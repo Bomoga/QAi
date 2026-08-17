@@ -72,6 +72,7 @@ Surprises worth recording:
 - [x] M2.5 ActorSession for bearer, cookie, header, none (commit 0c198f5)
 - [x] M2.6 seed and reset execution with the disposability gate (commit d752a75)
 - [x] M2.7 startup capability report (commit backfilled below)
+- [x] M2.8 `stateActor` in TargetConfig (commit backfilled below), added 2026-08-17 on the S5 branch, after S2 merged, because M5's state assertions had no configured identity to read as
 - Exit criterion: a script authenticates two distinct actors against `fixtures/ledger`, issues one request as each, and writes two redacted evidence records to `.qai/evidence/`
 - Exit criterion: **met**, verified 2026-08-16 via `packages/core/scripts/capture-two-actors.ts` against a live ledger. Two actors resolved, one request each, four files written, `request.headers.authorization` and `response.body.notes` redacted in both. No token and no sensitive field reached disk; `INV-1001` and `org-1` were retained.
 
@@ -277,10 +278,24 @@ Surprises worth recording:
   without credentials, was only half true, and the unchanged clause could never be false
   against this fixture. The tool issues no request body, so the applied change is a fixed
   increment to the total. The seed is untouched, so a restart is still the reset.
-- M5.11: `TargetConfig` still has no field naming the state actor, and two forms now need
-  one. Callers pass it in, the demonstration script names `owner` explicitly with a comment,
-  and it cannot default to the acting actor. That field belongs to M2, and M8 needs it the
-  moment a command assembles a run.
+- M2.8, resolving what M5.11 raised: `TargetConfig` now carries `stateActor`. It names a
+  configured actor, has no default, and naming an actor that is not configured fails the
+  load rather than leaving every state assertion quietly unevaluable. A cross-module edit
+  into M2's file, the same shape as M3.2 adding `resources`, and recorded in both module
+  files.
+- M2.8: neither candidate default was safe, which is why there is none. The acting actor is
+  frequently an identity that cannot read the record at all, and that is the point of the
+  criterion rather than an edge case. An actor scoped to its own organization counts only
+  what it can see, so a scoping bug would arrive dressed as a state bug.
+- M2.8 proved by breaking it: commenting `stateActor` out of `qai.config.yaml` and running
+  the demonstration against the repaired ledger turned AC-003-01 and AC-009-01 from pass to
+  unverified, 13 pass 0 fail 2 unverified becoming 11 pass 0 fail 4 unverified. The field is
+  load bearing, and its absence degrades honestly rather than passing quietly.
+- M2.8 limit worth stating: the fixture's `stateActor` is `owner`, which is scoped to org-1.
+  It is the right identity for the records these criteria compare and the wrong one in
+  general, since a count of an entity owned by another organization would come back short
+  rather than wrong. The config says so beside the field, and the corpus run will want an
+  unscoped reader.
 
 - M5.10, approved by the human on 2026-08-17 after the stage was otherwise complete: the
   assertion table gained an actor reference on the right of an equality and an every row

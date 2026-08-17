@@ -28,6 +28,17 @@ actors:
       kind: none
     attributes: {}
 
+# Who persisted state is read as, after an action has been taken. It cannot be the
+# acting actor: the criterion that most needs it acts as an unauthenticated caller who
+# cannot read the record at all, and reading state as the actor under test would report
+# a scoping rule as a state fact.
+#
+# `owner` is scoped to org-1, which is the right identity for the records the criteria
+# here compare and the wrong one in general. An unscoped reader would be better and this
+# fixture has none, so a count of an entity owned by another organization would come back
+# short rather than wrong. Worth remembering when the corpus run needs one.
+stateActor: owner
+
 # Routes and seeded records. An access rule names a resource, not a URL, and the tool
 # refuses to guess one from the entity name. Until the probe in M4 can discover these,
 # this is where the mapping comes from.
