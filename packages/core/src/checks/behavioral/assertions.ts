@@ -12,8 +12,16 @@ import { type LoadDiagnostic, warning } from '../../spec/diagnostics.ts';
  *   body contains field Invoice.org_id
  *   body omits field Invoice.notes
  *   body.status equals "ok"
+ *   body.org_id equals actor.org_id
+ *   every Invoice has org_id equal to actor.org_id
  *   record count of AuditLog is 1
  *   response time under 500ms
+ *
+ * The last two right hand sides arrived together on 2026-08-17, with approval, because
+ * the fixture spec had two criteria the table could not state: one comparing a field
+ * against the caller, and one making that claim about every row of a list. Both were
+ * being carried as recorded coverage gaps, which is the honest way to hold a gap and a
+ * poor substitute for closing it.
  *
  * Two rules keep this from drifting into natural language understanding.
  *
@@ -29,11 +37,35 @@ import { type LoadDiagnostic, warning } from '../../spec/diagnostics.ts';
  * a warning telling the author to rewrite the clause or mark the criterion `mode: fuzzy`.
  */
 
+/**
+ * The right hand side of an equality, added 2026-08-17 with approval.
+ *
+ * A literal is a value the spec author wrote down. An actor reference is resolved
+ * against the acting actor's configured attributes when the assertion is evaluated,
+ * which is what lets a criterion say a row belongs to the caller without the spec
+ * carrying target data. The two are separate members rather than one string, so nothing
+ * has to guess whether `actor.org_id` was meant as a reference or as text.
+ */
+export type AssertionValue =
+  | { readonly kind: 'literal'; readonly value: LiteralValue }
+  | { readonly kind: 'actor'; readonly attribute: string };
+
 export type Assertion =
   | { readonly kind: 'status'; readonly codes: readonly number[] }
   | { readonly kind: 'field-present'; readonly entity: string; readonly field: string }
   | { readonly kind: 'field-absent'; readonly entity: string; readonly field: string }
-  | { readonly kind: 'body-equals'; readonly path: string; readonly value: LiteralValue }
+  | { readonly kind: 'body-equals'; readonly path: string; readonly expected: AssertionValue }
+  /**
+   * Every row of a list response carries the field with that value. Added with the same
+   * approval, and the reason the fixture's REQ-002 criterion is checkable at all: a
+   * scoping claim is about every row, and asserting one row is a different claim.
+   */
+  | {
+      readonly kind: 'every-row';
+      readonly entity: string;
+      readonly field: string;
+      readonly expected: AssertionValue;
+    }
   | { readonly kind: 'record-count'; readonly entity: string; readonly count: number }
   /** Informational severity only, per the module. A slow response is not a failure. */
   | { readonly kind: 'response-time'; readonly maxMs: number };
@@ -63,6 +95,8 @@ const FIELD_ABSENT = /^body\s+omits\s+field\s+([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)
 const BODY_EQUALS = /^body\.([A-Za-z_][\w.[\]]*)\s+equals\s+(.+)$/iu;
 const RECORD_COUNT = /^record\s+count\s+of\s+([A-Za-z_][\w]*)\s+is\s+(\d+)$/iu;
 const RESPONSE_TIME = /^time\s+under\s+(\d+)\s*(?:ms)?$/iu;
+const EVERY_ROW = /^every\s+([A-Za-z_][\w]*)\s+has\s+([A-Za-z_][\w]*)\s+equal\s+to\s+(.+)$/iu;
+const ACTOR_REF = /^actor\.([A-Za-z_][\w]*)$/iu;
 
 const STATUS_CODE = /^[1-5]\d{2}$/u;
 
@@ -105,6 +139,23 @@ function parseLiteral(raw: string): LiteralValue | undefined {
   return undefined;
 }
 
+/**
+ * A literal, or a reference to the acting actor.
+ *
+ * The actor form is tried first, and a bare identifier is still refused. `Invoice.org_id`
+ * on the right of an equality is far more likely a mistyped reference than a string
+ * somebody meant literally, and the parser stays a parser rather than a guesser.
+ */
+function parseAssertionValue(raw: string): AssertionValue | undefined {
+  const text = raw.trim();
+
+  const actor = ACTOR_REF.exec(text);
+  if (actor?.[1] !== undefined) return { kind: 'actor', attribute: actor[1] };
+
+  const value = parseLiteral(text);
+  return value === undefined ? undefined : { kind: 'literal', value };
+}
+
 /** `404`, `401 or 403`, `401, 403`, `[401, 403]`. */
 function parseStatusCodes(raw: string): number[] | undefined {
   const inner = raw.trim().replace(/^\[/u, '').replace(/\]$/u, '');
@@ -140,8 +191,16 @@ function parseClause(clause: string): Assertion | undefined {
 
   const equals = BODY_EQUALS.exec(text);
   if (equals?.[1] !== undefined && equals[2] !== undefined) {
-    const value = parseLiteral(equals[2]);
-    return value === undefined ? undefined : { kind: 'body-equals', path: equals[1], value };
+    const expected = parseAssertionValue(equals[2]);
+    return expected === undefined ? undefined : { kind: 'body-equals', path: equals[1], expected };
+  }
+
+  const everyRow = EVERY_ROW.exec(text);
+  if (everyRow?.[1] !== undefined && everyRow[2] !== undefined && everyRow[3] !== undefined) {
+    const expected = parseAssertionValue(everyRow[3]);
+    return expected === undefined
+      ? undefined
+      : { kind: 'every-row', entity: everyRow[1], field: everyRow[2], expected };
   }
 
   const count = RECORD_COUNT.exec(text);
@@ -207,7 +266,8 @@ export const ASSERTION_FORMS: readonly string[] = [
   'status is <code>, or status in <code>, <code>',
   'body contains field <Entity>.<field>',
   'body omits field <Entity>.<field>',
-  'body.<path> equals <literal>',
+  'body.<path> equals <literal>, or equals actor.<attribute>',
+  'every <Entity> has <field> equal to <literal>, or equal to actor.<attribute>',
   'record count of <Entity> is <n>',
   'response time under <ms>',
 ];

@@ -89,11 +89,56 @@ describe('the value form', () => {
     ['body.deleted_at equals null', 'deleted_at', null],
     ['body.invoice.id equals "INV-1001"', 'invoice.id', 'INV-1001'],
   ])('reads %s', (text, path, value) => {
-    expect(assertionsOf(text)).toEqual([{ kind: 'body-equals', path, value }]);
+    expect(assertionsOf(text)).toEqual([
+      { kind: 'body-equals', path, expected: { kind: 'literal', value } },
+    ]);
   });
 
   it('refuses a bare word, which is more likely a typo than a literal', () => {
     expect(parseThen('body.status equals ok').kind).toBe('unsupported');
+  });
+
+  it('reads a comparison against the acting actor', () => {
+    expect(assertionsOf('body.org_id equals actor.org_id')).toEqual([
+      { kind: 'body-equals', path: 'org_id', expected: { kind: 'actor', attribute: 'org_id' } },
+    ]);
+  });
+
+  it('refuses an entity reference, which nothing here can resolve', () => {
+    expect(parseThen('body.org_id equals Invoice.org_id').kind).toBe('unsupported');
+  });
+});
+
+describe('the every row form', () => {
+  it('reads a comparison against the acting actor', () => {
+    expect(assertionsOf('every Invoice has org_id equal to actor.org_id')).toEqual([
+      {
+        kind: 'every-row',
+        entity: 'Invoice',
+        field: 'org_id',
+        expected: { kind: 'actor', attribute: 'org_id' },
+      },
+    ]);
+  });
+
+  it('reads a comparison against a literal', () => {
+    expect(assertionsOf('every Invoice has status equal to "open"')).toEqual([
+      {
+        kind: 'every-row',
+        entity: 'Invoice',
+        field: 'status',
+        expected: { kind: 'literal', value: 'open' },
+      },
+    ]);
+  });
+
+  it('absorbs the same filler every other form absorbs, and nothing more', () => {
+    expect(assertionsOf('every Invoice has org_id equal to actor.org_id.')).toHaveLength(1);
+    expect(parseThen('every returned invoice belongs to the caller').kind).toBe('unsupported');
+  });
+
+  it('refuses a bare word on the right, the same as the value form does', () => {
+    expect(parseThen('every Invoice has org_id equal to caller').kind).toBe('unsupported');
   });
 });
 

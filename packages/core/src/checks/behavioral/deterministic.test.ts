@@ -140,7 +140,11 @@ describe('evaluating one assertion', () => {
   });
 
   it('compares a value by path', () => {
-    const assertion: Assertion = { kind: 'body-equals', path: 'status', value: 'ok' };
+    const assertion: Assertion = {
+      kind: 'body-equals',
+      path: 'status',
+      expected: { kind: 'literal', value: 'ok' },
+    };
 
     expect(evaluateAssertion(assertion, response({ body: '{"status":"ok"}' })).state).toBe(
       'satisfied',
@@ -151,7 +155,11 @@ describe('evaluating one assertion', () => {
   });
 
   it('treats a missing path as violated rather than unevaluable, since the body was read', () => {
-    const assertion: Assertion = { kind: 'body-equals', path: 'status', value: 'ok' };
+    const assertion: Assertion = {
+      kind: 'body-equals',
+      path: 'status',
+      expected: { kind: 'literal', value: 'ok' },
+    };
     expect(evaluateAssertion(assertion, response({ body: '{}' })).state).toBe('violated');
   });
 
@@ -170,6 +178,211 @@ describe('evaluating one assertion', () => {
 
     expect(evaluateAssertion(assertion, response({ durationMs: 40 })).state).toBe('satisfied');
     expect(evaluateAssertion(assertion, response({ durationMs: 400 })).state).toBe('violated');
+  });
+});
+
+/**
+ * The two forms added on 2026-08-17, with the edges that decide whether they can be
+ * trusted. Every way of not knowing is unevaluable, and only a row that was read and
+ * found wanting is a violation.
+ */
+describe('comparing against the acting actor', () => {
+  const assertion: Assertion = {
+    kind: 'body-equals',
+    path: 'org_id',
+    expected: { kind: 'actor', attribute: 'org_id' },
+  };
+
+  const scope = { actorAttributes: { org_id: 'org-1' } };
+
+  it('is satisfied when the field carries the actor attribute', () => {
+    const outcome = evaluateAssertion(assertion, response({ body: '{"org_id":"org-1"}' }), scope);
+
+    expect(outcome.state).toBe('satisfied');
+  });
+
+  it('is violated when it carries someone else', () => {
+    expect(
+      evaluateAssertion(assertion, response({ body: '{"org_id":"org-2"}' }), scope).state,
+    ).toBe('violated');
+  });
+
+  it('compares loosely across string and number, since config can only hold strings', () => {
+    const numeric: Assertion = {
+      kind: 'body-equals',
+      path: 'org_id',
+      expected: { kind: 'actor', attribute: 'org_id' },
+    };
+
+    const outcome = evaluateAssertion(numeric, response({ body: '{"org_id":1}' }), {
+      actorAttributes: { org_id: '1' },
+    });
+
+    expect(outcome.state).toBe('satisfied');
+  });
+
+  it('is unevaluable when the actor carries no such attribute, never violated', () => {
+    const outcome = evaluateAssertion(assertion, response({ body: '{"org_id":"org-1"}' }), {
+      actorAttributes: {},
+    });
+
+    // A finding here would be about the configuration, dressed as a finding about the
+    // application. Invariant I2.
+    expect(outcome.state).toBe('unevaluable');
+    expect(outcome.observed).toContain('actor.org_id');
+  });
+
+  it('is unevaluable when no actor scope was supplied at all', () => {
+    expect(evaluateAssertion(assertion, response({ body: '{"org_id":"org-1"}' })).state).toBe(
+      'unevaluable',
+    );
+  });
+
+  it('keeps the literal comparison strict, which is what the author wrote down', () => {
+    const literal: Assertion = {
+      kind: 'body-equals',
+      path: 'total_cents',
+      expected: { kind: 'literal', value: 1000 },
+    };
+
+    expect(evaluateAssertion(literal, response({ body: '{"total_cents":"1000"}' })).state).toBe(
+      'violated',
+    );
+  });
+});
+
+describe('asserting over every row of a list', () => {
+  const assertion: Assertion = {
+    kind: 'every-row',
+    entity: 'Invoice',
+    field: 'org_id',
+    expected: { kind: 'actor', attribute: 'org_id' },
+  };
+
+  const scope = { actorAttributes: { org_id: 'org-1' } };
+
+  function list(rows: unknown[]): string {
+    return JSON.stringify({ invoices: rows });
+  }
+
+  it('is satisfied when every row belongs to the caller', () => {
+    const body = list([
+      { id: 'INV-1', org_id: 'org-1' },
+      { id: 'INV-2', org_id: 'org-1' },
+    ]);
+
+    const outcome = evaluateAssertion(assertion, response({ body }), scope);
+
+    expect(outcome.state).toBe('satisfied');
+    expect(outcome.observed).toContain('2 Invoice row(s)');
+  });
+
+  it('is violated by one foreign row among many, and names it', () => {
+    const body = list([
+      { id: 'INV-1', org_id: 'org-1' },
+      { id: 'INV-2', org_id: 'org-2' },
+    ]);
+
+    const outcome = evaluateAssertion(assertion, response({ body }), scope);
+
+    expect(outcome.state).toBe('violated');
+    expect(outcome.observed).toContain('INV-2');
+    expect(outcome.observed).not.toContain('INV-1,');
+  });
+
+  it('reads a bare array as the rows, the same as an enveloped one', () => {
+    const body = JSON.stringify([{ id: 'INV-2', org_id: 'org-2' }]);
+
+    expect(evaluateAssertion(assertion, response({ body }), scope).state).toBe('violated');
+  });
+
+  it('treats a row missing the field as violated, since the row was read', () => {
+    const outcome = evaluateAssertion(
+      assertion,
+      response({ body: list([{ id: 'INV-1' }]) }),
+      scope,
+    );
+
+    expect(outcome.state).toBe('violated');
+    expect(outcome.observed).toContain('INV-1');
+  });
+
+  it('falls back to a row position when a row carries no id', () => {
+    const outcome = evaluateAssertion(
+      assertion,
+      response({ body: list([{ org_id: 'org-2' }]) }),
+      scope,
+    );
+
+    expect(outcome.observed).toContain('row 0');
+  });
+
+  it('is unevaluable on an empty list, which shows nothing either way', () => {
+    const outcome = evaluateAssertion(assertion, response({ body: list([]) }), scope);
+
+    // Q5's answer, held to here as well: an endpoint scoping correctly and a dataset
+    // that happens to be empty are indistinguishable from outside.
+    expect(outcome.state).toBe('unevaluable');
+    expect(outcome.observed).toContain('empty list');
+  });
+
+  it('is unevaluable when no list can be recognized in the body', () => {
+    const outcome = evaluateAssertion(assertion, response({ body: '{"invoice":{}}' }), scope);
+
+    expect(outcome.state).toBe('unevaluable');
+  });
+
+  it('is unevaluable on a body that is not JSON', () => {
+    expect(evaluateAssertion(assertion, response({ body: 'not json' }), scope).state).toBe(
+      'unevaluable',
+    );
+  });
+
+  it('is unevaluable when the actor carries no such attribute', () => {
+    const body = list([{ id: 'INV-1', org_id: 'org-1' }]);
+
+    expect(evaluateAssertion(assertion, response({ body }), { actorAttributes: {} }).state).toBe(
+      'unevaluable',
+    );
+  });
+
+  it('compares against a literal without needing an actor at all', () => {
+    const literal: Assertion = {
+      kind: 'every-row',
+      entity: 'Invoice',
+      field: 'status',
+      expected: { kind: 'literal', value: 'open' },
+    };
+
+    const body = list([{ id: 'INV-1', status: 'open' }]);
+    expect(evaluateAssertion(literal, response({ body })).state).toBe('satisfied');
+  });
+});
+
+describe('the acting actor reaches the assertion', () => {
+  it('resolves an actor attribute from the session that issued the request', async () => {
+    const sessions = sessionReturning(
+      response({ body: '{"invoices":[{"id":"A","org_id":"org-9"}]}' }),
+    );
+
+    const result = await runDeterministicCheck(
+      plan({
+        assertions: [
+          {
+            kind: 'every-row',
+            entity: 'Invoice',
+            field: 'org_id',
+            expected: { kind: 'actor', attribute: 'org_id' },
+          },
+        ],
+      }),
+      context(sessions),
+    );
+
+    // The fake session carries no attributes, so this is unevaluable rather than a
+    // failure. The point of the test is that the runner reaches for them at all.
+    expect(result.verdict).toBe('inconclusive');
+    expect(result.detail).toContain('actor.org_id');
   });
 });
 

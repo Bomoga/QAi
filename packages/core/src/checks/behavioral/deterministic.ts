@@ -4,7 +4,7 @@ import { extractRows } from '../access/list.ts';
 import { resourceFieldsIn } from '../access/verdict.ts';
 import { fail, inconclusive, pass } from '../result.ts';
 import type { CheckResult } from '../types.ts';
-import type { Assertion, LiteralValue } from './assertions.ts';
+import type { Assertion, AssertionValue, LiteralValue } from './assertions.ts';
 import type { Severity } from '../../contracts/index.ts';
 import type { BehavioralContext, BehavioralPlan } from './types.ts';
 
@@ -79,9 +79,72 @@ function describe(value: LiteralValue | unknown): string {
   return JSON.stringify(value) ?? String(value);
 }
 
+/**
+ * What an assertion can be resolved against besides the response itself.
+ *
+ * Only the acting actor's attributes today. It is optional because most forms need
+ * nothing, and an actor form evaluated without it is unevaluable rather than false, in
+ * keeping with the rule that runs through all of this: what cannot be resolved is
+ * unknown, never a verdict.
+ */
+export interface AssertionScope {
+  readonly actorAttributes?: Readonly<Record<string, string>>;
+}
+
+/** Loose across string and number, exactly as `evaluateCondition` compares, so that
+ * `org_id: 1` and `"1"` agree. A configured attribute is always a string, since config
+ * holds strings, and comparing it strictly would fail against every numeric field. */
+function sameValue(left: unknown, right: string): boolean {
+  if (left === null || left === undefined) return false;
+  if (typeof left === 'object') return false;
+  return String(left) === right;
+}
+
+/**
+ * The expected side of an equality, resolved.
+ *
+ * An actor attribute that is not configured comes back unresolved, which the callers
+ * turn into `unevaluable`. Reporting a violation there would be a finding about the
+ * configuration dressed up as a finding about the application.
+ */
+function resolveExpected(
+  expected: AssertionValue,
+  scope: AssertionScope | undefined,
+):
+  | { resolved: true; value: LiteralValue | string; label: string }
+  | { resolved: false; label: string } {
+  if (expected.kind === 'literal') {
+    return { resolved: true, value: expected.value, label: describe(expected.value) };
+  }
+
+  const label = `actor.${expected.attribute}`;
+  const attributes = scope?.actorAttributes;
+  if (attributes === undefined || !Object.hasOwn(attributes, expected.attribute)) {
+    return { resolved: false, label };
+  }
+
+  const value = attributes[expected.attribute];
+  return value === undefined
+    ? { resolved: false, label }
+    : { resolved: true, value, label: `${label}, which is ${describe(value)}` };
+}
+
+function matches(
+  actual: unknown,
+  expected: AssertionValue,
+  resolvedValue: LiteralValue | string,
+): boolean {
+  // A literal keeps the strict comparison it has always had: the author wrote the type
+  // down. An actor attribute is compared loosely, because config can only carry strings.
+  return expected.kind === 'literal'
+    ? actual === resolvedValue
+    : sameValue(actual, String(resolvedValue));
+}
+
 export function evaluateAssertion(
   assertion: Assertion,
   response: CapturedResponse,
+  scope?: AssertionScope,
 ): AssertionOutcome {
   switch (assertion.kind) {
     case 'status': {
@@ -126,11 +189,84 @@ export function evaluateAssertion(
         };
       }
 
+      const expected = resolveExpected(assertion.expected, scope);
+      if (!expected.resolved) {
+        return {
+          assertion,
+          state: 'unevaluable',
+          observed: `${expected.label}, which the acting actor does not carry`,
+        };
+      }
+
       const found = readPath(parsed.value, assertion.path);
+      const satisfied = found.found && matches(found.value, assertion.expected, expected.value);
+
       return {
         assertion,
-        state: found.found && found.value === assertion.value ? 'satisfied' : 'violated',
+        state: satisfied ? 'satisfied' : 'violated',
         observed: `body.${assertion.path} was ${describe(found.found ? found.value : undefined)}`,
+      };
+    }
+
+    /**
+     * Every row of a list carries the field with the expected value.
+     *
+     * Rows are found by `extractRows`, the same function access checks use, so a list
+     * under an `invoices` key is recognized here exactly as it is there. Two readings of
+     * what counts as a list would eventually disagree, and the one in access checks is
+     * already the one findings are written against.
+     *
+     * An empty list is unevaluable rather than vacuously satisfied. That is Q5's answer
+     * for deny lists and it holds for the same reason: an endpoint scoping correctly and
+     * a dataset that happens to be empty are indistinguishable from out here, and reading
+     * zero rows as proof would report coverage on a run that established nothing.
+     */
+    case 'every-row': {
+      const rows = extractRows(response.body);
+      if (rows === undefined) {
+        return {
+          assertion,
+          state: 'unevaluable',
+          observed: 'a response body with no list of records this runner could recognize',
+        };
+      }
+
+      if (rows.length === 0) {
+        return {
+          assertion,
+          state: 'unevaluable',
+          observed: `an empty list, which shows nothing about whether every ${assertion.entity} would carry ${assertion.field}`,
+        };
+      }
+
+      const expected = resolveExpected(assertion.expected, scope);
+      if (!expected.resolved) {
+        return {
+          assertion,
+          state: 'unevaluable',
+          observed: `${expected.label}, which the acting actor does not carry`,
+        };
+      }
+
+      const offending: string[] = [];
+      rows.forEach((row, index) => {
+        const present = Object.hasOwn(row, assertion.field);
+        const value = present ? row[assertion.field] : undefined;
+        if (!present || !matches(value, assertion.expected, expected.value)) {
+          const id = row['id'];
+          offending.push(
+            typeof id === 'string' || typeof id === 'number' ? String(id) : `row ${index}`,
+          );
+        }
+      });
+
+      return {
+        assertion,
+        state: offending.length === 0 ? 'satisfied' : 'violated',
+        observed:
+          offending.length === 0
+            ? `${rows.length} ${assertion.entity} row(s), every one with ${assertion.field} equal to ${expected.label}`
+            : `${offending.length} of ${rows.length} ${assertion.entity} row(s) without ${assertion.field} equal to ${expected.label}: ${offending.join(', ')}`,
       };
     }
 
@@ -302,7 +438,12 @@ export async function runDeterministicCheck(
       continue;
     }
 
-    outcomes.push(evaluateAssertion(assertion, outcome.response));
+    // The acting actor's attributes, so a criterion can compare a field against the
+    // caller. Read from the session that issued the request rather than looked up again,
+    // since the identity that asked is the only one the answer is about.
+    outcomes.push(
+      evaluateAssertion(assertion, outcome.response, { actorAttributes: session.attributes }),
+    );
   }
 
   const violations = outcomes.filter((entry) => entry.state === 'violated');
