@@ -8,11 +8,13 @@
  * Nothing here may import from `llm/`, enforced by lint. The `Judge` interface arrives
  * as an argument.
  *
- * Present: the assertion vocabulary, its validation warnings, the plan shape, and the
- * deterministic runner.
+ * Present: both vocabularies, the `when` for requests and the `then` for assertions,
+ * their validation warnings, planning, and the deterministic runner.
  * Pending: persisted state assertions, the Judge, the Playwright fuzzy runner, the
  * verdict mapping, and graceful degradation.
  */
 export * from './assertions.ts';
 export * from './deterministic.ts';
+export * from './plan.ts';
 export * from './types.ts';
+export * from './when.ts';

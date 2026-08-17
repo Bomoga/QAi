@@ -1,6 +1,6 @@
 # Progress
 
-Updated: 2026-08-17T02:40:00Z
+Updated: 2026-08-17T03:10:00Z
 Current stage: S5
 Next task: M5.3
 
@@ -179,13 +179,14 @@ Surprises worth recording:
 ## S5. Behavioral checks (M5)
 
 - [x] M5.1 assertion vocabulary parser and validation warnings (commit 2ecf6f2)
-- [x] M5.2 deterministic HTTP runner with evidence capture (commits 45fc681 and the one backfilled below)
+- [x] M5.2 deterministic HTTP runner with evidence capture (commits 45fc681, 0a75029, 16c8501)
+- [x] M5.9 the `when` vocabulary and planBehavioralChecks (commits 4fd00c1 and the one backfilled below), added by decision, out of order because M5.8 needs it
 - [ ] M5.3 persisted state assertions via follow-up reads
 - [ ] M5.4 the Judge interface in llm/
 - [ ] M5.5 Playwright fuzzy runner with the selector policy
 - [ ] M5.6 verdict mapping, one test per row
 - [ ] M5.7 graceful degradation when Playwright is absent
-- [ ] M5.8 integration test over D4
+- [ ] M5.8 integration test over D4, needs the fixture spec rewritten into both vocabularies first
 - Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
 
@@ -206,6 +207,14 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.9, resolving the M5.2 gap: the user chose a `when` vocabulary over reusing access rules or changing the contract, so the module now carries a request table beside the assertion table. Seven forms, same discipline as `then`: canonical, mechanically tolerant, refusing rather than guessing.
+- M5.9: the instance id is optional on a read and required on an update or delete. A read of any record is still a read, while updating one record means naming which, and picking for the author would be the tool inventing a target's shape. A read may also name an id so a criterion about a record that does not exist can say which.
+- M5.9: routes resolve exactly as they do for access rules, Observation first then configured route then nothing, reusing M3's `resolvePath` and `PlanningContext`. No spec needs to carry target data, since the instance comes from config unless the criterion names one.
+- M5.9: `planBehavioralChecks` returns `{plans, unplannable}` where the module's Public API says `BehavioralPlan[]`, the same widening M3 made and for the same reason. A criterion that vanished from the plan would read as coverage that does not exist, so each one comes back with a reason from the contract's closed set.
+- M5.9: create and update send no request body, matching what access checks do. A criterion needing one is outside the table and needs approval, which is recorded in the module.
+- M5.9 repeat of the M5.1 trap, worth stating plainly: the type predicate was written over an intersection rather than a named union member, so narrowing failed on the negative branch and 958 tests passed while `pnpm typecheck` failed. Writing the note at M5.1 did not stop it happening again at M5.9. The rule to follow mechanically is that a predicate names a member of the union, never a shape that merely matches one.
+- M5.9: fixing the narrowing immediately surfaced dead code the compiler could not see before, a ternary for a `path` action that had already returned. Better types find more than they cost.
 
 - M5.2 gap, needs a decision before M5.8: nothing turns a criterion's `when` clause into a request. An access rule carries actor, action, and resource as fields, so M3 could plan one; an acceptance criterion states `when` in prose and the module gives a vocabulary for `then` only. `BehavioralPlan` therefore carries its request rather than deriving one, and `planBehavioralChecks` from the module's public API is not implemented. Three ways out: a `when` vocabulary mirroring the `then` table, reusing the requirement's access rules to supply the request where one exists, or adding structured fields to the criterion, which is a contract change. Recorded in the M5 Open questions.
 - M5.2: assertion evaluation is three-valued, satisfied, violated, or unevaluable, and a definite violation outranks an unevaluable assertion. If one clause is proven false the criterion did not hold, whatever could not be read about the rest. A criterion whose assertions are all unevaluable is `inconclusive`, never a pass.
