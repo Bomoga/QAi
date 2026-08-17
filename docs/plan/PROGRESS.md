@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T12:00:00Z
+Updated: 2026-08-17T12:05:00Z
 Current stage: S5
-Next task: M5.8
+Next task: S5 stage boundary
 
 ## S0. Skeleton
 
@@ -187,8 +187,8 @@ Surprises worth recording:
 - [x] M5.6 verdict mapping, one test per row (commit 7774ab4)
 - [x] M5.8-pre1 D4 in fixtures/ledger, the switch M5.8 has to toggle (commit ccd7892)
 - [x] M5.8-pre2 the fixture spec rewritten into both vocabularies (commits 5dc6c8b and bc93686)
-- [x] M5.7 graceful degradation when Playwright is absent (commit backfilled below)
-- [ ] M5.8 integration test over D4
+- [x] M5.7 graceful degradation when Playwright is absent (commits e086e1a, af65b47, c2fd391)
+- [x] M5.8 integration test over D4 (commit backfilled below)
 - Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
 
@@ -209,6 +209,26 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.8: the integration test reads the real `fixtures/ledger/spec/ledger.spec.yaml` rather
+  than a spec written inside the test. A hand-built spec would only prove the runner agrees
+  with something the test invented; what is worth asserting is that the file a user would
+  write turns into checks that catch what is wrong with the application it describes.
+- M5.8: both directions are pinned as whole verdict maps, not as one lookup each. Defects
+  on gives 5 fails, 2 inconclusive, 7 pass; defects off gives 0 fails and the same 14
+  criteria. A runner that always failed or always passed breaks one of the two, and the
+  same checks run in both so the runs compare.
+- M5.8: D1 costs two failures, AC-001-01 and AC-013-01. The second is the one that says a
+  refusal must not confirm the invoice exists, and with D1 on the read simply succeeds, so
+  both criteria are reporting the same defect from different angles.
+- M5.8: AC-006-01 is inconclusive in both directions and always will be. D6 is the entity
+  the spec declares and the application never built, so there is nowhere to count records
+  and nothing is claimed either way. That is invariant I4 doing its job rather than a gap
+  in the runner.
+- M5.8: the fuzzy criterion is the only result carrying `deterministic: false`, so
+  `modelAssistedCheckCount` is 1 for a run in which no model was consulted at all. That is
+  the M5.7 judgment call showing up in a real run, and it is the number a reviewer should
+  look at first.
 
 - M5.7 crossed a task boundary by one function, flagged rather than hidden:
   `planBehavioralChecks` used to refuse every fuzzy criterion with `capability-unavailable`,
