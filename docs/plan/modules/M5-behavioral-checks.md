@@ -68,9 +68,22 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 ## Definition of Done
 
 ```
-pnpm --filter @qai/core test -- behavioral
-pnpm --filter @qai/core test -- behavioral --no-playwright
+pnpm --filter @qai/core test behavioral
+pnpm --filter @qai/core test behavioral --no-playwright
 ```
+
+**Corrected 2026-08-16.** These commands previously carried a `--` before the filter
+names. pnpm forwards that `--` to the script, so vitest is invoked as
+`vitest run "--" "<name>"` and reads what follows as passthrough arguments rather
+than as filename filters, which runs the whole core suite and passes for the wrong
+reason. Without it the filter applies. `pnpm --filter @qai/core exec vitest run <name>`
+is the explicit equivalent.
+
+**`--no-playwright` is not a vitest option.** pnpm forwards it, and vitest then exits with
+`Unknown option --no-playwright`, so the second command cannot work as written whatever is
+done about the `--`. Verified 2026-08-16. Deciding how the playwright-absent path is
+exercised belongs to M5; an environment variable read by the test is the obvious shape,
+since vitest has no flag for it. Recorded in Open questions.
 
 - D4 produces a medium severity deterministic finding.
 - A fuzzy criterion runs, is labeled model assisted in the RunResult, and cannot produce `fail` under any tested model output, including adversarial ones.
@@ -87,3 +100,4 @@ pnpm --filter @qai/core test -- behavioral --no-playwright
 ## Open questions
 
 - None blocking. Flag any acceptance criterion in the fixture spec that the assertion vocabulary cannot express.
+- Raised 2026-08-16 while correcting the Definition of Done commands: `--no-playwright` is not a vitest option, and vitest exits with `Unknown option --no-playwright` when it is passed. The capability-unavailable path still has to be exercised somehow; an environment variable the test reads is the obvious shape. Decide when M5 is implemented, and correct the command above to match.

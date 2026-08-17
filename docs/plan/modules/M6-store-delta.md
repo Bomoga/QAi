@@ -81,9 +81,16 @@ export function diffRuns(a: RunResult, b: RunResult): RunDelta;
 ## Definition of Done
 
 ```
-pnpm --filter @qai/core test -- store delta
+pnpm --filter @qai/core test store delta
 pnpm --filter @qai/cli exec qai diff --last 2
 ```
+
+**Corrected 2026-08-16.** This command previously carried a `--` before the filter
+names. pnpm forwards that `--` to the script, so vitest is invoked as
+`vitest run "--" "<name>"` and reads what follows as passthrough arguments rather
+than as filename filters, which runs the whole core suite and passes for the wrong
+reason. Without it the filter applies. `pnpm --filter @qai/core exec vitest run <name>`
+is the explicit equivalent.
 
 - The same check against an unchanged target yields an identical `checkId` across runs.
 - A deliberate regeneration of the fixture app that removes an authorization guard produces an `accessLoosened` entry.

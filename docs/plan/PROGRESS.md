@@ -169,8 +169,8 @@ Surprises worth recording:
   that does not trip detection tests nothing about the adapter.
 - The M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` filtered
   nothing, because pnpm forwards the `--` to the script and vitest reads what follows as
-  passthrough rather than as filename filters. Corrected in the module. Same family as the
-  M1.2 trap, and the same wrong form appears in six other module files.
+  passthrough rather than as filename filters. Same family as the M1.2 trap. Every module
+  file carried the same wrong form and all of them are corrected.
 - Endpoint identity turned out to be the highest stakes small function in the module.
   M6 diffs runs on that string, so widening what counts as a record identifier renames
   every endpoint in every stored run.
@@ -365,7 +365,9 @@ Surprises worth recording:
 
 ## Known issues, not blocking
 
-- Six other module files carry the Definition of Done command form that does not filter: M2, M3, M5, M6, M7, and M9 all write `pnpm --filter @qai/core test -- <name>`. Only M4 was corrected, since that is the module this stage owns. The fix is dropping the `--`. M5's variant, `test -- behavioral --no-playwright`, is worth checking by hand when M5 lands, since the trailing flag is meant for vitest.
+- `--no-playwright` in the M5 Definition of Done is not a vitest option. pnpm forwards it and vitest exits with `Unknown option --no-playwright`, so that command cannot work as written. Fixing the `--` does not fix this. How the playwright-absent path gets exercised is an M5 decision, most likely an environment variable the test reads, and it is recorded in the M5 Open questions.
+
+- The Definition of Done test command was corrected in every module file, M2 through M9, not only M4. Each carried a `--` before its filter names, which pnpm forwards to the script so vitest reads them as passthrough arguments and filters nothing. Verified for the two modules that have tests today: `test target evidence` runs 151 tests, `test access` runs 159, where the old form ran the whole suite of 850.
 
 - The GitHub CLI was installed during S4, `gh` 2.97.0 via winget, user scope. It authenticates as `Bomoga` with a fine-grained token whose repository access had to be widened twice, first to include this private repository at all, then to give Pull requests read and write. The token has no Checks permission, so `gh pr checks` fails and CI status has to be read on the pull request page.
 
