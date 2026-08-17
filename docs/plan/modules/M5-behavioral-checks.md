@@ -43,6 +43,7 @@ export function runFuzzyCheck(plan: BehavioralPlan, ctx: TargetContext, judge: J
 | `every <Entity> has <field> equal to <literal>` | Every row of a list response |
 | `every <Entity> has <field> equal to actor.<attribute>` | Every row, against the acting actor |
 | `record count of <Entity> is <n>` | Persisted state via a subsequent read |
+| `record <Entity> is unchanged`, optionally naming an instance | The record, read before the action and again after |
 | `response time under <ms>` | Latency, informational severity only |
 
 Anything a criterion needs that this table cannot express is a load-time warning suggesting either a rewrite or `mode: fuzzy`, never a silent skip.
@@ -65,6 +66,26 @@ A literal is compared strictly, since the author wrote its type down. An actor a
 compared loosely across string and number, exactly as `evaluateCondition` compares, because
 configuration can only hold strings and a strict comparison would fail against every
 numeric field.
+
+**The before and after form was added 2026-08-17, with approval, and is M5.11.** It is the
+only assertion that needs the runner to hold state across requests: the record is read
+once before the action and once after, and the two readings are compared. It restores the
+"and the invoice is unchanged" clause that M5.8-pre2 had to drop from two criteria.
+
+- **Read as the configured state actor, never the acting one.** The criterion that most
+  needs this acts as an unauthenticated caller, who cannot read the record at all. Reading
+  state as the actor under test would report a scoping rule as a state fact.
+- **A record present before and gone after is a violation.** Deletion is the largest change
+  a record can undergo, and reporting it as an unreadable reading would lose the finding.
+- **Everything else that could go wrong is unevaluable**: no state actor, no read route, a
+  read that failed, a record that did not exist to begin with, or a body that will not
+  parse. Only two readable records that differ is a violation, and the finding names the
+  fields that moved.
+- Two byte-identical bodies that are not JSON count as unchanged. Two differing ones do
+  not count as changed, since the difference could be a rendered timestamp.
+
+Nothing in `TargetConfig` names the state actor yet, and two forms now need one. Callers
+pass it in. That belongs to M2 or M8 and is recorded below.
 
 **Request vocabulary for `when` clauses**, a closed set on the same terms, added
 2026-08-16 by decision. `then` had a vocabulary and `when` had none, so nothing could
@@ -115,6 +136,7 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 8. **M5.8** Integration test against `fixtures/ledger` covering defect D4.
 9. **M5.9** Implement the `when` vocabulary above and `planBehavioralChecks`. Added 2026-08-16; numbered last to leave the existing task ids alone, but it has to land before M5.8, which needs plans to run.
 10. **M5.10** Add the actor reference and the every row assertion forms, closing the coverage gaps M5.8-pre2 recorded. Approved 2026-08-17, after the stage was otherwise complete.
+11. **M5.11** Add the before and after state form, restoring the clause two criteria had to drop. Approved 2026-08-17. Includes making an accepted write in `fixtures/ledger` actually write, without which the form's violated branch could never fire against the fixture.
 
 ## Definition of Done
 
@@ -167,16 +189,19 @@ than passing over a path it stopped covering.
   |---|---|---|
   | AC-002-01 | A per-row comparison of a field against a caller attribute | **Closed at M5.10.** Both forms were approved and added, and the criterion now checks what the prose said |
   | AC-011-01 | A caller holding a token belonging to no user | Left in prose, unplannable, needs a fourth configured actor |
-  | AC-003-01 | "and the invoice is unchanged", which needs before and after state | Clause dropped, criterion asserts the status only |
-  | AC-009-01 | The same clause | Clause dropped, criterion asserts the status only |
+  | AC-003-01 | "and the invoice is unchanged", which needs before and after state | **Closed at M5.11.** The clause is restored and the criterion asserts it |
+  | AC-009-01 | The same clause | **Closed at M5.11**, same form |
   | AC-013-01 | A comparison against the status another request returns | Rewritten to the literal 404 REQ-012 pins |
   | AC-014-01 | A universal over every endpoint and every actor | Split into two criteria naming two routes |
 
-  What remains is one authoring gap that is about the target rather than the vocabulary,
-  and three criteria that assert less than the sentences they replaced. Closing those three
-  needs a before and after state form and a cross-request comparison, neither of which has
-  been asked for; both would be a larger extension than the two that landed, since they
-  need the runner to hold state across requests rather than read one response.
+  Two things remain, and neither is a missing assertion form. AC-011-01 needs a configured
+  actor holding a token belonging to no user, which is target configuration. AC-013-01 and
+  AC-014-01 assert less than their original sentences: one would need a comparison against
+  another request's response, and the other a universal over endpoints the spec does not
+  enumerate. Both are worth doing only if a real spec asks for them, since each adds a way
+  for an author to write something the runner has to be trusted to interpret.
+- **Raised at M5.11: `TargetConfig` has no field naming the state actor,** and two assertion forms now need one. The record count form has needed it since M5.3 and the before and after form needs it as well, so every caller assembling a run picks an actor for itself. It cannot default to the acting actor, since the criteria that need it act as identities that cannot read the record. That field belongs to M2, and M8 will need it the moment a command assembles a run.
+- **Raised at M5.11: an accepted write in `fixtures/ledger` now actually writes.** It did not before, which made D3's catalog line only half true and meant a criterion saying the invoice is unchanged could never be false. The request carries no body, since the vocabulary issues none, so the applied change is a fixed increment to the total. If the catalog intended D3 to be an accepted write that changes nothing, this is a fixture change worth reverting, and the criterion should go back to asserting the status alone.
 - **The real fuzzy path is still unexercised, decided at the S5 boundary 2026-08-17.** Every capture test drives an injected launcher, which defines the shape this code expects rather than proving Playwright provides it, and no judge has ever been backed by a model. The stage exit criterion was restated rather than met with a scripted judge, since a run labeled model assisted with no model in it is exactly the false green this tool exists to stop. The first run against a real browser with a real judge needs two things this repository does not have: Playwright installed, which is approved and merely absent, and a model SDK, which is not approved. See `05-BUILD-ORDER.md` under S5.
 - **AC-005-02 is the one fuzzy criterion in the fixture,** added at M5.8-pre2 because the
   S5 exit criterion needs a fuzzy criterion to run and the spec had none. It asks whether
