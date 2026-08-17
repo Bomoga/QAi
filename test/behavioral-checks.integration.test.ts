@@ -195,6 +195,9 @@ describe('the defective ledger, every criterion at once', () => {
       'AC-013-01': 'fail',
       // D3, an unauthenticated write accepted.
       'AC-003-01': 'fail',
+      // D2, the list handing an outsider rows from another organization. Checkable
+      // since M5.10 added the per-row form and the actor reference.
+      'AC-002-01': 'fail',
       // D4, the sensitive field in the list.
       'AC-004-01': 'fail',
       // D5, the debug endpoint answering rather than 404.
@@ -219,10 +222,28 @@ describe('the defective ledger, every criterion at once', () => {
       (result) => result.verdict === 'fail',
     );
 
-    expect(failures).toHaveLength(5);
+    expect(failures).toHaveLength(6);
     for (const failure of failures) {
       expect(failure.evidence.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('D2, the scoping claim the per-row form made checkable', () => {
+  it('names the foreign row rather than only saying the list was wrong', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-002-01');
+
+    expect(result?.verdict).toBe('fail');
+    expect(result?.detail).toContain('INV-1001');
+    expect(result?.detail).toContain('actor.org_id');
+  });
+
+  it('passes when the list is scoped, on rows that were actually present', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_OFF)).get('AC-002-01');
+
+    // The outsider owns INV-2001, so the scoped list is not empty and the pass rests on
+    // a row that was read rather than on there being nothing to read.
+    expect(result?.verdict).toBe('pass');
   });
 });
 

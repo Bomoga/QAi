@@ -14,10 +14,12 @@ name: 'Ledger invoicing'
 # Criteria were rewritten at M5.8-pre2 into the two vocabularies in
 # modules/M5-behavioral-checks.md, `when` as a request and `then` as assertions.
 # The file was authored at M1.8 in prose, before either table existed, so none of
-# the `when` clauses and only four of the `then` clauses could be read. Three
-# clauses stay in prose on purpose, each with a comment saying why: they are the
-# coverage gaps, and a criterion that cannot be checked is meant to be visible as
-# a warning rather than quietly rewritten into something narrower.
+# the `when` clauses and only four of the `then` clauses could be read.
+#
+# One clause stays in prose, AC-011-01, with a comment saying why. It is the
+# remaining coverage gap, and a criterion that cannot be checked is meant to be
+# visible as a warning rather than quietly rewritten into something narrower.
+# AC-002-01 was the other one until M5.10 added the two assertion forms it needed.
 
 actors:
   - id: owner
@@ -115,17 +117,15 @@ requirements:
         condition: 'Invoice.org_id != actor.org_id'
         effect: deny
     acceptanceCriteria:
-      # Coverage gap, deliberately left in prose. The `then` compares a field on
-      # every returned row against an attribute of the caller, and the assertion
-      # table has no per-row form. Rewriting it into something the table can state
-      # would assert less than the requirement says. The access rule above covers
-      # the same ground deterministically, so the gap costs a duplicate check
-      # rather than the finding itself.
+      # This was the coverage gap that bought the two assertion forms added on
+      # 2026-08-17: a comparison against a caller attribute, and that comparison
+      # made about every row rather than one. It says what the prose said, and
+      # unlike the prose it can be checked.
       - id: AC-002-01
         mode: deterministic
         given: 'invoices belonging to both organizations'
         when: 'actor outsider lists Invoice'
-        then: 'every returned invoice has org_id equal to the caller organization'
+        then: 'every Invoice has org_id equal to actor.org_id'
 
   # D3, mutation reachable without credentials.
   - id: REQ-003

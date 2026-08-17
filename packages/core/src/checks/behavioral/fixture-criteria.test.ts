@@ -25,13 +25,14 @@ import { planBehavioralChecks } from './plan.ts';
 const ROOT = resolve(import.meta.dirname, '..', '..', '..', '..', '..');
 const SPEC_PATH = 'fixtures/ledger/spec/ledger.spec.yaml';
 
-/** Criteria that stay in prose, each with a comment in the spec saying why. */
-const RECORDED_GAPS = {
-  /** A per-row comparison against a caller attribute. No assertion form states it. */
-  unexpressibleThen: 'AC-002-01',
-  /** Needs an actor holding a token belonging to no user, which config does not have. */
-  unexpressibleWhen: 'AC-011-01',
-} as const;
+/**
+ * The one criterion that stays in prose, with a comment in the spec saying why.
+ *
+ * AC-002-01 was here too until M5.10 added the per-row form and the actor reference it
+ * needed. What is left is not a vocabulary gap at all: expressing it needs an actor
+ * holding a token belonging to no user, and no configured actor does.
+ */
+const RECORDED_GAP = 'AC-011-01';
 
 /** The one fuzzy criterion. It plans, and the browser decides whether it can run. */
 const FUZZY = 'AC-005-02';
@@ -62,41 +63,44 @@ function planned(): ReturnType<typeof planBehavioralChecks> {
 }
 
 describe('the fixture spec read through the assertion vocabulary', () => {
-  it('warns about the one criterion whose then clause is outside the table', () => {
-    const diagnostics = validateAcceptanceCriteria(loadFixture().spec, SPEC_PATH);
-
-    expect(diagnostics.map((diagnostic) => diagnostic.severity)).toEqual(['warning']);
-    expect(diagnostics[0]?.message).toContain(RECORDED_GAPS.unexpressibleThen);
+  it('has no then clause left that the table cannot state', () => {
+    // Every warning here is a criterion nobody can check. The file carried one until
+    // M5.10, and closing it is the whole reason the two forms were added.
+    expect(validateAcceptanceCriteria(loadFixture().spec, SPEC_PATH)).toEqual([]);
   });
 
-  it('offers the author both ways out rather than only naming the problem', () => {
-    const [diagnostic] = validateAcceptanceCriteria(loadFixture().spec, SPEC_PATH);
+  it('reads the per-row form the scoping criterion needs', () => {
+    const plan = planned().plans.find((candidate) => candidate.criterionId === 'AC-002-01');
 
-    expect(diagnostic?.message).toContain('mode: fuzzy');
-    expect(diagnostic?.message).toContain('status is');
+    expect(plan?.assertions).toEqual([
+      {
+        kind: 'every-row',
+        entity: 'Invoice',
+        field: 'org_id',
+        expected: { kind: 'actor', attribute: 'org_id' },
+      },
+    ]);
+    expect(plan?.actorId).toBe('outsider');
   });
 });
 
 describe('the fixture spec read through the request vocabulary', () => {
-  it('plans every criterion but the two recorded gaps', () => {
+  it('plans every criterion but the one recorded gap', () => {
     const { plans, unplannable } = planned();
 
     const criteria = loadFixture().spec.requirements.flatMap(
       (requirement) => requirement.acceptanceCriteria,
     );
 
-    expect(plans).toHaveLength(criteria.length - 2);
-    expect(unplannable.map((entry) => entry.criterionId).sort()).toEqual([
-      RECORDED_GAPS.unexpressibleThen,
-      RECORDED_GAPS.unexpressibleWhen,
-    ]);
+    expect(plans).toHaveLength(criteria.length - 1);
+    expect(unplannable.map((entry) => entry.criterionId)).toEqual([RECORDED_GAP]);
   });
 
-  it('says which half of each gap could not be read', () => {
-    const byId = new Map(planned().unplannable.map((entry) => [entry.criterionId, entry]));
+  it('says which half of the gap could not be read', () => {
+    const [entry] = planned().unplannable;
 
-    expect(byId.get(RECORDED_GAPS.unexpressibleThen)?.detail).toContain('then clause');
-    expect(byId.get(RECORDED_GAPS.unexpressibleWhen)?.detail).toContain('when clause');
+    expect(entry?.criterionId).toBe(RECORDED_GAP);
+    expect(entry?.detail).toContain('when clause');
   });
 
   it('plans the fuzzy criterion as a page to open with nothing to assert', () => {
