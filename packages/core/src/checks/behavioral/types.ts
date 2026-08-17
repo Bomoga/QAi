@@ -1,4 +1,5 @@
 import type { CriterionMode } from '../../contracts/index.ts';
+import type { PageCaptureOptions } from './browser.ts';
 import type { ActorSession } from '../../target/session.ts';
 import type { RequestSpec } from '../../target/request.ts';
 import type { CheckPlan } from '../types.ts';
@@ -31,7 +32,10 @@ export interface BehavioralPlan extends CheckPlan {
   readonly request: RequestSpec;
   readonly assertions: readonly Assertion[];
   readonly mode: CriterionMode;
-  /** The criterion's `then` clause, as authored, for the finding text. */
+  /** The criterion's clauses, as authored. `then` is the finding text; a fuzzy check
+   * shows all three to the model so it judges the criterion rather than a fragment. */
+  readonly given: string;
+  readonly when: string;
   readonly then: string;
   /** A file reference when a probe supplied one, so a finding cites source. */
   readonly locationRef?: string;
@@ -44,8 +48,21 @@ export interface BehavioralPlan extends CheckPlan {
  * whole `TargetContext`: a check reaches the target through an actor session and has no
  * business touching credentials or the evidence writer directly.
  */
+/** What a fuzzy check needs to open a page. Absent means fuzzy criteria cannot run. */
+export interface FuzzyBrowserContext {
+  readonly baseUrl: string;
+  /** How an actor's credential reaches the page. `ActorSession` never exposes one. */
+  readonly headers?: Readonly<Record<string, string>>;
+  /** Opt in, since an image cannot be redacted the way a JSON body can. */
+  readonly screenshotPath?: string;
+  /** Injected for tests, so nothing launches a real browser under vitest. */
+  readonly launcher?: PageCaptureOptions['launcher'];
+}
+
 export interface BehavioralContext {
   readonly sessions: ReadonlyMap<string, ActorSession>;
+  /** Absent means fuzzy criteria report unverified rather than failing the run. */
+  readonly browser?: FuzzyBrowserContext;
   /**
    * The actor persisted state is read as, after the action under test. The module calls
    * it the configured owner actor: counting records needs an identity allowed to see

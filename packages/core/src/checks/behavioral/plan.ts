@@ -197,6 +197,8 @@ export function planBehavioralChecks(
         request: { method, path },
         assertions: then.assertions,
         mode: criterion.mode,
+        given: criterion.given,
+        when: criterion.when,
         then: criterion.then,
         ...(handlerRef === undefined ? {} : { locationRef: handlerRef }),
         ...(stateReads.length === 0 ? {} : { stateReads }),

@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T04:30:00Z
+Updated: 2026-08-17T05:00:00Z
 Current stage: S5
-Next task: M5.6
+Next task: M5.7
 
 ## S0. Skeleton
 
@@ -184,7 +184,7 @@ Surprises worth recording:
 - [x] M5.3 persisted state assertions via follow-up reads (commit backfilled below)
 - [x] M5.4 the Judge interface in llm/ (commit backfilled below)
 - [x] M5.5 browser capture, lazy Playwright, selector policy (commit backfilled below)
-- [ ] M5.6 verdict mapping, one test per row
+- [x] M5.6 verdict mapping, one test per row (commit backfilled below)
 - [ ] M5.7 graceful degradation when Playwright is absent
 - [ ] M5.8 integration test over D4, needs the fixture spec rewritten into both vocabularies first
 - Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
@@ -207,6 +207,13 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.6, the invariant I1 rule in code: a deterministic failure decides the verdict whatever the model answered; `satisfied` with nothing failing is `pass`; `not-satisfied` and `uncertain` are both `inconclusive`. The only `fail` in the file is reached without consulting the answer at all, and a test iterates the whole answer union asserting none of them produces one.
+- M5.6: the same rule runs the other way, and that direction is the more tempting mistake. A model answering `satisfied` cannot erase a deterministic failure. A check a model can talk out of failing is worth nothing, and there is a test for it.
+- M5.6: a fuzzy result carries the deterministic result's evidence and records none of its own. That is not a gap in invariant I3: the only verdict this path can produce that is a finding is `fail`, which arrives from the deterministic side already carrying a request and a response. `pass` and `inconclusive` are not findings.
+- M5.6: the model's answer is quoted in the detail behind the words "Model assisted", and on the failing row the deterministic observation is stated first so nobody reads the model as having decided. Every result sets `deterministic: false`, which is what drives `modelAssistedCheckCount`.
+- M5.6: `fuzzy.test.ts` declares its own judges rather than importing `scriptedJudge` from `llm/`. Rule R1 forbids anything under `checks/` importing that directory, and lint enforces it for tests as much as for runners. A boundary a test may cross is not a boundary. The duplication is small and the alternative weakens the rule.
+- M5.6: `BehavioralPlan` gained `given` and `when`, so a fuzzy check shows the model the whole criterion rather than a fragment, and `BehavioralContext` gained `browser`, which keeps `runFuzzyCheck` to the three arguments the module's Public API names plus an optional deterministic result.
 
 - M5.5: `capturePage` reads `innerText('body')`, the rendered text of the document, and never a class, a tag structure, an nth-child position, or a generated identifier. Invariant I6 holds by construction rather than by review, and a test reads the source with comments stripped to assert no such API is called. The first version of that test failed against the words in its own doc comment, which is a fair warning about grepping prose for a policy.
 - M5.5 judgment call, needs review: **screenshots are off by default.** The module says a fuzzy check captures one, and a screenshot cannot be redacted the way a JSON body can, so a field marked `sensitive: true` is plainly readable in the image while rule R8 says never write an unredacted response to disk. The image is captured only when a caller passes a path; the accessible text, which does go through redaction, is the default evidence. If the intent was that screenshots are always taken, that is a conflict between the module and R8 rather than a local choice.

@@ -71,6 +71,8 @@ function plan(overrides: Partial<BehavioralPlan> = {}): BehavioralPlan {
     request: { method: 'GET', path: '/api/invoices/INV-9999' },
     assertions: [{ kind: 'status', codes: [404] }],
     mode: 'deterministic',
+    given: 'a seeded invoice',
+    when: 'actor owner reads Invoice INV-9999',
     then: 'the response status is 404',
     ...overrides,
   };
