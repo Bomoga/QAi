@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T05:00:00Z
+Updated: 2026-08-17T11:40:00Z
 Current stage: S5
-Next task: M5.7
+Next task: M5.8-pre2
 
 ## S0. Skeleton
 
@@ -180,13 +180,15 @@ Surprises worth recording:
 
 - [x] M5.1 assertion vocabulary parser and validation warnings (commit 2ecf6f2)
 - [x] M5.2 deterministic HTTP runner with evidence capture (commits 45fc681, 0a75029, 16c8501)
-- [x] M5.9 the `when` vocabulary and planBehavioralChecks (commits 4fd00c1 and the one backfilled below), added by decision, out of order because M5.8 needs it
-- [x] M5.3 persisted state assertions via follow-up reads (commit backfilled below)
-- [x] M5.4 the Judge interface in llm/ (commit backfilled below)
-- [x] M5.5 browser capture, lazy Playwright, selector policy (commit backfilled below)
-- [x] M5.6 verdict mapping, one test per row (commit backfilled below)
+- [x] M5.9 the `when` vocabulary and planBehavioralChecks (commits 4fd00c1 and 15ddee1), added by decision, out of order because M5.8 needs it
+- [x] M5.3 persisted state assertions via follow-up reads (commit fe2cc2a)
+- [x] M5.4 the Judge interface in llm/ (commits ecc5057 and 8191700)
+- [x] M5.5 browser capture, lazy Playwright, selector policy (commit c2e1c02)
+- [x] M5.6 verdict mapping, one test per row (commit 7774ab4)
+- [x] M5.8-pre1 D4 in fixtures/ledger, the switch M5.8 has to toggle (commit backfilled below)
+- [ ] M5.8-pre2 rewrite fixtures/ledger/spec/ledger.spec.yaml into both vocabularies
 - [ ] M5.7 graceful degradation when Playwright is absent
-- [ ] M5.8 integration test over D4, needs the fixture spec rewritten into both vocabularies first
+- [ ] M5.8 integration test over D4
 - Exit criterion: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; at least one fuzzy criterion runs under Playwright and is labeled model assisted in the report; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
 
@@ -207,6 +209,23 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.8-pre1: D4 is now implemented in `fixtures/ledger` behind `LEDGER_DEFECT_D4`, with
+  ledger level tests holding it in both directions, the same shape D5 took at M4.9. The
+  catalog now has D1, D2, D3, D4, D5 and both negative controls. D6 stays unimplemented on
+  purpose and D7 is still deferred.
+- M5.8-pre1: the switch is scoped to the list. REQ-004 says notes are omitted from list
+  responses, so a single invoice read returns the field whichever way the switch is set.
+  Covering the read as well would put two defects behind one toggle and would change what
+  D1 leaks, which several S0 to S3 assertions are written against.
+- M5.8-pre1: the redacted row is spelled out field by field against `Omit<Invoice,'notes'>`
+  rather than copied and pruned, so a field added to `Invoice` later fails to compile
+  instead of quietly disappearing from list responses.
+- M5.8-pre1 consequence to watch at M5.8: with D4 off the crawler no longer sees `notes` in
+  the list, so `diffSpecObservation` can report a field mismatch against an entity the spec
+  declares the field on. No test asserts `fieldMismatches` for the defects-off probe today,
+  so nothing breaks, but a spec declaring a field and a requirement asking for it to be
+  withheld from one response are not in conflict and the diff cannot currently tell.
 
 - M5.6, the invariant I1 rule in code: a deterministic failure decides the verdict whatever the model answered; `satisfied` with nothing failing is `pass`; `not-satisfied` and `uncertain` are both `inconclusive`. The only `fail` in the file is reached without consulting the answer at all, and a test iterates the whole answer union asserting none of them produces one.
 - M5.6: the same rule runs the other way, and that direction is the more tempting mistake. A model answering `satisfied` cannot erase a deterministic failure. A check a model can talk out of failing is worth nothing, and there is a test for it.

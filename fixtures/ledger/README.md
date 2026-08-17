@@ -36,13 +36,20 @@ These credentials are fixture data. They authenticate against this app and nothi
 | `LEDGER_DEFECT_D1` | `on`, `off` | `on`    | D1, invoice readable across organizations by id       |
 | `LEDGER_DEFECT_D2` | `on`, `off` | `on`    | D2, invoice list returns rows from every organization |
 | `LEDGER_DEFECT_D3` | `on`, `off` | `on`    | D3, invoice update accepts an unauthenticated caller  |
+| `LEDGER_DEFECT_D4` | `on`, `off` | `on`    | D4, invoice list returns the sensitive notes field    |
+| `LEDGER_DEFECT_D5` | `on`, `off` | `on`    | D5, an undeclared debug endpoint serving state        |
 
 Defects default to on. An unrecognized value is a startup error rather than a fallback,
 because a mistyped switch that silently leaves the defect enabled makes a passing run
 mean nothing.
 
-Defects D4 through D7 in the catalog are not implemented yet. They land with the stages
-that build the checks which consume them.
+D4 is scoped to the list. A single invoice read returns notes whichever way the switch
+is set, because REQ-004 asks for the field to be omitted from list responses and a
+switch covering both would put two defects behind one toggle.
+
+Defects D6 and D7 in the catalog are not implemented. D6 is intentional and permanent:
+it is the entity the spec declares and the application never built, which is what the
+structural diff reports. D7 lands with the stage that builds the check consuming it.
 
 Negative control N2, a cross-organization write being refused, holds whether or not D3
 is on: D3 is about the missing credential check, not about ownership. A finding against

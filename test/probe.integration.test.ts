@@ -45,6 +45,7 @@ const DEFECTS_ON: DefectSwitches = {
   d1CrossOrgInvoiceRead: true,
   d2UnscopedInvoiceList: true,
   d3UnauthenticatedMutation: true,
+  d4NotesInInvoiceList: true,
   d5UndeclaredDebugEndpoint: true,
 };
 
@@ -52,6 +53,7 @@ const DEFECTS_OFF: DefectSwitches = {
   d1CrossOrgInvoiceRead: false,
   d2UnscopedInvoiceList: false,
   d3UnauthenticatedMutation: false,
+  d4NotesInInvoiceList: false,
   d5UndeclaredDebugEndpoint: false,
 };
 

@@ -22,6 +22,7 @@ async function start(
   overrides: Partial<{
     d2UnscopedInvoiceList: boolean;
     d3UnauthenticatedMutation: boolean;
+    d4NotesInInvoiceList: boolean;
     d5UndeclaredDebugEndpoint: boolean;
   }> = {},
 ): Promise<string> {
@@ -31,6 +32,7 @@ async function start(
       d1CrossOrgInvoiceRead,
       d2UnscopedInvoiceList: overrides.d2UnscopedInvoiceList ?? true,
       d3UnauthenticatedMutation: overrides.d3UnauthenticatedMutation ?? true,
+      d4NotesInInvoiceList: overrides.d4NotesInInvoiceList ?? true,
       d5UndeclaredDebugEndpoint: overrides.d5UndeclaredDebugEndpoint ?? true,
     },
   });

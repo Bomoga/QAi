@@ -50,22 +50,41 @@ function readInvoice(
   return { status: 200, body: invoice };
 }
 
+/** A listed row with the sensitive field dropped, which is what REQ-004 asks for. */
+type ListedInvoice = Omit<Invoice, 'notes'>;
+
 /**
  * D2. The list returns every invoice rather than the caller's. Switching the defect off
  * filters by organization, which is what the requirement says should happen.
  *
+ * D4. The list also hands back `notes`, which the spec marks sensitive and REQ-004 says
+ * to omit from list responses. Switching that defect off drops the field from every row
+ * while leaving a single invoice read alone, since the requirement is about the list.
+ *
  * Note the shape: the rows come back under a `invoices` key rather than as a bare
  * array, because a check that only understood top level arrays would miss this.
+ *
+ * The redacted row is spelled out field by field against `ListedInvoice` rather than
+ * copied and pruned, so a field added to `Invoice` later fails to compile here instead
+ * of quietly vanishing from the list.
  */
 function listInvoices(
   actor: User,
   options: LedgerOptions,
-): { status: number; body: { invoices: Invoice[] } } {
-  const invoices = options.defects.d2UnscopedInvoiceList
+): { status: number; body: { invoices: (Invoice | ListedInvoice)[] } } {
+  const scoped = options.defects.d2UnscopedInvoiceList
     ? [...options.data.invoices]
     : options.data.invoices.filter((invoice) => invoice.org_id === actor.org_id);
 
-  return { status: 200, body: { invoices } };
+  if (options.defects.d4NotesInInvoiceList) return { status: 200, body: { invoices: scoped } };
+
+  const withoutNotes: ListedInvoice[] = scoped.map((invoice) => ({
+    id: invoice.id,
+    org_id: invoice.org_id,
+    total_cents: invoice.total_cents,
+  }));
+
+  return { status: 200, body: { invoices: withoutNotes } };
 }
 
 /**
