@@ -26,13 +26,15 @@ const ROOT = resolve(import.meta.dirname, '..', '..', '..', '..', '..');
 const SPEC_PATH = 'fixtures/ledger/spec/ledger.spec.yaml';
 
 /**
- * The one criterion that stays in prose, with a comment in the spec saying why.
+ * No criterion in this file is a recorded gap any more.
  *
- * AC-002-01 was here too until M5.10 added the per-row form and the actor reference it
- * needed. What is left is not a vocabulary gap at all: expressing it needs an actor
- * holding a token belonging to no user, and no configured actor does.
+ * There were three when it was rewritten at M5.8-pre2, and three more criteria asserted
+ * less than the sentences they replaced. Closing them took five assertion forms, one
+ * config field, and one configured actor. This constant is kept as an empty list rather
+ * than deleted, because the assertion that nothing is unplannable is the one that will
+ * fail the day somebody writes a clause the vocabulary cannot read.
  */
-const RECORDED_GAP = 'AC-011-01';
+const RECORDED_GAPS: readonly string[] = [];
 
 /** The one fuzzy criterion. It plans, and the browser decides whether it can run. */
 const FUZZY = 'AC-005-02';
@@ -85,22 +87,24 @@ describe('the fixture spec read through the assertion vocabulary', () => {
 });
 
 describe('the fixture spec read through the request vocabulary', () => {
-  it('plans every criterion but the one recorded gap', () => {
+  it('plans every criterion in the file', () => {
     const { plans, unplannable } = planned();
 
     const criteria = loadFixture().spec.requirements.flatMap(
       (requirement) => requirement.acceptanceCriteria,
     );
 
-    expect(plans).toHaveLength(criteria.length - 1);
-    expect(unplannable.map((entry) => entry.criterionId)).toEqual([RECORDED_GAP]);
+    expect(unplannable.map((entry) => entry.criterionId)).toEqual(RECORDED_GAPS);
+    expect(plans).toHaveLength(criteria.length);
   });
 
-  it('says which half of the gap could not be read', () => {
-    const [entry] = planned().unplannable;
+  it('plans the forged credential criterion as the actor configured for it', () => {
+    const plan = planned().plans.find((candidate) => candidate.criterionId === 'AC-011-01');
 
-    expect(entry?.criterionId).toBe(RECORDED_GAP);
-    expect(entry?.detail).toContain('when clause');
+    // A caller presenting a credential that belongs to nobody is a different request
+    // from one presenting nothing, so it needs an actor of its own.
+    expect(plan?.actorId).toBe('impostor');
+    expect(plan?.request).toEqual({ method: 'GET', path: '/api/invoices/INV-1001' });
   });
 
   it('plans the fuzzy criterion as a page to open with nothing to assert', () => {

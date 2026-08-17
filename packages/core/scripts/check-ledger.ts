@@ -30,7 +30,11 @@ import {
  *
  * Start the target first, and set the credentials the config names:
  *   PORT=3000 pnpm --filter ledger dev
- *   LEDGER_OWNER_TOKEN, LEDGER_OUTSIDER_TOKEN
+ *   LEDGER_OWNER_TOKEN, LEDGER_OUTSIDER_TOKEN, LEDGER_UNKNOWN_TOKEN
+ *
+ * Every configured actor must resolve or the run stops at exit code 2, so the third
+ * variable is required since `impostor` was configured at M5.13. It holds a token
+ * matching no seeded user.
  */
 
 const FAIL_ON: Record<string, number> = { high: 3, medium: 2, low: 1, info: 0 };

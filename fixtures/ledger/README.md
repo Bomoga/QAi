@@ -22,12 +22,19 @@ Listens on `PORT`, default 3000.
 Two organizations, one user each, one invoice each. Two actors are the minimum for
 cross-organization access to be observable at all.
 
-| Actor      | Organization      | Bearer token            | Invoice  |
-| ---------- | ----------------- | ----------------------- | -------- |
-| `owner`    | `org-1` Northwind | `ledger-owner-token`    | INV-1001 |
-| `outsider` | `org-2` Contoso   | `ledger-outsider-token` | INV-2001 |
+| Actor      | Organization      | Bearer token              | Invoice  |
+| ---------- | ----------------- | ------------------------- | -------- |
+| `owner`    | `org-1` Northwind | `ledger-owner-token`      | INV-1001 |
+| `outsider` | `org-2` Contoso   | `ledger-outsider-token`   | INV-2001 |
+| `impostor` | none              | `ledger-not-a-real-token` | none     |
 
 These credentials are fixture data. They authenticate against this app and nothing else.
+
+`impostor` is the one that authenticates against nothing at all: its token matches no
+seeded user, so every route that reads a credential refuses it. That is a different case
+from the `anonymous` actor, who presents no credential, and a target can get one right
+while getting the other wrong. `qai.config.yaml` supplies it through
+`LEDGER_UNKNOWN_TOKEN`, which has to be set alongside the other two.
 
 ## Defect switches
 

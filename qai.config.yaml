@@ -28,6 +28,19 @@ actors:
       kind: none
     attributes: {}
 
+  # A caller presenting a bearer token that belongs to no user. Distinct from
+  # `anonymous`, who presents nothing: a target can refuse an absent credential and
+  # still accept a forged one, and REQ-011 is about the second.
+  #
+  # The variable holds a token deliberately matching no seeded user. It is fixture data
+  # rather than a secret, and it is still named here rather than written down, because a
+  # config that carries one credential value teaches the habit of carrying them.
+  - id: impostor
+    auth:
+      kind: bearer
+      tokenEnv: LEDGER_UNKNOWN_TOKEN
+    attributes: {}
+
 # Who persisted state is read as, after an action has been taken. It cannot be the
 # acting actor: the criterion that most needs it acts as an unauthenticated caller who
 # cannot read the record at all, and reading state as the actor under test would report

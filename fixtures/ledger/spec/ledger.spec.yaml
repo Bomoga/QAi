@@ -28,6 +28,8 @@ actors:
     description: 'Authenticated user belonging to organization org-2'
   - id: anonymous
     description: 'Unauthenticated caller carrying no credentials'
+  - id: impostor
+    description: 'Caller presenting a bearer token that belongs to no user'
 
 entities:
   - name: Organization
@@ -281,21 +283,25 @@ requirements:
     entities: [User]
     tags: [authentication]
     accessRules:
+      # Named `anonymous` until M5.13, which was a weaker claim than the requirement:
+      # a caller presenting nothing is REQ-010. This one is about a credential that
+      # belongs to nobody. Still unplannable, since the target serves no User route,
+      # and that was true before the actor changed.
       - id: AR-011-01
-        actor: anonymous
+        actor: impostor
         action: read
         resource: User
         effect: deny
     acceptanceCriteria:
-      # Coverage gap, and this one is about the target rather than the vocabulary.
-      # Every request form names a configured actor, and no actor carries a token
-      # belonging to no user; `anonymous` sends no credential at all, which is
-      # REQ-010 and a different claim. Configuring a fourth actor with a bogus
-      # token would express it.
+      # The last gap in this file, and it was never a vocabulary one: every request
+      # form names a configured actor and none of them carried a forged credential.
+      # `impostor` was added to the target at M5.13 and the criterion says what it
+      # always meant. It is a different claim from REQ-010, which is about a caller
+      # who presents nothing at all.
       - id: AC-011-01
         mode: deterministic
         given: 'a bearer token belonging to no user'
-        when: 'the caller requests an invoice by id'
+        when: 'actor impostor reads Invoice INV-1001'
         then: 'status is 401'
 
   - id: REQ-012

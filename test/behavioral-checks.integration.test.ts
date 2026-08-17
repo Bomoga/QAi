@@ -52,7 +52,7 @@ function fixtureSpec(): Spec {
 
 /** The routes and seeded records `qai.config.yaml` carries, since no probe runs here. */
 const PLANNING: PlanningContext = {
-  actorIds: new Set(['owner', 'outsider', 'anonymous']),
+  actorIds: new Set(['owner', 'outsider', 'anonymous', 'impostor']),
   resources: [
     {
       name: 'Invoice',
@@ -82,6 +82,13 @@ const ACTORS: ResolvedActor[] = [
     attributes: { org_id: 'org-2' },
   },
   { id: 'anonymous', credential: { kind: 'none' }, attributes: {} },
+  {
+    id: 'impostor',
+    // Deliberately matching no seeded user. The ledger authenticates by token lookup,
+    // so this is a credential the target will not recognize rather than a malformed one.
+    credential: { kind: 'bearer', token: 'ledger-not-a-real-token' },
+    attributes: {},
+  },
 ];
 
 const ALL_DEFECTS_ON: DefectSwitches = {
@@ -231,6 +238,9 @@ describe('the defective ledger, every criterion at once', () => {
       'AC-008-01': 'pass',
       'AC-009-01': 'pass',
       'AC-010-01': 'pass',
+      // A forged credential is refused, which is a different claim from AC-010-01, where
+      // the caller presents nothing at all.
+      'AC-011-01': 'pass',
       'AC-012-01': 'pass',
       'AC-014-01': 'pass',
       'AC-014-02': 'pass',
@@ -332,7 +342,7 @@ describe('REQ-014, the universal over endpoints', () => {
 
     expect(result?.verdict).toBe('pass');
     expect(result?.detail).toMatch(/\d+ reading\(s\)/u);
-    expect(result?.detail).toContain('anonymous, outsider, owner');
+    expect(result?.detail).toContain('anonymous, impostor, outsider, owner');
 
     // One reading per endpoint per actor, each recorded. The request count is the cost
     // the criterion asked for in as many words, and it is visible here rather than
