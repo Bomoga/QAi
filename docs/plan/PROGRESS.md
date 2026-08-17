@@ -364,7 +364,7 @@ Surprises worth recording:
 
 ## Known issues, not blocking
 
-- The GitHub CLI is not installed on this machine, so the S4 pull request could not be opened from the session. The branch is pushed; the description is written and waiting outside the repository. Install `gh` or open stage pull requests by hand.
+- The GitHub CLI was installed during S4, `gh` 2.97.0 via winget, user scope. It authenticates as `Bomoga` with a fine-grained token whose repository access had to be widened twice, first to include this private repository at all, then to give Pull requests read and write. The token has no Checks permission, so `gh pr checks` fails and CI status has to be read on the pull request page.
 
 - CI emits one warning annotation: the v4 actions target Node.js 20 and are being forced onto a newer runtime. Bump `actions/checkout` and `actions/setup-node` to v5 when convenient. It does not affect the result.
 - `origin/main` does not exist. Only `dev` and the stage branch are pushed. Create `main` before the first release.
