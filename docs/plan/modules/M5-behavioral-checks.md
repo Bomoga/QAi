@@ -69,7 +69,9 @@ available so that a criterion about a record that does not exist can name one. C
 update send no body, matching what access checks already do; a criterion that needs a
 request body is outside this table and needs approval to add.
 
-**Fuzzy checks, and the boundary.** A fuzzy check drives Playwright, captures a screenshot and the accessible text of the page, and asks a model whether the `then` clause is satisfied. The model returns one of `satisfied`, `not-satisfied`, `uncertain`, with a one sentence reason. Mapping is fixed: `satisfied` becomes `pass`, `uncertain` becomes `inconclusive`, and `not-satisfied` becomes `inconclusive` unless a deterministic assertion in the same criterion also failed, in which case the deterministic result decides.
+**Fuzzy checks, and the boundary.** A fuzzy check drives Playwright, captures the accessible text of the page, and asks a model whether the `then` clause is satisfied.
+
+**Screenshots are opt in, decided 2026-08-17.** This paragraph used to say a fuzzy check captures a screenshot as well. Rule R8 says never write an unredacted response to disk, and an image cannot be redacted the way a JSON body can, so a field marked `sensitive: true` would sit in the clear in a PNG. The accessible text, which does go through redaction, is the default evidence, and an image is written only when a caller passes a path. The module was wrong rather than R8. The model returns one of `satisfied`, `not-satisfied`, `uncertain`, with a one sentence reason. Mapping is fixed: `satisfied` becomes `pass`, `uncertain` becomes `inconclusive`, and `not-satisfied` becomes `inconclusive` unless a deterministic assertion in the same criterion also failed, in which case the deterministic result decides.
 
 Read that last mapping carefully. A model alone can never produce `fail`. This is invariant I1 expressed in code, and it means the worst a hallucination can do is under-report. Every fuzzy result sets `deterministic: false` and increments `modelAssistedCheckCount` so the report can state the extent of model involvement plainly.
 
@@ -85,7 +87,7 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 2. **M5.2** Implement the deterministic HTTP runner with evidence capture.
 3. **M5.3** Implement persisted state assertions via follow-up reads as the configured owner actor.
 4. **M5.4** Implement the `Judge` interface in `llm/`, returning only the three-value enum plus a reason string. Assert by type that it cannot return a `Verdict`.
-5. **M5.5** Implement the Playwright fuzzy runner with the selector policy and screenshot evidence.
+5. **M5.5** Implement the Playwright fuzzy runner with the selector policy and page text evidence, screenshot on request only.
 6. **M5.6** Implement the verdict mapping above, with one test per mapping row, including the case that proves a model cannot produce `fail`.
 7. **M5.7** Implement graceful degradation when Playwright is absent.
 8. **M5.8** Integration test against `fixtures/ledger` covering defect D4.
@@ -150,6 +152,7 @@ than passing over a path it stopped covering.
   Two forms would close most of this: an assertion over every row of a list, and a
   comparison against an actor attribute. Both are additions to a closed table and need
   approval, which is why neither was added here.
+- **The real fuzzy path is still unexercised, decided at the S5 boundary 2026-08-17.** Every capture test drives an injected launcher, which defines the shape this code expects rather than proving Playwright provides it, and no judge has ever been backed by a model. The stage exit criterion was restated rather than met with a scripted judge, since a run labeled model assisted with no model in it is exactly the false green this tool exists to stop. The first run against a real browser with a real judge needs two things this repository does not have: Playwright installed, which is approved and merely absent, and a model SDK, which is not approved. See `05-BUILD-ORDER.md` under S5.
 - **AC-005-02 is the one fuzzy criterion in the fixture,** added at M5.8-pre2 because the
   S5 exit criterion needs a fuzzy criterion to run and the spec had none. It asks whether
   the index page offers an administrative or debug route. `planBehavioralChecks` currently
