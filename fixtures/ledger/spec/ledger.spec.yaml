@@ -330,17 +330,20 @@ requirements:
     fields: [User.token]
     tags: [data-exposure]
     acceptanceCriteria:
-      # The universal was split into one criterion per endpoint at M5.8-pre2 and
-      # restored at M5.12b, when a form arrived that could quantify. It ranges over
+      # "any endpoint by any actor", which was split into one criterion per endpoint
+      # at M5.8-pre2 and restored over both axes at M5.12b and M5.12c. It ranges over
       # the endpoints a probe observed, which is the only enumeration of this
-      # application that exists, and it is unevaluable rather than satisfied when
-      # no probe ran. That is the honest shape of the claim: what a crawl never
-      # reached was never checked, and the result says how many were.
+      # application that exists, and is unevaluable rather than satisfied when no
+      # probe ran. What a crawl never reached was never checked, and the result says
+      # how many readings it took and which actors it took them as.
+      #
+      # The actor axis is written out because it multiplies the request count: three
+      # actors across four observed endpoints is twelve readings from one criterion.
       - id: AC-014-01
         mode: deterministic
         given: 'the running application'
         when: 'actor owner lists Invoice'
-        then: 'every endpoint omits field User.token'
+        then: 'every endpoint omits field User.token as every actor'
 
       # Kept deliberately. It needs no probe, so REQ-014 keeps deterministic
       # coverage in a run that has no Observation, where the universal above can

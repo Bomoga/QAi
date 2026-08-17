@@ -327,12 +327,17 @@ describe('REQ-013, the refusal that must not confirm the invoice exists', () => 
 });
 
 describe('REQ-014, the universal over endpoints', () => {
-  it('sweeps what the probe observed and says how many it checked', async () => {
+  it('sweeps what the probe observed, as every actor, and says how many readings that took', async () => {
     const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-014-01');
 
     expect(result?.verdict).toBe('pass');
-    expect(result?.detail).toMatch(/\d+ observed endpoint\(s\)/u);
-    expect(result?.evidence.length).toBeGreaterThan(1);
+    expect(result?.detail).toMatch(/\d+ reading\(s\)/u);
+    expect(result?.detail).toContain('anonymous, outsider, owner');
+
+    // One reading per endpoint per actor, each recorded. The request count is the cost
+    // the criterion asked for in as many words, and it is visible here rather than
+    // hidden behind the word every.
+    expect(result?.evidence.length).toBeGreaterThanOrEqual(6);
   });
 
   it('is unevaluable without a probe, rather than passing over an empty enumeration', async () => {

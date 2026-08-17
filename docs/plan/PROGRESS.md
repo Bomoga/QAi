@@ -193,7 +193,8 @@ Surprises worth recording:
 - [x] M5.10 the actor reference and every row assertion forms (commits d70cb04, 7e231ab, 079a08f), approved 2026-08-17 after the stage was otherwise complete
 - [x] M5.11 the before and after state form (commits 83b86ca, 0d26083, f47327e, ad9ed65), approved 2026-08-17
 - [x] M5.12 the cross-request status comparison (commits 049e8b3, d986c5e, 06eb606), approved 2026-08-17
-- [x] M5.12b the endpoint sweep, closing the last vocabulary gap (commit backfilled below), approved 2026-08-17
+- [x] M5.12b the endpoint sweep (commits 0e126b0, 284ed8c, c93c02b), approved 2026-08-17
+- [x] M5.12c the actor axis on the sweep, closing the last vocabulary gap (commit backfilled below), approved 2026-08-17
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
@@ -209,8 +210,8 @@ assertions through follow-up reads, the judge boundary proved by type sweep, pag
 with a lazily imported Playwright, the fuzzy verdict mapping that makes invariant I1
 executable, the batch runner that degrades to unverified when no browser is there, D4 in
 the fixture, the fixture spec rewritten into both vocabularies, and an integration run
-over the live ledger, and five assertion forms added afterwards at M5.10 through M5.12b,
-with the state actor field M2.8 added to carry them. 1130 tests pass across 47 files.
+over the live ledger, and five assertion forms added afterwards at M5.10 through M5.12c,
+with the state actor field M2.8 added to carry them. 1137 tests pass across 47 files.
 
 Deferred: a fuzzy criterion judged by a real model, which needs a model SDK nobody has
 approved, and a run against a real browser, which needs Playwright installed. Both are
@@ -252,6 +253,26 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.12c, approved by the human on 2026-08-17: `as every actor` on the endpoint sweep
+  closes the second half of AC-014-01. Every criterion the fixture spec narrowed at
+  M5.8-pre2 has now been restored to what it originally claimed, which was not the plan
+  when those gaps were recorded as losses.
+- M5.12c: the axis is written out in the criterion rather than implied by the word every,
+  because it multiplies the request count. Three actors across four observed endpoints is
+  twelve readings from one criterion, and an author should meet that number in the spec
+  rather than in a run. The result states the reading count and names the actors.
+- M5.12c: the sweep runs as the actors in the session map, which holds those whose
+  credentials resolved. An actor that did not resolve is absent rather than failing, so
+  naming who was swept is what stops that reading as coverage the run did not have.
+- M5.12c earns its cost, measured rather than argued. Making the fixture hand a token to
+  org-2 only, the criterion without the axis passes over four clean readings as the owner
+  while the outsider is being handed a token; with the axis it fails naming
+  `/health as outsider`. A field one identity can see and another cannot is exactly what a
+  single-actor sweep cannot find.
+- M5.12c: `every endpoint omits field User.token for every actor` is refused, as is a
+  sentence that trails off after `as every`. Multiplying the request count is not something
+  to infer from prose that nearly says it.
 
 - M5.12b, approved by the human on 2026-08-17: `every endpoint omits field <Entity>.<field>`
   closes AC-014-01, the last of the fixture spec's vocabulary gaps. It quantifies over the
