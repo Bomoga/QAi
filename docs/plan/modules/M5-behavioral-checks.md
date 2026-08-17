@@ -126,6 +126,28 @@ since vitest has no flag for it. Recorded in Open questions.
 ## Open questions
 
 - None blocking. Flag any acceptance criterion in the fixture spec that the assertion vocabulary cannot express.
+- **Coverage gaps recorded at M5.8-pre2, when the fixture spec was rewritten into both
+  vocabularies.** Thirteen of sixteen criteria plan. The three that do not, and the two
+  that plan only because a clause was dropped, are listed here so the reduction is
+  reviewable rather than buried in a YAML comment.
+
+  | Criterion | What cannot be expressed | How it stands now |
+  |---|---|---|
+  | AC-002-01 | A per-row comparison of a field against a caller attribute | Left in prose, warns, unplannable |
+  | AC-011-01 | A caller holding a token belonging to no user | Left in prose, unplannable, needs a fourth configured actor |
+  | AC-003-01 | "and the invoice is unchanged", which needs before and after state | Clause dropped, criterion asserts the status only |
+  | AC-009-01 | The same clause | Clause dropped, criterion asserts the status only |
+  | AC-013-01 | A comparison against the status another request returns | Rewritten to the literal 404 REQ-012 pins |
+  | AC-014-01 | A universal over every endpoint and every actor | Split into two criteria naming two routes |
+
+  Two forms would close most of this: an assertion over every row of a list, and a
+  comparison against an actor attribute. Both are additions to a closed table and need
+  approval, which is why neither was added here.
+- **AC-005-02 is the one fuzzy criterion in the fixture,** added at M5.8-pre2 because the
+  S5 exit criterion needs a fuzzy criterion to run and the spec had none. It asks whether
+  the index page offers an administrative or debug route. `planBehavioralChecks` currently
+  refuses every fuzzy criterion with `capability-unavailable`, which is the right answer
+  when Playwright is absent and the wrong one when it is present. M5.7 owns that.
 - **Raised at M5.4, decided here, worth confirming.** The task says to implement `Judge` in `llm/`, and rule R1's lint enforcement forbids anything under `checks/` importing `llm/` by path with `allowTypeImports: false`. The fuzzy runner is a check and needs the type, so a `Judge` declared in `llm/` is unimportable by its only consumer. The interface therefore lives in `checks/behavioral/judge.ts`, beside the consumer, and `llm/` holds the implementations that satisfy it. Neither rule was weakened. The alternative was relaxing `allowTypeImports`, which is not a local decision.
 - **Resolved 2026-08-16, the `when` gap raised at M5.2.** Nothing turned a criterion's `when` clause into a request. Three options were put up: a `when` vocabulary mirroring the `then` table, reusing the requirement's access rules, or adding structured fields to the criterion, which would be a contract change. The decision was the vocabulary, now in Implementation notes above and implemented by M5.9. No contract changed.
 - Raised 2026-08-16 while correcting the Definition of Done commands: `--no-playwright` is not a vitest option, and vitest exits with `Unknown option --no-playwright` when it is passed. The capability-unavailable path still has to be exercised somehow; an environment variable the test reads is the obvious shape. Decide when M5 is implemented, and correct the command above to match.
