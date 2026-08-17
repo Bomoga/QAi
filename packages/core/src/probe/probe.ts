@@ -6,6 +6,7 @@ import { buildObservation, mergeScans, type MergeInput } from './merge.ts';
 import { createAdapterRegistry } from './registry.ts';
 import { createExpressAdapter } from './source/express.ts';
 import { createNextAdapter } from './source/next.ts';
+import { createPrismaAdapter } from './source/prisma.ts';
 import type { ProbeOptions, SourceAdapter, SourceScan } from './types.ts';
 
 /**
@@ -22,9 +23,13 @@ import type { ProbeOptions, SourceAdapter, SourceScan } from './types.ts';
  * from the source, each saying plainly which half it is missing.
  */
 
-/** The adapters Q1 lists, minus Prisma, which is blocked on a dependency decision. */
+/**
+ * The adapters Q1 lists. More than one recognizing a repository is normal rather than a
+ * conflict: a Next.js application with a Prisma schema is two adapters describing
+ * different things, routes and models.
+ */
 export function defaultAdapters(): SourceAdapter[] {
-  return [createNextAdapter(), createExpressAdapter()];
+  return [createNextAdapter(), createExpressAdapter(), createPrismaAdapter()];
 }
 
 /**

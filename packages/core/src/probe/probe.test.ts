@@ -228,6 +228,50 @@ describe('degrading to one half', () => {
   });
 });
 
+describe('two adapters over one repository', () => {
+  it('takes routes from one and models from the other', async () => {
+    write(
+      'src/server.ts',
+      [
+        "import express from 'express';",
+        'const app = express();',
+        "app.get('/api/invoices', list);",
+      ].join('\n'),
+    );
+    write(
+      'prisma/schema.prisma',
+      ['model Invoice {', '  id String @id', '  orgId String @map("org_id")', '}'].join('\n'),
+    );
+
+    const { session } = site({ '/api/invoices': '' });
+    const { ctx } = context(session);
+
+    const observation = await probe(ctx, {
+      deps: DEPS,
+      cwd: root,
+      sourceRoot: '.',
+      baseUrl: BASE,
+      startPaths: ['/api/invoices'],
+    });
+
+    expect(observation.endpoints.map((endpoint) => endpoint.id)).toEqual(['GET /api/invoices']);
+    expect(observation.entities.map((entity) => entity.name)).toEqual(['Invoice']);
+    expect(observation.entities[0]).toMatchObject({ origin: 'schema', confidence: 'high' });
+    expect(observation.entities[0]?.fields.map((field) => field.name)).toEqual(['id', 'orgId']);
+  });
+
+  it('reads a schema even where no route adapter recognizes anything', async () => {
+    write('prisma/schema.prisma', 'model Invoice {\n  id String @id\n}\n');
+
+    const { ctx } = context(undefined, { sourceRoot: '.' });
+    const observation = await probe(ctx, { deps: DEPS, cwd: root });
+
+    expect(observation.mode).toBe('source');
+    expect(observation.entities.map((entity) => entity.name)).toEqual(['Invoice']);
+    expect(observation.endpoints).toEqual([]);
+  });
+});
+
 describe('what the probe does not do', () => {
   it('issues nothing but GET and HEAD', async () => {
     const { session, sent } = site({ '/': '<a href="/a">x</a><a href="/b.css">y</a>', '/a': '' });

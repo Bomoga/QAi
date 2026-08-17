@@ -8,9 +8,9 @@
  * that knew what it was looking for would find it, and an Observation shaped by the
  * spec cannot support a finding that the two disagree.
  *
- * Present: probe interfaces, adapter registration, the Next.js and Express adapters,
- * the black box crawler, endpoint identity normalization, the merge, and `probe`.
- * Pending: the Prisma adapter and the structural diff.
+ * Present: probe interfaces, adapter registration, the Next.js, Express, and Prisma
+ * adapters, the black box crawler, endpoint identity normalization, the merge, and
+ * `probe` itself.
  */
 export * from './crawl.ts';
 export * from './identity.ts';

@@ -1,6 +1,6 @@
 # Progress
 
-Updated: 2026-08-17T01:05:00Z
+Updated: 2026-08-17T01:40:00Z
 Current stage: S4 complete, awaiting review
 Next task: S5, behavioral checks (M5)
 
@@ -128,7 +128,7 @@ Surprises worth recording:
 - [x] M4.1 probe interfaces and adapter registration (commit 6795e64)
 - [x] M4.2 Next.js App Router adapter (commit f14f1cd)
 - [x] M4.3 Express adapter (commit d1cbcbf)
-- [ ] M4.4 Prisma schema adapter, **deferred by decision**, see the M4 Open questions
+- [x] M4.4 Prisma schema adapter, read textually by decision (commit backfilled below)
 - [x] M4.5 black box crawler, read-only, budgeted (commit 9adc558)
 - [x] M4.6 endpoint identity normalization (commit 5117842)
 - [x] M4.7 source and black box merge with confidence (commit b82ae56)
@@ -142,16 +142,17 @@ Surprises worth recording:
 ### S4 summary
 
 Built: the probe interfaces and adapter registry, the Next.js App Router adapter, the
-Express adapter with cross-file mount resolution, the read-only black box crawler,
-endpoint identity normalization, the source and black box merge with its confidence
-table, `probe()` itself, `diffSpecObservation` with the module's severity rules, D5 in
-the fixture, and an integration run over D5 and D6. 815 tests pass, 36 files.
+Express adapter with cross-file mount resolution, the Prisma schema adapter, the
+read-only black box crawler, endpoint identity normalization, the source and black box
+merge with its confidence table, `probe()` itself, `diffSpecObservation` with the
+module's severity rules, D5 in the fixture, and an integration run over D5 and D6.
+850 tests pass, 37 files.
 
-Deferred: M4.4, the Prisma schema adapter, stopped on the `@prisma/internals` dependency
-and skipped by decision. The options are written into the M4 Open questions. The visible
-cost is that no entity in any Observation comes from a schema, so `Organization` and
-`User` are reported as specified and not observed alongside `AuditLog`. The integration
-test asserts all three, so the day M4.4 lands someone has to look at that line.
+Deferred: nothing from M4. M4.4 stopped the loop on the `@prisma/internals` dependency
+and was resolved in the same session: read the schema textually, add no dependency, and
+correct the plan. The fixture is unaffected either way, since it has no `schema.prisma`,
+so `Organization`, `User`, and `AuditLog` are still reported as specified and not
+observed when probing the ledger.
 
 Surprises worth recording:
 
@@ -195,6 +196,11 @@ Surprises worth recording:
 
 ## Notes carried forward
 
+- M4.4 resolved 2026-08-16: the user chose to read `schema.prisma` textually and add no dependency. The plan was corrected rather than the approved list widened, so the module implementation note now says so. The adapter reads `model` and `view` blocks with the same glob and regex posture as the other two.
+- M4.4: relation fields are dropped. A relation is a link to another model, not necessarily a field in any response, and recording one would produce an undeclared field finding against a spec that was right. Enums are read but are not entities, and a field typed by an enum stays, because an enum is a value.
+- M4.4: `@map` is not used as the field name. The mapped value is the database column and the client surface carries the field name. The diff's name normalization already matches `orgId` to `org_id`, so nothing is lost.
+- M4.4: `fieldsInBlock` is named for the block because `fieldsIn` is already exported by the crawler through the same barrel. The M4.1 note said anything the barrel exports twice is a compile error rather than a silent divergence; this is the second time that has come up.
+- M4.4 does not change the ledger. It has no `schema.prisma`, so the probe of it is still black box and `Organization`, `User`, and `AuditLog` are still reported as specified and not observed. That earlier note predicted the integration assertion would change when M4.4 landed; it does not, because the fixture has no schema for any adapter to read.
 - M4.9: D5 is now implemented in `fixtures/ledger` behind `LEDGER_DEFECT_D5`, with ledger level tests holding it in both directions. D6 needed nothing: the spec has declared `AuditLog` since M1.8 and the application has never implemented it.
 - M4.9: the ledger now serves a route index at `/`. It is not a defect and is asserted either way. Without something naming the debug route a black box crawl could not reach it at all, and a defect the probe cannot reach would test the diff against an Observation that could never contain it. The blind spot is real and is what the low confidence on a black box only endpoint is for.
 - M4.9: the index names `/api/invoices/{id}`, which the crawler requests as `/api/invoices/%7Bid%7D` because every candidate is resolved through `URL` rather than pasted together. It answers 404 and is correctly not recorded. A test pins both halves of that.
