@@ -189,12 +189,13 @@ Surprises worth recording:
 - [x] M5.8-pre2 the fixture spec rewritten into both vocabularies (commits 5dc6c8b and bc93686)
 - [x] M5.7 graceful degradation when Playwright is absent (commits e086e1a, af65b47, c2fd391)
 - [x] M5.8 integration test over D4 (commits 7505312, 2c86e39, 03dc6fa)
-- [x] M5.10 the actor reference and every row assertion forms (commit backfilled below), approved 2026-08-17 after the stage was otherwise complete
+- [x] M5.10 the actor reference and every row assertion forms (commits d70cb04, 7e231ab, 079a08f), approved 2026-08-17 after the stage was otherwise complete
+- [x] M5.11 the before and after state form (commit backfilled below), approved 2026-08-17
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
 - Pull request #7 opened into `dev` on 2026-08-17, 22 commits, not squashed. Awaiting review; the merge decision is the human's.
-- Exit criterion: **met as restated**, verified 2026-08-17 via `packages/core/scripts/check-behavior-ledger.ts` against a live ledger, both directions, and re-run after M5.10 changed the counts. Defective: 15 criteria planned, 7 pass, 6 fail, 2 unverified, exit 1, with D4 reported at medium severity carrying request evidence. Repaired: 13 pass, 0 fail, 2 unverified, exit 0. The same 15 checks run in both, so the runs compare. With Playwright absent, `AC-005-02` is unverified with reason `capability-unavailable` and the install line, and the exit code is unaffected in both directions. Authoring warnings went from 1 to 0 when M5.10 closed the last unexpressible `then`. `qai check` is M8 and lands in S6, so the command itself does not exist yet.
+- Exit criterion: **met as restated**, verified 2026-08-17 via `packages/core/scripts/check-behavior-ledger.ts` against a live ledger, both directions, and re-run after M5.10 changed the counts. Defective: 15 criteria planned, 7 pass, 6 fail, 2 unverified, exit 1, with D4 reported at medium severity carrying request evidence. Repaired: 13 pass, 0 fail, 2 unverified, exit 0. The same 15 checks run in both, so the runs compare. With Playwright absent, `AC-005-02` is unverified with reason `capability-unavailable` and the install line, and the exit code is unaffected in both directions. Authoring warnings went from 1 to 0 when M5.10 closed the last unexpressible `then`. M5.11 did not move the counts, since AC-003-01 was already failing on its status clause; what changed is what the finding says, which now reads `status 200, Invoice INV-1001 changed across the action: total_cents`. `qai check` is M8 and lands in S6, so the command itself does not exist yet.
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
 
 ### S5 summary
@@ -205,14 +206,14 @@ assertions through follow-up reads, the judge boundary proved by type sweep, pag
 with a lazily imported Playwright, the fuzzy verdict mapping that makes invariant I1
 executable, the batch runner that degrades to unverified when no browser is there, D4 in
 the fixture, the fixture spec rewritten into both vocabularies, and an integration run
-over the live ledger, and the two assertion forms added at M5.10. 1068 tests pass across
-47 files.
+over the live ledger, and three assertion forms added afterwards at M5.10 and M5.11.
+1095 tests pass across 47 files.
 
 Deferred: a fuzzy criterion judged by a real model, which needs a model SDK nobody has
 approved, and a run against a real browser, which needs Playwright installed. Both are
-recorded in the M5 Open questions rather than papered over. One coverage gap in the
-fixture spec stays in prose, and three criteria assert less than the sentences they
-replaced; the table in the module names all of them.
+recorded in the M5 Open questions rather than papered over. What is left of the fixture
+spec's coverage gaps is one criterion needing an actor the config does not have, and two
+that assert less than their original sentences; the table in the module names them.
 
 Surprises worth recording:
 
@@ -248,6 +249,38 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.11, approved by the human on 2026-08-17: the assertion table gained
+  `record <Entity> is unchanged`, which restores the clause AC-003-01 and AC-009-01 had to
+  drop at M5.8-pre2. It is the only form that needs the runner to hold state across
+  requests: the record is read once before the action and once after, and the two readings
+  are compared.
+- M5.11: the before read is the one thing in the runner that has to happen first, and the
+  ordering is load bearing rather than incidental. Proved by breaking it: moving the read
+  to after the action failed five tests, including the end to end one.
+- M5.11: the record is read as the configured state actor, never the acting one, for a
+  reason this criterion makes vivid. AC-003-01 acts as `anonymous`, who cannot read the
+  invoice at all, so reading state as the actor under test would report a scoping rule as
+  a state fact and the criterion could never be evaluated.
+- M5.11: a record present before and gone after is a violation, not an unreadable reading.
+  Deletion is the largest change a record can undergo and collapsing it into "could not
+  read" would lose the finding entirely.
+- M5.11: everything else that can go wrong is unevaluable, with the reason attached. No
+  state actor, no read route, a read that failed, a record that did not exist to begin
+  with, or a body that will not parse. Only two readable records that differ is a
+  violation, and the finding names the fields that moved.
+- M5.11: two byte-identical bodies that are not JSON count as unchanged, and two differing
+  ones do not count as changed. A difference between two unparseable bodies could be a
+  rendered timestamp, which is not evidence about the record.
+- M5.11 fixture change, flagged for review: an accepted write in `fixtures/ledger` now
+  actually writes. It did not before, so D3's catalog line, that an invoice can be modified
+  without credentials, was only half true, and the unchanged clause could never be false
+  against this fixture. The tool issues no request body, so the applied change is a fixed
+  increment to the total. The seed is untouched, so a restart is still the reset.
+- M5.11: `TargetConfig` still has no field naming the state actor, and two forms now need
+  one. Callers pass it in, the demonstration script names `owner` explicitly with a comment,
+  and it cannot default to the acting actor. That field belongs to M2, and M8 needs it the
+  moment a command assembles a run.
 
 - M5.10, approved by the human on 2026-08-17 after the stage was otherwise complete: the
   assertion table gained an actor reference on the right of an equality and an every row

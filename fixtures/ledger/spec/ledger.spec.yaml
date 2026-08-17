@@ -144,17 +144,14 @@ requirements:
         resource: Invoice
         effect: deny
     acceptanceCriteria:
-      # "and the invoice is unchanged" was dropped rather than left in prose,
-      # because it needs the record read before and after the action and the
-      # vocabulary offers only a count. Keeping it would make the whole criterion
-      # unsupported and leave D3 with no behavioral coverage at all. What remains
-      # is narrower than the sentence that was here, which is the cost of the
-      # rewrite and is recorded in the M5 Open questions.
+      # The unchanged half was dropped at M5.8-pre2 and restored at M5.11, when the
+      # form that reads the record before and after the action was approved. The
+      # criterion asserts what the original sentence asserted again.
       - id: AC-003-01
         mode: deterministic
         given: 'an existing invoice'
         when: 'actor anonymous updates Invoice INV-1001'
-        then: 'status is 401'
+        then: 'status is 401 and record Invoice INV-1001 is unchanged'
 
   # D4, a sensitive field returned where it should be omitted.
   - id: REQ-004
@@ -253,14 +250,14 @@ requirements:
         condition: 'Invoice.org_id != actor.org_id'
         effect: deny
     acceptanceCriteria:
-      # The unchanged half was dropped here for the same reason as AC-003-01, and
-      # at the same cost. The ledger tests hold N2 in both directions, so the
-      # control itself is not resting on this criterion alone.
+      # Restored at M5.11 alongside AC-003-01. This is the negative control, so the
+      # unchanged half is the half that matters: a refusal that still wrote would be
+      # the worst outcome here and the status alone would not have caught it.
       - id: AC-009-01
         mode: deterministic
         given: 'an invoice belonging to organization org-1'
         when: 'actor outsider updates Invoice INV-1001'
-        then: 'status in 403, 404'
+        then: 'status in 403, 404 and record Invoice INV-1001 is unchanged'
 
   - id: REQ-010
     statement: 'An unauthenticated caller cannot read any invoice'

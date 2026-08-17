@@ -90,6 +90,16 @@ async function main(): Promise<void> {
   // and the reader should see the line telling them how to enable it.
   const { results, unverified } = await runBehavioralChecks(plans as BehavioralPlan[], {
     sessions,
+    /**
+     * Who persisted state is read as, named here because `qai.config.yaml` has no field
+     * for it. Two assertion forms now need it, the record count and the before and after
+     * comparison, so M2 or M8 should give it one rather than every caller choosing.
+     *
+     * It cannot be the acting actor. The criterion that most needs this comparison acts
+     * as `anonymous`, who cannot read the invoice at all, and reading state as the actor
+     * under test would report a scoping rule as a state fact.
+     */
+    stateActorId: 'owner',
     ...(config.config.target.baseUrl === undefined
       ? {}
       : { browser: { baseUrl: config.config.target.baseUrl } }),

@@ -142,8 +142,14 @@ async function runAgainst(defects: DefectSwitches): Promise<Run> {
 
   // Mutation is permitted the way the M2 gate would permit it: the fixture is disposable
   // and restarted per test, so a criterion that writes runs rather than being refused.
+  //
+  // The state actor is named here because `qai.config.yaml` has no field for one. It has
+  // to be an identity that can read the record: the criterion under test acts as
+  // `anonymous`, who cannot, which is exactly why persisted state is never read as the
+  // acting actor.
   return runBehavioralChecks(plans as BehavioralPlan[], {
     sessions,
+    stateActorId: 'owner',
     mutation: { allowed: true },
   });
 }
@@ -244,6 +250,39 @@ describe('D2, the scoping claim the per-row form made checkable', () => {
     // The outsider owns INV-2001, so the scoped list is not empty and the pass rests on
     // a row that was read rather than on there being nothing to read.
     expect(result?.verdict).toBe('pass');
+  });
+});
+
+describe('D3, the write that is accepted without credentials', () => {
+  it('reports the record moving, not only the status that let it', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-003-01');
+
+    expect(result?.verdict).toBe('fail');
+    expect(result?.detail).toContain('status 200');
+    expect(result?.detail).toContain('changed across the action: total_cents');
+  });
+
+  it('carries the two extra reads as evidence, so the claim can be checked', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-003-01');
+
+    // The action, the read before it, and the read after it.
+    expect(result?.evidence).toHaveLength(3);
+  });
+
+  it('passes on the repaired ledger, where the write is refused and nothing moves', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_OFF)).get('AC-003-01');
+
+    expect(result?.verdict).toBe('pass');
+  });
+
+  it('N2: a refused cross-organization write leaves the record alone either way', async () => {
+    for (const defects of [ALL_DEFECTS_ON, ALL_DEFECTS_OFF]) {
+      const result = byCriterion(await runAgainst(defects)).get('AC-009-01');
+
+      // A finding here is a false positive, and the unchanged half is the half that
+      // matters: a refusal that still wrote is the worst outcome this control covers.
+      expect(result?.verdict).toBe('pass');
+    }
   });
 });
 
