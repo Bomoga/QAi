@@ -330,17 +330,21 @@ requirements:
     fields: [User.token]
     tags: [data-exposure]
     acceptanceCriteria:
-      # "any endpoint by any actor" is a universal, and every request form names
-      # one actor and one route. It becomes one criterion per endpoint that
-      # returns a record, which is the whole surface a token could leak through
-      # today. An endpoint added later is not covered until someone adds a
-      # criterion for it, and that is worse than the sentence it replaces.
+      # The universal was split into one criterion per endpoint at M5.8-pre2 and
+      # restored at M5.12b, when a form arrived that could quantify. It ranges over
+      # the endpoints a probe observed, which is the only enumeration of this
+      # application that exists, and it is unevaluable rather than satisfied when
+      # no probe ran. That is the honest shape of the claim: what a crawl never
+      # reached was never checked, and the result says how many were.
       - id: AC-014-01
         mode: deterministic
         given: 'the running application'
         when: 'actor owner lists Invoice'
-        then: 'body omits field User.token'
+        then: 'every endpoint omits field User.token'
 
+      # Kept deliberately. It needs no probe, so REQ-014 keeps deterministic
+      # coverage in a run that has no Observation, where the universal above can
+      # only report that it could not be evaluated.
       - id: AC-014-02
         mode: deterministic
         given: 'the running application'

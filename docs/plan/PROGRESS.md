@@ -192,7 +192,8 @@ Surprises worth recording:
 - [x] M5.8 integration test over D4 (commits 7505312, 2c86e39, 03dc6fa)
 - [x] M5.10 the actor reference and every row assertion forms (commits d70cb04, 7e231ab, 079a08f), approved 2026-08-17 after the stage was otherwise complete
 - [x] M5.11 the before and after state form (commits 83b86ca, 0d26083, f47327e, ad9ed65), approved 2026-08-17
-- [x] M5.12 the cross-request status comparison (commit backfilled below), approved 2026-08-17
+- [x] M5.12 the cross-request status comparison (commits 049e8b3, d986c5e, 06eb606), approved 2026-08-17
+- [x] M5.12b the endpoint sweep, closing the last vocabulary gap (commit backfilled below), approved 2026-08-17
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
@@ -208,15 +209,14 @@ assertions through follow-up reads, the judge boundary proved by type sweep, pag
 with a lazily imported Playwright, the fuzzy verdict mapping that makes invariant I1
 executable, the batch runner that degrades to unverified when no browser is there, D4 in
 the fixture, the fixture spec rewritten into both vocabularies, and an integration run
-over the live ledger, and four assertion forms added afterwards at M5.10 through M5.12,
-with the state actor field M2.8 added to carry them. 1114 tests pass across 47 files.
+over the live ledger, and five assertion forms added afterwards at M5.10 through M5.12b,
+with the state actor field M2.8 added to carry them. 1130 tests pass across 47 files.
 
 Deferred: a fuzzy criterion judged by a real model, which needs a model SDK nobody has
 approved, and a run against a real browser, which needs Playwright installed. Both are
-recorded in the M5 Open questions rather than papered over. What is left of the fixture
-spec's coverage gaps is one criterion needing an actor the config does not have, and one
-universal over endpoints the spec does not enumerate; the table in the module names both,
-and says why the second is better left open than closed badly.
+recorded in the M5 Open questions rather than papered over. One coverage gap is left in the
+fixture spec, AC-011-01, and it is not a vocabulary gap: it needs a configured actor
+holding a token belonging to no user, which is target configuration.
 
 Surprises worth recording:
 
@@ -252,6 +252,37 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.12b, approved by the human on 2026-08-17: `every endpoint omits field <Entity>.<field>`
+  closes AC-014-01, the last of the fixture spec's vocabulary gaps. It quantifies over the
+  endpoints an Observation holds, which is the only enumeration of an application that
+  exists here.
+- M5.12b, the rule that makes the quantifier safe: with no Observation, or none the sweep
+  can read, the assertion is unevaluable rather than satisfied. A universal over nothing
+  was not asked. An integration test runs the criterion both ways and asserts exactly that,
+  since a form that passed when it checked nothing would be worse than the enumerated
+  criteria it replaced.
+- M5.12b: an endpoint whose body could not be read blocks a pass. Four clean readings and
+  one unparseable body do not establish that every endpoint omits a field, which is the
+  refusal M3.6 already made about rows nobody could judge. A definite leak still outranks
+  an unreadable body, since the leak was seen.
+- M5.12b proved by breaking it: adding a `token` field to the debug endpoint's response
+  made the criterion fail, and `AC-014-02`, the enumerated read this form replaced, did not
+  notice. That is the coverage the universal buys, measured rather than asserted.
+- M5.12b: only GET and HEAD are swept and a path carrying an unresolved parameter is
+  skipped, so an assertion cannot write and cannot request a route the target does not
+  serve.
+- M5.12b honest limitation: coverage is the crawl's coverage. An endpoint the probe never
+  reached was never checked. The result says how many endpoints answered so the scope of
+  the claim is visible, and the structural diff remains what reports an endpoint nobody
+  specified.
+- M5.12b: the demonstration script now probes before planning, since a criterion that
+  quantifies over an Observation needs one. `AC-014-02` was kept deliberately, so REQ-014
+  still has deterministic coverage in a run with no probe at all.
+- M5.12b: the universal over actors was deliberately not closed. A criterion names one
+  actor, and sweeping every configured identity would read as thoroughness while hiding a
+  loop whose cost the author cannot see. One criterion per actor keeps the request count in
+  the spec where somebody can read it.
 
 - M5.12, approved by the human on 2026-08-17: `status matches <request>` compares the
   action's status against the status another request returns, which is what AC-013-01

@@ -11,6 +11,7 @@ import {
   loadSpec,
   mutatingChecksAllowed,
   planBehavioralChecks,
+  probe,
   resolveCredentials,
   rulesFor,
   runBehavioralChecks,
@@ -80,7 +81,24 @@ async function main(): Promise<void> {
     deps: { now: () => new Date().toISOString(), nextId: idSource() },
   });
 
-  const { plans, unplannable } = planBehavioralChecks(spec.spec, null, {
+  /**
+   * The probe runs first, because one criterion quantifies over the endpoints an
+   * Observation holds and there is no other enumeration of the application. Without it
+   * that criterion reports that it could not be evaluated, which is honest and is also
+   * the whole coverage it would have had.
+   */
+  const observation =
+    config.config.target.baseUrl === undefined
+      ? null
+      : await probe(
+          { config: { target: { baseUrl: config.config.target.baseUrl } }, sessions },
+          {
+            deps: { now: () => new Date().toISOString(), nextId: idSource() },
+            baseUrl: config.config.target.baseUrl,
+          },
+        );
+
+  const { plans, unplannable } = planBehavioralChecks(spec.spec, observation, {
     actorIds: new Set(actors.map((actor) => actor.id)),
     resources: config.config.resources,
   });

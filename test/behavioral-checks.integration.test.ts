@@ -14,10 +14,12 @@ import {
   isLoadFailure,
   loadSpec,
   planBehavioralChecks,
+  probe,
   rulesFor,
   runBehavioralChecks,
   type BehavioralPlan,
   type CheckResult,
+  type Observation,
   type PlanningContext,
   type ResolvedActor,
   type Spec,
@@ -129,16 +131,29 @@ interface Run {
   readonly unverified: readonly UnverifiedCheck[];
 }
 
-async function runAgainst(defects: DefectSwitches): Promise<Run> {
+/**
+ * Runs the criteria, optionally over a real Observation.
+ *
+ * The `every endpoint` assertion ranges over what a probe saw, so a run without one can
+ * only report that it could not be evaluated. Both are exercised: the probe is real
+ * rather than a literal Observation written here, because a hand-built one would test
+ * that the sweep agrees with a list this file invented.
+ */
+async function runAgainst(defects: DefectSwitches, withProbe = true): Promise<Run> {
   const spec = fixtureSpec();
   const baseUrl = await startLedger(defects);
 
-  const { plans } = planBehavioralChecks(spec, null, PLANNING);
   const sessions = createActorSessions(ACTORS, {
     client: createHttpClient({ baseUrl }),
     rules: rulesFor(spec),
     deps: fixedDeps(),
   });
+
+  const observation: Observation | null = withProbe
+    ? await probe({ config: { target: { baseUrl } }, sessions }, { deps: fixedDeps(), baseUrl })
+    : null;
+
+  const { plans } = planBehavioralChecks(spec, observation, PLANNING);
 
   // Mutation is permitted the way the M2 gate would permit it: the fixture is disposable
   // and restarted per test, so a criterion that writes runs rather than being refused.
@@ -307,6 +322,31 @@ describe('REQ-013, the refusal that must not confirm the invoice exists', () => 
 
     // The claim is that a cross-organization read looks exactly like a read of an invoice
     // that was never created. It holds whatever status the application chooses for both.
+    expect(result?.verdict).toBe('pass');
+  });
+});
+
+describe('REQ-014, the universal over endpoints', () => {
+  it('sweeps what the probe observed and says how many it checked', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-014-01');
+
+    expect(result?.verdict).toBe('pass');
+    expect(result?.detail).toMatch(/\d+ observed endpoint\(s\)/u);
+    expect(result?.evidence.length).toBeGreaterThan(1);
+  });
+
+  it('is unevaluable without a probe, rather than passing over an empty enumeration', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON, false)).get('AC-014-01');
+
+    // This is the whole reason the form is safe to have. A universal that quantified
+    // silently would report pass here, having checked nothing at all.
+    expect(result?.verdict).toBe('inconclusive');
+    expect(result?.detail).toContain('no observed endpoints');
+  });
+
+  it('keeps the enumerated criterion, so the requirement is covered without a probe', async () => {
+    const result = byCriterion(await runAgainst(ALL_DEFECTS_ON, false)).get('AC-014-02');
+
     expect(result?.verdict).toBe('pass');
   });
 });
