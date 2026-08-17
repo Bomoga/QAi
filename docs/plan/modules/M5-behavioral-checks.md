@@ -1,6 +1,6 @@
 # M5: Behavioral Checks
 
-**Status:** not started
+**Status:** complete
 **Owns:** `packages/core/src/checks/behavioral/`
 **Depends on:** M1, M2, M3 registry
 **Depended on by:** M7
