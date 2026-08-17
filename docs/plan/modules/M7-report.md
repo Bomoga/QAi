@@ -71,9 +71,16 @@ Hand-roll the SARIF. The libraries are worse than the specification and exact co
 ## Definition of Done
 
 ```
-pnpm --filter @qai/core test -- report
+pnpm --filter @qai/core test report
 pnpm --filter @qai/cli exec qai check --format sarif > /tmp/out.sarif
 ```
+
+**Corrected 2026-08-16.** This command previously carried a `--` before the filter
+names. pnpm forwards that `--` to the script, so vitest is invoked as
+`vitest run "--" "<name>"` and reads what follows as passthrough arguments rather
+than as filename filters, which runs the whole core suite and passes for the wrong
+reason. Without it the filter applies. `pnpm --filter @qai/core exec vitest run <name>`
+is the explicit equivalent.
 
 - SARIF output validates against the published schema.
 - The text report displays `modelAssistedCheckCount` even when zero.

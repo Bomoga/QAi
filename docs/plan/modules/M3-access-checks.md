@@ -69,9 +69,16 @@ The 2xx-with-empty-body case is deliberately inconclusive rather than pass. An e
 ## Definition of Done
 
 ```
-pnpm --filter @qai/core test -- access
+pnpm --filter @qai/core test access
 pnpm --filter @qai/cli exec qai check --config fixtures/ledger/qai.config.yaml
 ```
+
+**Corrected 2026-08-16.** This command previously carried a `--` before the filter
+names. pnpm forwards that `--` to the script, so vitest is invoked as
+`vitest run "--" "<name>"` and reads what follows as passthrough arguments rather
+than as filename filters, which runs the whole core suite and passes for the wrong
+reason. Without it the filter applies. `pnpm --filter @qai/core exec vitest run <name>`
+is the explicit equivalent.
 
 - D1, D2, D3 each produce exactly one high severity finding with request and response evidence.
 - N1 and N2 produce no findings. This is the gate that matters most.

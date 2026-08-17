@@ -83,8 +83,15 @@ redaction:
 
 ```
 pnpm --filter @qai/core test
-pnpm --filter @qai/core test -- target evidence
+pnpm --filter @qai/core test target evidence
 ```
+
+**Corrected 2026-08-16.** The second command previously carried a `--` before the filter
+names. pnpm forwards that `--` to the script, so vitest is invoked as
+`vitest run "--" "<name>"` and reads what follows as passthrough arguments rather
+than as filename filters, which runs the whole core suite and passes for the wrong
+reason. Without it the filter applies. `pnpm --filter @qai/core exec vitest run <name>`
+is the explicit equivalent.
 
 - Two actors authenticate against `fixtures/ledger` and issue distinct requests.
 - A written evidence record contains no authorization header value and no field marked sensitive.

@@ -55,8 +55,15 @@ export function extractSpec(doc: string, deps: { model: ModelClient }): Promise<
 ## Definition of Done
 
 ```
-pnpm --filter @qai/core test -- extraction
+pnpm --filter @qai/core test extraction
 ```
+
+**Corrected 2026-08-16.** This command previously carried a `--` before the filter
+names. pnpm forwards that `--` to the script, so vitest is invoked as
+`vitest run "--" "<name>"` and reads what follows as passthrough arguments rather
+than as filename filters, which runs the whole core suite and passes for the wrong
+reason. Without it the filter applies. `pnpm --filter @qai/core exec vitest run <name>`
+is the explicit equivalent.
 
 - A type-level test proves no exported function here can return a `Verdict`.
 - The ESLint restriction fails the build when a model client is imported outside this directory.

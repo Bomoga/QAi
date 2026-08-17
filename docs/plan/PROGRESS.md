@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-16T20:00:00Z
-Current stage: S3
-Next task: stage boundary, demonstrate the S3 exit criterion
+Updated: 2026-08-17T01:40:00Z
+Current stage: S4 complete, awaiting review
+Next task: S5, behavioral checks (M5)
 
 ## S0. Skeleton
 
@@ -125,7 +125,55 @@ Surprises worth recording:
 
 ## S4. Probe and structural diff (M4)
 
-- [ ] not started
+- [x] M4.1 probe interfaces and adapter registration (commit 6795e64)
+- [x] M4.2 Next.js App Router adapter (commit f14f1cd)
+- [x] M4.3 Express adapter (commit d1cbcbf)
+- [x] M4.4 Prisma schema adapter, read textually by decision (commit backfilled below)
+- [x] M4.5 black box crawler, read-only, budgeted (commit 9adc558)
+- [x] M4.6 endpoint identity normalization (commit 5117842)
+- [x] M4.7 source and black box merge with confidence (commit b82ae56)
+- [x] M4.8 diffSpecObservation and severity rules (commit 9298e61)
+- [x] M4.9 integration test over D5 and D6 (commits 7d8ea01 and 8e717f7)
+- Exit criterion: `qai probe` emits an Observation naming every entity and endpoint with correct origin and confidence; `qai check` additionally reports one endpoint that exists but appears in no requirement
+- **Conflict raised at stage start, decided 2026-08-16: black box origin for the ledger.** M4's adapters target Next.js, Express, and Prisma; `fixtures/ledger` is a hand-written `node:http` server with no ORM, chosen at S0 so the fixture needed no runtime dependencies. The Definition of Done line "every entity and endpoint in fixtures/ledger appears in the Observation with correct origin" therefore holds with `origin: blackbox` and reduced confidence, not `origin: source`. Adapters are built and tested against synthetic source trees. Rejected: adding a `node:http` adapter, which is outside Q1's list and covers a framework no real user has; and rewriting the fixture on Express, which adds a runtime dependency and risks the three second boot requirement in 06-TESTING.md. The DoD line should be restated to say black box for this fixture.
+- D5, the undeclared debug endpoint, was added to the ledger at M4.9, the same way D2 and D3 were added during S3.
+- Exit criterion: **behavior met, command still M8**. Verified 2026-08-16 via `packages/core/scripts/probe-ledger.ts` against a live ledger, both directions. Defects on: 4 endpoints, every one `origin: blackbox` and `confidence: low` with one evidence id each, `GET /api/debug/state` reported in `observedNotSpecified` at medium, `AuditLog` in `specifiedNotObserved`, exit 1. D5 off: 3 endpoints, no medium finding, exit 0. The source adapters cannot be demonstrated against this fixture and are covered by their own tests, per the decision recorded at the top of this section.
+
+### S4 summary
+
+Built: the probe interfaces and adapter registry, the Next.js App Router adapter, the
+Express adapter with cross-file mount resolution, the Prisma schema adapter, the
+read-only black box crawler, endpoint identity normalization, the source and black box
+merge with its confidence table, `probe()` itself, `diffSpecObservation` with the
+module's severity rules, D5 in the fixture, and an integration run over D5 and D6.
+850 tests pass, 37 files.
+
+Deferred: nothing from M4. M4.4 stopped the loop on the `@prisma/internals` dependency
+and was resolved in the same session: read the schema textually, add no dependency, and
+correct the plan. The fixture is unaffected either way, since it has no `schema.prisma`,
+so `Organization`, `User`, and `AuditLog` are still reported as specified and not
+observed when probing the ledger.
+
+Surprises worth recording:
+
+- The stage demonstration found a false finding four hundred unit tests had passed over,
+  the same pattern as S2. The ledger returns rows under an `invoices` key, so the crawler
+  recorded the envelope as the response shape and the diff then reported every declared
+  Invoice field as missing. M3.6 had already solved that shape for lists; the crawler had
+  not. Running the thing end to end keeps being worth more than another unit test.
+- The demonstration also showed `mode: hybrid` for a run whose source half read nothing,
+  because the config points `sourceRoot` at a fixture no adapter recognizes. A source root
+  that nothing recognized is not a source reading.
+- Four probe tests wrote a synthetic Express file with no `import express`, so detection
+  correctly said no and the source half never ran. Three of them passed anyway. A fixture
+  that does not trip detection tests nothing about the adapter.
+- The M4 Definition of Done command `pnpm --filter @qai/core test -- probe diff` filtered
+  nothing, because pnpm forwards the `--` to the script and vitest reads what follows as
+  passthrough rather than as filename filters. Same family as the M1.2 trap. Every module
+  file carried the same wrong form and all of them are corrected.
+- Endpoint identity turned out to be the highest stakes small function in the module.
+  M6 diffs runs on that string, so widening what counts as a record identifier renames
+  every endpoint in every stored run.
 
 ## S5. Behavioral checks (M5)
 
@@ -148,6 +196,63 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M4.4 resolved 2026-08-16: the user chose to read `schema.prisma` textually and add no dependency. The plan was corrected rather than the approved list widened, so the module implementation note now says so. The adapter reads `model` and `view` blocks with the same glob and regex posture as the other two.
+- M4.4: relation fields are dropped. A relation is a link to another model, not necessarily a field in any response, and recording one would produce an undeclared field finding against a spec that was right. Enums are read but are not entities, and a field typed by an enum stays, because an enum is a value.
+- M4.4: `@map` is not used as the field name. The mapped value is the database column and the client surface carries the field name. The diff's name normalization already matches `orgId` to `org_id`, so nothing is lost.
+- M4.4: `fieldsInBlock` is named for the block because `fieldsIn` is already exported by the crawler through the same barrel. The M4.1 note said anything the barrel exports twice is a compile error rather than a silent divergence; this is the second time that has come up.
+- M4.4 does not change the ledger. It has no `schema.prisma`, so the probe of it is still black box and `Organization`, `User`, and `AuditLog` are still reported as specified and not observed. That earlier note predicted the integration assertion would change when M4.4 landed; it does not, because the fixture has no schema for any adapter to read.
+- M4.9: D5 is now implemented in `fixtures/ledger` behind `LEDGER_DEFECT_D5`, with ledger level tests holding it in both directions. D6 needed nothing: the spec has declared `AuditLog` since M1.8 and the application has never implemented it.
+- M4.9: the ledger now serves a route index at `/`. It is not a defect and is asserted either way. Without something naming the debug route a black box crawl could not reach it at all, and a defect the probe cannot reach would test the diff against an Observation that could never contain it. The blind spot is real and is what the low confidence on a black box only endpoint is for.
+- M4.9: the index names `/api/invoices/{id}`, which the crawler requests as `/api/invoices/%7Bid%7D` because every candidate is resolved through `URL` rather than pasted together. It answers 404 and is correctly not recorded. A test pins both halves of that.
+- M4.9: the probe of the defective ledger records four endpoints, `/`, `/api/debug/state`, `/api/invoices`, and `/health`, each `origin: blackbox` and `confidence: low`, each carrying one evidence id.
+- M4.9 cost of deferring M4.4, asserted rather than hidden: `Organization` and `User` are real in the fixture, serve no route of their own, and therefore appear in `specifiedNotObserved` alongside `AuditLog`. A Prisma adapter would have observed them as models. The test states all three so the day M4.4 lands, the assertion changes and someone has to look at it.
+- M4.9: entity matching by response fields now ignores `id` and the timestamp names. Two records agreeing that they have an `id` is not evidence they are the same model, and without that rule an invoice response matched the `User` entity.
+- M4.8: the contract's `specifiedNotObserved` and `fieldMismatches` entries carry no severity field, while the module states a default severity for both. Adding the field would be a contract change, so the two defaults are exported as constants for whoever turns an entry into a finding. Worth resolving properly when M7 renders these.
+- M4.8: an Observation that saw nothing at all produces no `specifiedNotObserved` entries. A probe that could not reach the target and a target implementing none of the spec are different facts, and reporting the first as the second fills a report with findings about a run that never happened. The RunResult already has `probe-incomplete` for the real case.
+- M4.8: entity matching has three strengths, and they are recorded rather than flattened. An adapter that read the model is high, a route named after the entity is medium, and response fields lining up is low. With M4.4 deferred nothing produces schema entities, so in practice every match is by route or by fields, which is exactly why the confidence is on the record.
+- M4.8: an endpoint counts as specified when a path segment names a spec entity that some requirement references. That is the only link the spec offers, since a spec names entities and rules rather than routes. `TargetConfig.resources` would give an exact mapping, but `diffSpecObservation(spec, observation)` is the public API and taking config here would widen it.
+- M4.8: the unauthenticated rule is checked before the noise rule. A health route that answers without credentials and returns fields from a spec entity is not noise, whatever it is called. A test holds that ordering.
+- M4.8: `authRequired` is `unknown` on everything the crawler produces, so the high severity rule will rarely fire until a check establishes authentication. That is the module's rule working as written rather than a gap.
+- M4.8: field mismatches are only computed for an entity whose fields were actually observed. Otherwise a spec field the crawl never had a chance to see would be reported as missing, which is a finding about the crawl budget dressed up as a finding about the application.
+- M4.8: `singular` leaves words ending in `us`, `ss`, or `is` alone, so `status` does not become `statu`. Found by a test; both sides of a comparison run through it, so a wrong answer costs a match rather than inventing one.
+- M4.7 owns `probe()` as well as the merge. No task claims the orchestration, nothing else can assemble an Observation, and M4.9 needs it. Flagged rather than assumed: if the plan meant it elsewhere, this is where it landed.
+- M4.7 confidence table, from the module text: source only high, black box only low, both agree high, and in hybrid mode a route only one side saw is medium with a note. The two hybrid rows are the ones that matter. A declared route the crawl never reached may be unlinked, behind the budget, or not wired up, and the tool cannot tell which from outside. A route that answered while nothing declares it is the shape of an endpoint nobody asked for.
+- M4.7: nothing either side saw is dropped. A merge that resolved a disagreement silently would erase the finding this stage exists to make possible.
+- M4.7: when both sides agree, the source spelling of the path and its handler reference win, and the crawl contributes evidence and observed fields. Matching is by the M4.6 identity key, so `:invoiceId` from source pairs with `INV-1001` from the crawl.
+- M4.7: `probe` takes a narrow `ProbeContext` rather than the whole `TargetContext`, which satisfies it structurally. The probe has no business reaching credentials, the evidence writer, or the redaction rules, and the narrower seam is what lets the unit tests state a target in three lines.
+- M4.7: `ProbeOptions` gained `deps`, `cwd`, and `startPaths`. `deps` is required, because an Observation carries a timestamp and rule R6 says core does not read the clock on its own.
+- M4.7 test trap, same family as the earlier ones: four probe tests wrote a synthetic Express file with no `import express`, so the adapter's detect correctly said no and the source half never ran. Three of them asserted things that were true anyway and passed. Only the one asserting an endpoint list failed. A fixture that does not trip detection tests nothing about the adapter.
+- M4.6: identity has two levels. `endpointId` is what a reader sees and what the Observation stores, keeping parameter names as the adapter wrote them. `identityKey` erases them, so a source `:invoiceId` and a crawl's derived `:id` are recognized as one route. A merge comparing the written form would report each side as an endpoint the other did not have.
+- M4.6: a segment becomes a parameter only when it is recognizably an identifier: all digits, a UUID, 24 or more hex characters, `INV-1001` or `user_42`, or a 20 character opaque token containing a digit. Never merely because it contains a digit, which is why `/api/v1/invoices` and `/oauth2/callback` survive intact. M6 diffs on this, so widening the rule renames every endpoint in every stored run.
+- M4.6: a catch-all keeps its own marker in the identity key. `/files/:path*` and `/files/:name` match a different number of segments and are not the same route.
+- M4.6: folding two records of one route unions their evidence and their observed fields, takes a determined `authRequired` over an unknown one, and falls back to `unknown` when two observations disagree rather than picking a side.
+- M4.6: normalization is not applied inside the crawler. The crawl records what it observed and the fold happens once, over both sides, so the source and black box readings are normalized by the same rule. That is M4.7.
+- M4.4 stopped the loop and was skipped by the user's decision on 2026-08-16. The module says to prefer `@prisma/internals` over regex for `schema.prisma`, and that package is not on the approved list in 04-CONVENTIONS.md, which is a dependency stop. Three options were put up: approve it as a runtime dependency, approve it as a lazily imported optional one, or correct the plan to read the schema textually like the other two adapters. The choice was to skip M4.4 for now and carry on; the options stay written down in the M4 Open questions. Consequence for the stage: the Observation has no entities from source at all, so `fieldMismatches` and `specifiedNotObserved` for an entity will have only the black box side to work from at M4.8.
+- M4.5: the M4 Definition of Done says a black box degrade produces `origin: "inferred"`, but `EndpointOrigin` in 03-CONTRACTS.md is `source` or `blackbox`, and `inferred` is an entity origin. The crawler emits `blackbox` for endpoints, per the contract. The same DoD line already needs restating for the fixture being probed black box, so both corrections belong in one edit at the stage boundary.
+- M4.5: the crawler records a path that answered 401 or 403 but not one that answered 404, 405, or 410. A refusal proves the route is there; a dead link is evidence against it, and recording one would invent a route the target refuses to serve.
+- M4.5: `authRequired` stays `unknown` even on a 401. The crawl is authenticated, so a refusal says this actor may not have it, not that credentials are required. Only a refusal without credentials establishes that, and observing it is a check's job.
+- M4.5: `actorVisibility` is left empty even though the crawling actor plainly saw the page, because 03-CONTRACTS.md reserves that field for checks and says a probe-only run reports every actor untested.
+- M4.5: the crawler produces no entities. A crawl sees response field names, which are recorded as `responseShape.fields`, but never a model name, and naming an entity from a response would be a guess dressed as a schema reading.
+- M4.5: static assets get HEAD rather than GET, and are recorded with the method that was issued. Reading the method off what was actually sent keeps the Observation a record of what happened; M4.8 already plans to lower asset routes to info severity.
+- M4.5: a JSON body is scanned for string values that look like same-origin paths, so an API index listing its own routes is followed. Without that a JSON-only target stops at the seed, since there are no links to follow.
+- M4.5: the crawl takes a narrow `CrawlSession` rather than the whole `ActorSession`. An `ActorSession` satisfies it structurally, and nothing in the probe should be able to reach a credential.
+- M4.5: exhausting the page budget produces a warn note naming the ceiling and how many paths were left. An Observation that stopped early and does not say so reads as an application with nothing more in it.
+- M4.3, corrected in the plan at the stage boundary: the M4 Definition of Done command was `pnpm --filter @qai/core test -- probe diff` and filtered nothing. pnpm forwards the `--` to the script, so vitest runs as `vitest run "--" "probe" "diff"` and reads everything after it as passthrough rather than as filename filters. The whole core suite ran instead, 32 files and 794 tests. Dropping the `--` filters correctly, 9 files and 283 tests, and the module now says so. Same class as the M1.2 trap: a Definition of Done command that quietly does not do what it says. Both forms were run at every task in this stage.
+- M4.3: mount prefixes are resolved across files. A router declaring `/invoices` that the app mounts at `/api` is recorded as `/api/invoices`, because recording the declared path alone puts an endpoint in the Observation the target does not serve, and that costs two structural findings rather than one: the specified path missing and the wrong path undeclared.
+- M4.3: a router file nothing mounts still contributes its endpoints, with an info note saying the path may be missing a prefix. Dropping it would hide a route that exists; claiming a prefix nobody could find would be a guess.
+- M4.3: a receiver counts as a router when it was assigned from `express()` or `Router()` in the same file, or when its last dotted segment is `app` or `router`, which covers `function routes(app)` and `this.app`. A registration also has to pass a handler argument, so `client.get('/api/invoices', config)` and `request(app).get('/x')` are not routes. Both forms have tests.
+- M4.3: `app.all('/x', h)` produces one endpoint with method `ALL`, not eight. Expanding it would invent endpoints; dropping it would lose one. Worth confirming at M4.7, since a black box observation of the same route reports a concrete method and the merge will have to reconcile `ALL` against it.
+- M4.3: a route registered on a path the adapter cannot read, a template literal for example, produces a warn note naming `file:line` and no endpoint.
+- M4.3: Express has no directory convention, so the adapter reads every source file rather than a glob of route files. Test files, type declarations, and the usual build directories are excluded, since a route registered inside a test is not a route the target serves.
+- M4.2: adapters are tested against synthetic route trees in a temp directory, not a scaffolded Next.js app. The adapter reads a directory convention and a few export forms; a real application would add hundreds of files without covering anything more.
+- M4.2: method patterns are anchored to the line start, so `// export async function DELETE()` in a comment and `"export function PUT()"` in a string do not become endpoints. Both have tests.
+- M4.2: a route file exporting nothing recognizable produces a warning note and no endpoint. Inventing a route from a filename would put something in the Observation the application does not serve.
+- M4.2: confidence constants revised from the M4.1 guess. Source only is now `high`, because an adapter read the declaration rather than deducing it; black box only is `low`, since traffic inference can miss an unlinked route and can split one route into two.
+- M4.1: `ProbeMode` was briefly redefined in `probe/types.ts` when the contracts already export it. Typecheck caught the ambiguous re-export. Worth remembering as a category: anything the contracts already name is imported, never restated, and the barrel makes a duplicate a compile error rather than a silent divergence.
+- M4.1: an adapter whose `detect` throws has simply not recognized the root; an adapter whose `scan` throws produces an error note and the other adapters still run. A probe that fails partially produces a partial Observation, per the failure posture in 02-ARCHITECTURE.md.
+- M4.1: more than one adapter recognizing a repository is normal rather than a conflict. A Next.js app with a Prisma schema is two adapters describing different things.
+- M4.1: the probe is not given the spec. Matching happens in the diff, because a probe that knew what it was looking for would find it, and an Observation shaped by the spec cannot support a finding that the two disagree.
 
 - M3.9: D2 and D3 are now implemented in `fixtures/ledger`, so the catalog has D1, D2, D3 and both negative controls. D4 through D7 remain deferred to the stages that build the checks consuming them. Ledger level tests hold D2 and D3 in place the same way they hold D1.
 - M3.9 placement: the integration test lives in the repository root `test/`, not in either package. 02-ARCHITECTURE.md says core depends on nothing here and `fixtures/ledger` likewise, and an integration test inside either one would quietly make that false. The root is the only place legitimately allowed to depend on both.
@@ -259,6 +364,12 @@ Surprises worth recording:
 - The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
 
 ## Known issues, not blocking
+
+- `--no-playwright` in the M5 Definition of Done is not a vitest option. pnpm forwards it and vitest exits with `Unknown option --no-playwright`, so that command cannot work as written. Fixing the `--` does not fix this. How the playwright-absent path gets exercised is an M5 decision, most likely an environment variable the test reads, and it is recorded in the M5 Open questions.
+
+- The Definition of Done test command was corrected in every module file, M2 through M9, not only M4. Each carried a `--` before its filter names, which pnpm forwards to the script so vitest reads them as passthrough arguments and filters nothing. Verified for the two modules that have tests today: `test target evidence` runs 151 tests, `test access` runs 159, where the old form ran the whole suite of 850.
+
+- The GitHub CLI was installed during S4, `gh` 2.97.0 via winget, user scope. It authenticates as `Bomoga` with a fine-grained token whose repository access had to be widened twice, first to include this private repository at all, then to give Pull requests read and write. The token has no Checks permission, so `gh pr checks` fails and CI status has to be read on the pull request page.
 
 - CI emits one warning annotation: the v4 actions target Node.js 20 and are being forced onto a newer runtime. Bump `actions/checkout` and `actions/setup-node` to v5 when convenient. It does not affect the result.
 - `origin/main` does not exist. Only `dev` and the stage branch are pushed. Create `main` before the first release.
