@@ -47,6 +47,13 @@ D4 is scoped to the list. A single invoice read returns notes whichever way the 
 is set, because REQ-004 asks for the field to be omitted from list responses and a
 switch covering both would put two defects behind one toggle.
 
+An accepted write actually writes, whichever way D3 is set: a `PATCH` that gets past the
+credential check increments the invoice total. The request carries no body because the
+tool issues none, so the change is a fixed one; what matters is that something moves, or
+a criterion saying the invoice is unchanged could never be false and D3 would only be
+half implemented. A refused write changes nothing, and the seed is never touched, so a
+restart is still the reset.
+
 Defects D6 and D7 in the catalog are not implemented. D6 is intentional and permanent:
 it is the entity the spec declares and the application never built, which is what the
 structural diff reports. D7 lands with the stage that builds the check consuming it.

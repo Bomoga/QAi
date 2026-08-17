@@ -8,6 +8,18 @@ export interface LedgerOptions {
   readonly defects: DefectSwitches;
 }
 
+/**
+ * The rows this server is serving, as opposed to the rows it was seeded with.
+ *
+ * A write moves these and leaves the seed alone, so a fresh server always starts from the
+ * same data and a restart is genuinely the reset that `qai.config.yaml` claims it is.
+ */
+interface LedgerState {
+  readonly organizations: readonly LedgerData['organizations'][number][];
+  readonly users: readonly User[];
+  readonly invoices: Invoice[];
+}
+
 const INVOICE_PATH = /^\/api\/invoices\/([^/]+)$/;
 
 function send(response: ServerResponse, status: number, body: unknown): void {
@@ -19,7 +31,7 @@ function send(response: ServerResponse, status: number, body: unknown): void {
   response.end(payload);
 }
 
-function authenticate(request: IncomingMessage, data: LedgerData): User | undefined {
+function authenticate(request: IncomingMessage, data: LedgerState): User | undefined {
   const header = request.headers.authorization;
   if (header === undefined) return undefined;
 
@@ -38,12 +50,13 @@ function authenticate(request: IncomingMessage, data: LedgerData): User | undefi
 function readInvoice(
   invoiceId: string,
   actor: User,
-  options: LedgerOptions,
+  state: LedgerState,
+  defects: DefectSwitches,
 ): { status: number; body: Invoice | { error: string } } {
-  const invoice = options.data.invoices.find((candidate) => candidate.id === invoiceId);
+  const invoice = state.invoices.find((candidate) => candidate.id === invoiceId);
   if (invoice === undefined) return { status: 404, body: { error: 'not_found' } };
 
-  if (!options.defects.d1CrossOrgInvoiceRead && invoice.org_id !== actor.org_id) {
+  if (!defects.d1CrossOrgInvoiceRead && invoice.org_id !== actor.org_id) {
     return { status: 404, body: { error: 'not_found' } };
   }
 
@@ -70,13 +83,14 @@ type ListedInvoice = Omit<Invoice, 'notes'>;
  */
 function listInvoices(
   actor: User,
-  options: LedgerOptions,
+  state: LedgerState,
+  defects: DefectSwitches,
 ): { status: number; body: { invoices: (Invoice | ListedInvoice)[] } } {
-  const scoped = options.defects.d2UnscopedInvoiceList
-    ? [...options.data.invoices]
-    : options.data.invoices.filter((invoice) => invoice.org_id === actor.org_id);
+  const scoped = defects.d2UnscopedInvoiceList
+    ? [...state.invoices]
+    : state.invoices.filter((invoice) => invoice.org_id === actor.org_id);
 
-  if (options.defects.d4NotesInInvoiceList) return { status: 200, body: { invoices: scoped } };
+  if (defects.d4NotesInInvoiceList) return { status: 200, body: { invoices: scoped } };
 
   const withoutNotes: ListedInvoice[] = scoped.map((invoice) => ({
     id: invoice.id,
@@ -93,24 +107,36 @@ function listInvoices(
  *
  * The cross-organization refusal is negative control N2 and holds either way: this
  * defect is about the missing credential check, not about ownership.
+ *
+ * **An accepted write actually writes.** It did not until M5.11, and that made the
+ * catalog line for D3, that an invoice can be modified without credentials, only half
+ * true: the request was accepted and nothing moved, so a criterion saying the invoice is
+ * unchanged could never be false and the defect could not be caught by looking at the
+ * record. The request carries no body, since the tool issues none, so the change is a
+ * fixed one: the total is incremented. What matters is that something moved.
  */
 function updateInvoice(
   invoiceId: string,
   actor: User | undefined,
-  options: LedgerOptions,
+  state: LedgerState,
+  defects: DefectSwitches,
 ): { status: number; body: Invoice | { error: string } } {
-  if (!options.defects.d3UnauthenticatedMutation && actor === undefined) {
+  if (!defects.d3UnauthenticatedMutation && actor === undefined) {
     return { status: 401, body: { error: 'unauthenticated' } };
   }
 
-  const invoice = options.data.invoices.find((candidate) => candidate.id === invoiceId);
+  const index = state.invoices.findIndex((candidate) => candidate.id === invoiceId);
+  const invoice = state.invoices[index];
   if (invoice === undefined) return { status: 404, body: { error: 'not_found' } };
 
   if (actor !== undefined && invoice.org_id !== actor.org_id) {
     return { status: 404, body: { error: 'not_found' } };
   }
 
-  return { status: 200, body: invoice };
+  const updated: Invoice = { ...invoice, total_cents: invoice.total_cents + 1 };
+  state.invoices[index] = updated;
+
+  return { status: 200, body: updated };
 }
 
 /**
@@ -123,30 +149,40 @@ function updateInvoice(
  * reach it at all: an unlinked route is the known blind spot of crawling, recorded in
  * the probe's confidence levels rather than papered over here.
  */
-function routeIndex(options: LedgerOptions): { routes: string[] } {
+function routeIndex(defects: DefectSwitches): { routes: string[] } {
   const routes = ['/health', '/api/invoices', '/api/invoices/{id}'];
-  if (options.defects.d5UndeclaredDebugEndpoint) routes.push('/api/debug/state');
+  if (defects.d5UndeclaredDebugEndpoint) routes.push('/api/debug/state');
   return { routes };
 }
 
 export function createLedgerServer(options: LedgerOptions): Server {
+  const { defects } = options;
+
+  // The seed is copied rather than served directly, so a write moves this server's rows
+  // and leaves `seedLedger()` returning the same data to the next one.
+  const state: LedgerState = {
+    organizations: [...options.data.organizations],
+    users: [...options.data.users],
+    invoices: [...options.data.invoices],
+  };
+
   return createServer((request, response) => {
     const url = new URL(request.url ?? '/', 'http://ledger.invalid');
 
     if (request.method === 'GET' && url.pathname === '/') {
-      send(response, 200, routeIndex(options));
+      send(response, 200, routeIndex(defects));
       return;
     }
 
     if (
       request.method === 'GET' &&
       url.pathname === '/api/debug/state' &&
-      options.defects.d5UndeclaredDebugEndpoint
+      defects.d5UndeclaredDebugEndpoint
     ) {
       send(response, 200, {
-        users: options.data.users.length,
-        invoices: options.data.invoices.length,
-        defects: options.defects,
+        users: state.users.length,
+        invoices: state.invoices.length,
+        defects,
       });
       return;
     }
@@ -157,20 +193,20 @@ export function createLedgerServer(options: LedgerOptions): Server {
     }
 
     if (request.method === 'GET' && url.pathname === '/api/invoices') {
-      const actor = authenticate(request, options.data);
+      const actor = authenticate(request, state);
       if (actor === undefined) {
         send(response, 401, { error: 'unauthenticated' });
         return;
       }
 
-      const result = listInvoices(actor, options);
+      const result = listInvoices(actor, state, defects);
       send(response, result.status, result.body);
       return;
     }
 
     const mutationMatch = INVOICE_PATH.exec(url.pathname);
     if ((request.method === 'PATCH' || request.method === 'PUT') && mutationMatch !== null) {
-      const actor = authenticate(request, options.data);
+      const actor = authenticate(request, state);
       const invoiceId = mutationMatch[1];
 
       if (invoiceId === undefined) {
@@ -178,14 +214,14 @@ export function createLedgerServer(options: LedgerOptions): Server {
         return;
       }
 
-      const result = updateInvoice(decodeURIComponent(invoiceId), actor, options);
+      const result = updateInvoice(decodeURIComponent(invoiceId), actor, state, defects);
       send(response, result.status, result.body);
       return;
     }
 
     const invoiceMatch = INVOICE_PATH.exec(url.pathname);
     if (request.method === 'GET' && invoiceMatch !== null) {
-      const actor = authenticate(request, options.data);
+      const actor = authenticate(request, state);
       if (actor === undefined) {
         send(response, 401, { error: 'unauthenticated' });
         return;
@@ -197,7 +233,7 @@ export function createLedgerServer(options: LedgerOptions): Server {
         return;
       }
 
-      const result = readInvoice(decodeURIComponent(invoiceId), actor, options);
+      const result = readInvoice(decodeURIComponent(invoiceId), actor, state, defects);
       send(response, result.status, result.body);
       return;
     }
