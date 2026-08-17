@@ -1,8 +1,8 @@
 # Progress
 
-Updated: 2026-08-17T02:10:00Z
+Updated: 2026-08-17T02:40:00Z
 Current stage: S5
-Next task: M5.2
+Next task: M5.3
 
 ## S0. Skeleton
 
@@ -178,8 +178,8 @@ Surprises worth recording:
 
 ## S5. Behavioral checks (M5)
 
-- [x] M5.1 assertion vocabulary parser and validation warnings (commit backfilled below)
-- [ ] M5.2 deterministic HTTP runner with evidence capture
+- [x] M5.1 assertion vocabulary parser and validation warnings (commit 2ecf6f2)
+- [x] M5.2 deterministic HTTP runner with evidence capture (commits 45fc681 and the one backfilled below)
 - [ ] M5.3 persisted state assertions via follow-up reads
 - [ ] M5.4 the Judge interface in llm/
 - [ ] M5.5 Playwright fuzzy runner with the selector policy
@@ -206,6 +206,14 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.2 gap, needs a decision before M5.8: nothing turns a criterion's `when` clause into a request. An access rule carries actor, action, and resource as fields, so M3 could plan one; an acceptance criterion states `when` in prose and the module gives a vocabulary for `then` only. `BehavioralPlan` therefore carries its request rather than deriving one, and `planBehavioralChecks` from the module's public API is not implemented. Three ways out: a `when` vocabulary mirroring the `then` table, reusing the requirement's access rules to supply the request where one exists, or adding structured fields to the criterion, which is a contract change. Recorded in the M5 Open questions.
+- M5.2: assertion evaluation is three-valued, satisfied, violated, or unevaluable, and a definite violation outranks an unevaluable assertion. If one clause is proven false the criterion did not hold, whatever could not be read about the rest. A criterion whose assertions are all unevaluable is `inconclusive`, never a pass.
+- M5.2: a body that is not JSON makes a field or value assertion unevaluable, but a JSON body missing the asserted path is a violation. Not being able to read the body and reading it to find the value absent are different facts.
+- M5.2: a violated `response time under` assertion fails at info severity, per the module's line that latency is informational. When latency is only one of several failures the criterion keeps its own severity, since something other than speed was wrong. Both directions have tests.
+- M5.2: the runner reuses `resourceFieldsIn` from M3's verdict table rather than writing a second field matcher. Two implementations of "is this field in the body" would eventually disagree, and the one in access checks is already the one findings are written against.
+- M5.2: `record count of <Entity> is <n>` is unevaluable here and says so in the finding text. It needs the follow-up read that M5.3 adds, and reporting anything else would be a verdict about state nobody read.
+- M5.2: the mutating interlock is the same shape as M3.7, permission passed in rather than recomputed, absent means refused. A refused mutating criterion issues no request at all, asserted by a test on the recorded request list.
 
 - M5.1: the vocabulary is strict and its tolerance is mechanical only. A leading `the`, a leading `response`, a trailing period, and `and` between clauses are absorbed; nothing else. A parser that decided "the body reports status ok" means `body.status equals "ok"` would be guessing, and a wrong guess here becomes a confident verdict about somebody's application. Eight tests assert the refusals, using the real unparseable clauses from the fixture spec.
 - M5.1: a criterion is all or nothing. If one clause of three falls outside the table the whole criterion is unsupported, because asserting the two that parsed and reporting `pass` claims the criterion was verified while a third of it was never tested. That is the quiet green run invariant I2 exists to stop.
