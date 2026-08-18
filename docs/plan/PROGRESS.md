@@ -1,4 +1,4 @@
-# Progress
+﻿# Progress
 
 Updated: 2026-08-17T12:20:00Z
 Current stage: S5 complete, pull request open, awaiting review
@@ -197,7 +197,8 @@ Surprises worth recording:
 - [x] M5.12b the endpoint sweep (commits 0e126b0, 284ed8c, c93c02b), approved 2026-08-17
 - [x] M5.12c the actor axis on the sweep (commits adcff2a, 8199d07, aa954c5), approved 2026-08-17
 - [x] M5.13 the impostor actor, closing the last criterion in the fixture spec (commits 24bd43b and 3389dd9), approved 2026-08-17
-- [x] M5.14 AR-011-01 pointed at a resource that has routes, so the last unplannable access rule became a check (commit backfilled below)
+- [x] M5.14 AR-011-01 pointed at a resource that has routes, so the last unplannable access rule became a check (commits 1f6d690 and 53acdcd)
+- [x] M5.15 the S3 script prints coverage gaps with their reasons instead of counting them (commit backfilled below)
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
@@ -256,6 +257,27 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.15, the actual reason AR-011-01 went unnoticed for two stages: `check-ledger.ts`
+  printed `1 not` and threw the reasons away. `planAccessChecks` had been returning the
+  rule id, a reason from the closed set, and a sentence naming the fix on every run since
+  M3.2, and no reader ever saw any of it. The script prints them now, under a heading that
+  says what they are.
+- M5.15, proved by putting the defect back: with AR-011-01 pointed at `User` again the run
+  reports `AR-011-01 unsupported-condition` and `No route is known for read on "User".
+  Configure resources[].routes.read for it, or run a probe first.` Pointed at `Invoice` it
+  reports no gaps at all. The count alone was what made a two-stage-old gap look exactly
+  like a fresh one.
+- M5.15, what this does not fix, stated so nobody mistakes it for solved: a gap that has
+  been open since M1.8 still reads identically to one introduced this morning. Telling them
+  apart needs run history, which is M6, and a report that can compare against it, which is
+  M7. Neither exists. The honest position is that gaps are now legible, not that they are
+  ranked.
+- M5.15 for M7 to decide: an unplannable rule reaches the caller in a side channel next to
+  the results, so any renderer that shows results and forgets the side channel loses it
+  again. Turning each one into a `CheckResult` with verdict `inconclusive` would put gaps
+  in the same table as everything else and make forgetting them structurally harder. That
+  changes what the results list means and belongs to whoever assembles the RunResult.
 
 - M5.14: AR-011-01 named `User`, which the target serves no route for, so it could never be
   planned. It names `Invoice` now and the rule is checked rather than being coverage on

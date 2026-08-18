@@ -106,6 +106,21 @@ async function main(): Promise<void> {
     process.stdout.write(`\n[${failure.severity}] ${failure.title}\n  ${failure.detail ?? ''}\n`);
   }
 
+  /**
+   * The rules nobody could attempt, with the reason each one carries.
+   *
+   * This printed only a count until M5.15, which is how AR-011-01 sat unplannable from
+   * M1.8 to S5 with nobody looking at it. The reason and the fix were in the data on every
+   * one of those runs and never reached the reader. A coverage gap reported as a number is
+   * a coverage gap nobody acts on, and invariant I4 exists to say the opposite.
+   */
+  if (unplannable.length > 0) {
+    process.stdout.write(`\ncoverage gaps, with reasons\n`);
+    for (const entry of unplannable) {
+      process.stdout.write(`  ${entry.ruleId.padEnd(12)}${entry.reason}\n    ${entry.detail}\n`);
+    }
+  }
+
   const threshold = FAIL_ON['high'] ?? 3;
   const atOrAbove = failures.filter((failure) => (FAIL_ON[failure.severity] ?? 0) >= threshold);
 
