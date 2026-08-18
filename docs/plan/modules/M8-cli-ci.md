@@ -1,4 +1,4 @@
-# M8: CLI and CI Action
+﻿# M8: CLI and CI Action
 
 **Status:** not started
 **Owns:** `packages/cli/`, `packages/action/`
@@ -86,4 +86,27 @@ pnpm --filter @qai/cli exec qai check --config fixtures/ledger/qai.config.yaml -
 
 ## Open questions
 
-- None blocking.
+- **The Definition of Done names a config path that does not exist.** It runs
+  `qai check --config fixtures/ledger/qai.config.yaml`, and this repository's target
+  configuration lives at the root as `qai.config.yaml`. `fixtures/ledger/` holds the
+  application and its spec, never a config. The command was run at M8.5 against the real
+  path and both halves of the criterion hold: exit 1 with the defect switches on, exit 0
+  with them off. Correct the path here, or move the config, but the two should agree.
+- **M8.1 deviation, recorded rather than assumed.** `Reporter` is listed in
+  `03-CONTRACTS.md` as a shared runtime type owned by M7, and M7 completed without
+  building it, so M8.1 added it to `packages/core/src/report/`. Nothing in `core` accepts
+  one yet: `probe`, `runAccessChecks`, and `runBehavioralChecks` report no progress at
+  all, and threading one through them changes signatures owned by M4 and M5. The CLI
+  implements the port and reports its own progress in the meantime.
+- **M8.2 cross-module edit.** `TargetConfigSchema` gained a `defaults` section. The
+  module states a precedence of flag, environment, config file, then built-in default,
+  and the schema is strict, so without a section for these settings the config file layer
+  could not exist: writing `format: sarif` was a load error.
+- **M8.4 cross-module edit.** `LoadedSpec` gained `files`, the paths actually read.
+  `RunResult.spec.files` needs exactly that list and nothing else could supply it, and
+  `validate` has to name what it read or a user cannot tell a passing spec from a glob
+  that matched the wrong directory.
+- **M8 is branched from `feat/m7-report`, not from `dev`.** The one deviation from the
+  branching rule in `04-CONVENTIONS.md`. M8 imports `renderSarif`, `renderJunit`, and
+  `computeExitCode`, none of which exist on `dev` until PR #10 merges. PR #2 stacked the
+  same way in S1. Rebase onto `dev` once #10 lands.
