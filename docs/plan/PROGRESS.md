@@ -2,7 +2,7 @@
 
 Updated: 2026-08-18T05:30:00Z
 Current stage: S6, module M7, branch feat/m7-report
-Next task: M7.2
+Next task: M7.3
 
 ## S0. Skeleton
 
@@ -245,8 +245,8 @@ Surprises worth recording:
 
 ## S6. Report and CI (M7, M8)
 
-- [x] M7.1 assembleRun, the verdict rollup, and the closed reason set (commit backfilled below)
-- [ ] M7.2 renderJson with sorted, stable output
+- [x] M7.1 assembleRun, the verdict rollup, and the closed reason set (commit 3683191)
+- [x] M7.2 renderJson with sorted, stable output (commit backfilled below)
 - [ ] M7.3 renderText in the section order the module gives
 - [ ] M7.4 renderSarif, validated against the 2.1.0 schema
 - [ ] M7.5 renderJunit, inconclusive mapping to skipped
@@ -268,6 +268,25 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.2: keys are sorted at every level, arrays are never reordered. `JSON.stringify` emits
+  keys in insertion order, so two structurally identical results can differ byte for byte
+  and a golden file would be testing construction order rather than content. Array order is
+  the opposite case and carries meaning: `assembleRun` puts requirements in spec order so a
+  reader comparing two runs looks down the same list, and sorting them here would destroy
+  that. Proved by breaking it: dropping the `.sort()` failed exactly the different-order
+  test and nothing else.
+- M7.2: this deliberately does not reuse `stableStringify` from `spec/hash.ts`. That one
+  feeds a digest, so it is compact and writes `null` where a key has no value. Both are
+  wrong for a report, which wants indentation a reader can diff and needs an absent
+  optional field to stay absent, since the strict schema rejects `null` where it expects
+  an optional string. Two serializers with different requirements rather than two answers
+  to one question, which is the opposite of the M5.2 case where reuse was right.
+- M7.2 test bug worth remembering, the same family as the M3.6 one: the array-order test
+  searched the whole document for a requirement id, and found it first inside `checks`,
+  which sorts before `requirements`. It failed for a reason unrelated to what it was
+  testing. The assertion is scoped to the requirements block now. A test that searches a
+  serialized document has to say which part of it.
 
 - M7.1: the rollup is one exported function, `rollUpRequirement`, because the module says
   it is the rule most likely to be reimplemented subtly differently somewhere else. It is
