@@ -1,6 +1,6 @@
 ﻿# M8: CLI and CI Action
 
-**Status:** not started
+**Status:** complete except `report`, which is blocked on M6
 **Owns:** `packages/cli/`, `packages/action/`
 **Depends on:** M1, M2, M3, M4, M5, M7
 **Optionally consumes:** M6, required only by the `diff` subcommand
