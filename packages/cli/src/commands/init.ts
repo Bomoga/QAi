@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 
 import type { Stream } from '../reporter.ts';
+import { present } from '../errors.ts';
 
 /**
  * `qai init`: a config, a starter spec, and the `.gitignore` entry for `.qai/`.
@@ -239,9 +240,19 @@ export function runInit(options: InitOptions): Promise<number> {
     );
   } catch (cause) {
     // Exit 2: a configuration error with no run performed, per 03-CONTRACTS.md.
-    const reason = cause instanceof Error ? cause.message : 'unknown error';
-    stderr.write(`error: could not write the starter files\n  ${reason}\n`);
-    return Promise.resolve(2);
+    return Promise.resolve(
+      present(
+        {
+          code: 2,
+          summary: 'could not write the starter files',
+          where: cwd,
+          reason: cause instanceof Error ? cause.message : 'unknown error',
+          suggestion: 'Check that the directory exists and is writable, then run init again.',
+          cause,
+        },
+        { stderr },
+      ),
+    );
   }
 
   stdout.write(`${lines.join('\n')}\n`);

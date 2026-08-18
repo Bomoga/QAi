@@ -2,6 +2,7 @@ import type { Command } from 'commander';
 
 import { createReporter, type Stream } from '../reporter.ts';
 import { describeContext, isContextError, resolveContext } from '../context.ts';
+import { presentContextError } from '../errors.ts';
 import { resolveConfigPath, type Flags } from '../settings.ts';
 import { runCheck } from './check.ts';
 import { runInit } from './init.ts';
@@ -73,6 +74,7 @@ export function registerCommands(
         stdout: io.stdout,
         stderr: io.stderr,
         ...(flags.format === undefined ? {} : { format: flags.format }),
+        ...(flags.verbose === true ? { verbose: true } : {}),
       });
     });
 
@@ -81,17 +83,14 @@ export function registerCommands(
     .argument('[paths...]', 'spec files or globs, defaulting to spec/*.spec.yaml')
     .description('probe the target, run the checks, and report where it disagrees with the spec')
     .action(async (paths: string[]) => {
-      const flags = program.opts<Flags & { verbose?: boolean; color?: boolean }>();
+      const flags = program.opts<Flags>();
       const context = resolveContext({ flags, env: io.env, cwd: io.cwd });
 
       if (isContextError(context)) {
-        io.stderr.write(`error: ${context.message}
-`);
-        if ('suggestion' in context && context.suggestion !== undefined) {
-          io.stderr.write(`  ${context.suggestion}
-`);
-        }
-        outcome.code = 2;
+        outcome.code = presentContextError(context, {
+          stderr: io.stderr,
+          ...(flags.verbose === true ? { verbose: true } : {}),
+        });
         return;
       }
 
@@ -107,6 +106,7 @@ export function registerCommands(
         stdout: io.stdout,
         stderr: io.stderr,
         color: flags.color !== false && io.stdoutTty === true,
+        ...(flags.verbose === true ? { verbose: true } : {}),
         reporter: createReporter({
           stdout: io.stdout,
           stderr: io.stderr,
@@ -121,13 +121,14 @@ export function registerCommands(
     .argument('[paths...]', 'spec files or globs, read only for the sensitive field list')
     .description('describe what the target actually contains, judging nothing')
     .action(async (paths: string[]) => {
-      const flags = program.opts<Flags & { verbose?: boolean; color?: boolean }>();
+      const flags = program.opts<Flags>();
       const context = resolveContext({ flags, env: io.env, cwd: io.cwd });
 
       if (isContextError(context)) {
-        io.stderr.write(`error: ${context.message}
-`);
-        outcome.code = 2;
+        outcome.code = presentContextError(context, {
+          stderr: io.stderr,
+          ...(flags.verbose === true ? { verbose: true } : {}),
+        });
         return;
       }
 
@@ -142,6 +143,7 @@ export function registerCommands(
         settings: context.settings,
         stdout: io.stdout,
         stderr: io.stderr,
+        ...(flags.verbose === true ? { verbose: true } : {}),
         reporter: createReporter({
           stdout: io.stdout,
           stderr: io.stderr,

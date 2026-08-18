@@ -6,6 +6,7 @@ import {
   type Spec,
 } from '@qai/core';
 
+import { fromDiagnostic, present, presentAll } from '../errors.ts';
 import type { Stream } from '../reporter.ts';
 
 /**
@@ -34,6 +35,8 @@ export interface ValidateOptions {
   readonly stderr: Stream;
   /** The resolved `--format`, only so an inapplicable one can be reported. */
   readonly format?: string;
+  /** Adds a stack trace to any error this prints. */
+  readonly verbose?: boolean;
 }
 
 /** `1 requirement`, `2 requirements`. Counting is the point of this command's output. */
@@ -98,16 +101,33 @@ export function runValidate(options: ValidateOptions): Promise<number> {
   const requested = paths.length > 0 ? paths : [DEFAULT_SPEC_GLOB];
   const loaded = loadSpec(requested, { cwd });
 
+  const presentTo = { stderr, ...(options.verbose === true ? { verbose: true } : {}) };
+
   if (isLoadFailure(loaded)) {
     // Exit 2: the spec is invalid and no run was performed, per 03-CONTRACTS.md.
-    stderr.write(`error: ${loaded.error.message}\n`);
-    for (const diagnostic of loaded.error.diagnostics) {
-      stderr.write(`${describeDiagnostic(diagnostic)}\n`);
-    }
     if (loaded.error.diagnostics.length === 0) {
-      stderr.write(`  Looked for ${requested.join(', ')} under ${cwd}.\n`);
+      return Promise.resolve(
+        present(
+          {
+            code: 2,
+            summary: loaded.error.message,
+            where: `${requested.join(', ')} under ${cwd}`,
+            suggestion:
+              'Pass the spec path explicitly, or run "qai init" to write a starter spec at spec/app.spec.yaml.',
+          },
+          presentTo,
+        ),
+      );
     }
-    return Promise.resolve(2);
+
+    return Promise.resolve(
+      presentAll(
+        loaded.error.diagnostics.map((diagnostic) =>
+          fromDiagnostic(diagnostic, loaded.error.message),
+        ),
+        presentTo,
+      ),
+    );
   }
 
   // Authoring warnings live in M5, since M1 does not depend on it and having the loader
@@ -123,9 +143,13 @@ export function runValidate(options: ValidateOptions): Promise<number> {
   if (errors.length > 0) {
     // A Spec came back, but it came back with errors, and it is still one no run should
     // proceed on.
-    stderr.write(`error: ${count(errors.length, 'problem')} in the spec\n`);
-    for (const diagnostic of errors) stderr.write(`${describeDiagnostic(diagnostic)}\n`);
-    return Promise.resolve(2);
+    const summary = `${count(errors.length, 'problem')} in the spec`;
+    return Promise.resolve(
+      presentAll(
+        errors.map((diagnostic) => fromDiagnostic(diagnostic, summary)),
+        presentTo,
+      ),
+    );
   }
 
   const lines = summarise(loaded.spec, loaded.hash, loaded.conditions.size, loaded.files);

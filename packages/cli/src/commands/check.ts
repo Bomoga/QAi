@@ -34,6 +34,7 @@ import {
 } from '@qai/core';
 
 import type { Stream } from '../reporter.ts';
+import { fromDiagnostic, present, presentAll } from '../errors.ts';
 import { CLI_VERSION } from '../program.ts';
 import type { Settings } from '../settings.ts';
 import { DEFAULT_SPEC_GLOB } from './validate.ts';
@@ -71,6 +72,8 @@ export interface CheckOptions {
   readonly reporter: Reporter;
   /** Whether stdout is a terminal, so the text report can be coloured. */
   readonly color?: boolean;
+  /** Adds a stack trace to any error this prints. */
+  readonly verbose?: boolean;
   /** Injected so a test can pin the clock and the identifier source, per rule R6. */
   readonly deps?: Deps;
 }
@@ -148,25 +151,42 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   const { cwd, env, settings, stdout, stderr, reporter } = options;
   const deps = options.deps ?? systemDeps();
   const config = options.config;
+  const presentTo = { stderr, ...(options.verbose === true ? { verbose: true } : {}) };
 
   // Everything that means no run can happen is settled first, so nothing below has to
   // ask whether it has a target.
   if (config === undefined) {
-    stderr.write(
-      `error: no configuration at ${options.configPath}\n  Run "qai init" to write one, or pass --config with the path to yours.\n`,
+    return present(
+      {
+        code: 2,
+        summary: 'no configuration was found',
+        where: options.configPath,
+        suggestion: 'Run "qai init" to write one, or pass --config with the path to yours.',
+      },
+      presentTo,
     );
-    return 2;
   }
 
   const requested = options.paths.length > 0 ? options.paths : [DEFAULT_SPEC_GLOB];
   const loaded = loadSpec(requested, { cwd });
   if (isLoadFailure(loaded)) {
-    stderr.write(`error: ${loaded.error.message}\n`);
-    for (const diagnostic of loaded.error.diagnostics) {
-      stderr.write(`  ${diagnostic.file}:${diagnostic.path}\n    ${diagnostic.message}\n`);
+    if (loaded.error.diagnostics.length === 0) {
+      return present(
+        {
+          code: 2,
+          summary: loaded.error.message,
+          where: requested.join(', '),
+          suggestion: 'Run "qai validate" to see what the loader looked for.',
+        },
+        presentTo,
+      );
     }
-    stderr.write('  Run "qai validate" for the full list.\n');
-    return 2;
+    return presentAll(
+      loaded.error.diagnostics.map((diagnostic) =>
+        fromDiagnostic(diagnostic, loaded.error.message),
+      ),
+      presentTo,
+    );
   }
 
   const startedAt = deps.now();
@@ -176,10 +196,16 @@ export async function runCheck(options: CheckOptions): Promise<number> {
 
   const baseUrl = config.target.baseUrl;
   if (baseUrl === undefined) {
-    stderr.write(
-      `error: target.baseUrl is not set in ${options.configPath}\n  A check issues requests, so it needs somewhere to send them. Set target.baseUrl.\n`,
+    return present(
+      {
+        code: 2,
+        summary: 'the target has no base URL',
+        where: `${options.configPath}, at target.baseUrl`,
+        reason: 'A check issues requests, so it needs somewhere to send them.',
+        suggestion: 'Set target.baseUrl in the config, for example http://localhost:3000.',
+      },
+      presentTo,
     );
-    return 2;
   }
 
   // One request before anything else, so an unreachable target is reported as one rather
@@ -189,8 +215,17 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   // application; whether anything answered at all is the fact this is asking for.
   const reachability = await target.client.send({ method: 'GET', path: '/' }, { kind: 'none' });
   if (isTransportError(reachability)) {
-    stderr.write(`error: could not reach ${baseUrl}\n  ${reachability.message}\n`);
-    return 3;
+    // Exit 3: the target is unreachable, so no run happened at all.
+    return present(
+      {
+        code: 3,
+        summary: 'could not reach the target',
+        where: baseUrl,
+        reason: reachability.message,
+        suggestion: 'Start the application, or correct target.baseUrl in the config.',
+      },
+      presentTo,
+    );
   }
 
   reporter.step('Probing the target');

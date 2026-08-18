@@ -15,6 +15,7 @@ import {
 } from '@qai/core';
 
 import type { Stream } from '../reporter.ts';
+import { present } from '../errors.ts';
 import type { Settings } from '../settings.ts';
 import { DEFAULT_SPEC_GLOB } from './validate.ts';
 
@@ -47,6 +48,8 @@ export interface ProbeOptions {
   readonly stderr: Stream;
   readonly reporter: Reporter;
   readonly deps?: Deps;
+  /** Adds a stack trace to any error this prints. */
+  readonly verbose?: boolean;
 }
 
 function tally<T extends string>(items: readonly T[], keys: readonly T[]): string {
@@ -117,20 +120,32 @@ export async function runProbe(options: ProbeOptions): Promise<number> {
   const { cwd, env, settings, stdout, stderr, reporter } = options;
   const deps = options.deps ?? systemDeps();
   const config = options.config;
+  const presentTo = { stderr, ...(options.verbose === true ? { verbose: true } : {}) };
 
   if (config === undefined) {
-    stderr.write(
-      `error: no configuration at ${options.configPath}\n  Run "qai init" to write one, or pass --config with the path to yours.\n`,
+    return present(
+      {
+        code: 2,
+        summary: 'no configuration was found',
+        where: options.configPath,
+        suggestion: 'Run "qai init" to write one, or pass --config with the path to yours.',
+      },
+      presentTo,
     );
-    return 2;
   }
 
   const baseUrl = config.target.baseUrl;
   if (baseUrl === undefined) {
-    stderr.write(
-      `error: target.baseUrl is not set in ${options.configPath}\n  A probe issues requests, so it needs somewhere to send them. Set target.baseUrl.\n`,
+    return present(
+      {
+        code: 2,
+        summary: 'the target has no base URL',
+        where: `${options.configPath}, at target.baseUrl`,
+        reason: 'A probe issues requests, so it needs somewhere to send them.',
+        suggestion: 'Set target.baseUrl in the config, for example http://localhost:3000.',
+      },
+      presentTo,
     );
-    return 2;
   }
 
   if (settings.format.value === 'sarif' || settings.format.value === 'junit') {
@@ -159,8 +174,16 @@ export async function runProbe(options: ProbeOptions): Promise<number> {
   reporter.step(`Reaching ${baseUrl}`);
   const reachability = await target.client.send({ method: 'GET', path: '/' }, { kind: 'none' });
   if (isTransportError(reachability)) {
-    stderr.write(`error: could not reach ${baseUrl}\n  ${reachability.message}\n`);
-    return 3;
+    return present(
+      {
+        code: 3,
+        summary: 'could not reach the target',
+        where: baseUrl,
+        reason: reachability.message,
+        suggestion: 'Start the application, or correct target.baseUrl in the config.',
+      },
+      presentTo,
+    );
   }
 
   reporter.step('Probing the target');

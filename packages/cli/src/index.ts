@@ -2,6 +2,7 @@ import process from 'node:process';
 
 import { registerCommands, type CommandOutcome } from './commands/index.ts';
 import { describeContext, isContextError, resolveContext } from './context.ts';
+import { present, presentContextError, unexpected } from './errors.ts';
 import { createProgram } from './program.ts';
 import type { Flags } from './settings.ts';
 import type { Stream } from './reporter.ts';
@@ -22,6 +23,15 @@ export {
   GLOBAL_FLAGS,
 } from './program.ts';
 export { createReporter, type Stream, type ReporterOptions } from './reporter.ts';
+export {
+  present,
+  presentAll,
+  presentContextError,
+  fromDiagnostic,
+  unexpected,
+  cliError,
+  type CliError,
+} from './errors.ts';
 export {
   resolveSettings,
   resolveConfigPath,
@@ -133,25 +143,33 @@ export async function main(argv: readonly string[], options: MainOptions = {}): 
     await program.parseAsync([...argv]);
   } catch (error) {
     if (isCommanderError(error) && BENIGN_COMMANDER_CODES.has(error.code ?? '')) return 0;
-    if (isCommanderError(error)) return 2;
-    throw error;
+    if (isCommanderError(error)) {
+      // Commander has already printed its own usage message by this point, so repeating
+      // it in this project's voice would say the same thing twice.
+      return 2;
+    }
+
+    // Anything else reaching here is a fatal runtime error, which 03-CONTRACTS.md gives
+    // code 3. Without this the binary ends in a raw trace and whatever code Node chose,
+    // and for a tool whose exit code is the product that is worse than the crash.
+    return present(unexpected(error), {
+      stderr,
+      ...(argv.includes('--verbose') ? { verbose: true } : {}),
+    });
   }
 
   // A command that ran owns the outcome. `init` writes files and reports on them, and
   // resolving settings afterwards would be work nobody asked for.
   if (outcome.code !== undefined) return outcome.code;
 
-  const flags = program.opts<Flags & { verbose?: boolean; color?: boolean }>();
+  const flags = program.opts<Flags>();
   const context = resolveContext({ flags, env, cwd });
 
   if (isContextError(context)) {
-    // Presented in this project's voice by M8.7. Until then the reason reaches the user
-    // plainly, on stderr, and the code is 2 because no run was performed.
-    stderr.write(`error: ${context.message}\n`);
-    if ('suggestion' in context && context.suggestion !== undefined) {
-      stderr.write(`  ${context.suggestion}\n`);
-    }
-    return 2;
+    return presentContextError(context, {
+      stderr,
+      ...(flags.verbose === true ? { verbose: true } : {}),
+    });
   }
 
   // Written to stderr, not stdout, because stdout carries the report. A user piping a

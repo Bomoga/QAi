@@ -68,6 +68,9 @@ export interface Flags {
   readonly failOn?: string;
   readonly failOnUnverified?: boolean;
   readonly concurrency?: string;
+  /** Global flags that are not settings, but that every command reads. */
+  readonly verbose?: boolean;
+  readonly color?: boolean;
 }
 
 export interface SettingsInput {

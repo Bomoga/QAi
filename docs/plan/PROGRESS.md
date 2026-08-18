@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T15:40:00Z
+Updated: 2026-08-18T15:47:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.7
+Next task: M8.8
 
 ## S0. Skeleton
 
@@ -261,8 +261,9 @@ Surprises worth recording:
 - [x] M8.4 validate (commits 44aa7c7 and 55bc6f5)
 - [x] M8.5 check, the startup capability report, and exit code application
   (commits fcf8d2f and 13cd02c)
-- [~] M8.6 probe done (commits f93e5f8 and one backfilled below); report is blocked on
-  M6 run persistence, recorded in the M8 open questions; diff was already S7
+- [~] M8.6 probe done (commits f93e5f8 and 4bbab25); report is blocked on M6 run
+  persistence, recorded in the M8 open questions; diff was already S7
+- [x] M8.7 error presentation for exit codes 2 and 3 (commit backfilled below)
 - [ ] M8.7 error presentation for exit codes 2 and 3
 - [ ] M8.8 the GitHub Action, with SARIF upload and outputs
 - [ ] M8.9 end to end test of init, validate, and check against fixtures/ledger
@@ -283,6 +284,35 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.7: there were nine error sites each formatting its own shape. A user learns the shape
+  of a tool's errors the way they learn its output, by seeing the same thing twice, and
+  the only way that holds across nine sites is if none of them formats its own. They all
+  go through `present` now, which takes the summary, the where, the reason, and one
+  suggested fix, and returns the exit code the error carries.
+- M8.7: the code travels with the error rather than being chosen by the caller. That is
+  what stops a new error path picking 1, which belongs to a completed run with findings.
+- M8.7: a stack trace appears only under `--verbose`. A trace through this tool's
+  internals tells a user nothing about their spec, and printing one by default trains
+  people to skip error output. Proved by breaking it: printing it unconditionally failed
+  exactly the test written for it.
+- M8.7: `main` now catches anything that is not a Commander error and presents it as exit
+  3, which 03-CONTRACTS.md gives to a fatal runtime error with the run aborted. Without
+  it the binary ended in a raw trace and whatever code Node chose, which for a tool whose
+  exit code is the product is worse than the crash.
+- M8.7: a spec diagnostic becomes one error per problem rather than a summary and a list,
+  so a spec with four mistakes costs one run instead of four. The suggestion names the
+  path rather than guessing the fix, since a tool that guessed what somebody meant by a
+  malformed requirement would be wrong often enough to be worse than saying where to look.
+- M8.7: the Definition of Done sentence, that a malformed spec exits 2 naming file, path,
+  reason, and a suggested fix with no stack trace, is five assertions and is tested as
+  five, including the negative.
+- M8.7 escape trap, fourth time this session and the most expensive yet: the Bash tool
+  strips one level of backslash before Python sees a heredoc, so `\n` in a pattern
+  arrives as a real newline and never matches TypeScript source containing a literal
+  backslash-n. An earlier patch silently wrote real newlines inside template literals
+  because of it. Two rules that work: build the escape from `chr(92)`, and normalize CRLF
+  before matching, since Prettier writes CRLF here and multi-line LF patterns never match.
 
 - M8.6 is half done and the half that is missing is blocked, not skipped. `probe` is
   implemented. `report <runId>` re-renders a stored run and nothing stores one:
