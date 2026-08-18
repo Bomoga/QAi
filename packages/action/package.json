@@ -13,11 +13,13 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "action.yml"
   ],
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "@qai/cli": "workspace:*"

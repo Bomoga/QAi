@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T15:47:00Z
+Updated: 2026-08-18T15:53:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.8
+Next task: M8.9
 
 ## S0. Skeleton
 
@@ -284,6 +284,34 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.8: the Action runs `qai check` once, never twice. A second run to collect counts in
+  another format would double the traffic against the target and could disagree with the
+  first, since a run writes to whatever it is allowed to write to. Every output comes out
+  of the SARIF, which carries coverage, the unverified count, and the model assisted count
+  in `runs[0].properties` because M7.4 put them there for exactly this caller.
+- M8.8: the check step captures the exit code instead of letting it end the step. A run
+  that found something still has a report worth uploading, and failing there would skip
+  the upload and leave the findings invisible on the pull request. The workflow fails at
+  the end with the code the CLI returned, applied and never recomputed from the counts.
+- M8.8: output computation is TypeScript and orchestration is YAML, because a decision in
+  YAML is a decision nobody can test. Thirteen tests cover the computation, and one of
+  them asserts that the set of names written matches the set declared in `action.yml`: an
+  output declared with nothing writing it comes back as an empty string, which a workflow
+  reads as zero findings.
+- M8.8: an unreadable SARIF throws rather than reporting zero. An Action that said no
+  findings because it could not read the file is the quietest possible failure.
+- M8.8 verified against a real report, not a hand-built one: the fixture's defective run
+  gives 15 findings, 3 error, 7 warning, 5 note, coverage 87%, 2 unverified, 1 model
+  assisted, which matches the M7.7 golden exactly.
+- M8.8: `upload-sarif` is an input although it mirrors no flag. Uploading needs code
+  scanning enabled on the repository, and a workflow that only wants the outputs should
+  not fail on that. Every other input mirrors a global flag, since a flag and an input
+  that meant different things would be two surfaces to learn.
+- M8.8: the repository now has a README, which it did not before. The module asks for the
+  three line workflow snippet to live there, and there was nowhere to put it.
+- M8.8: `packages/action` got its own vitest config, the third time the M1.2 trap has
+  come up. Without one the package's Definition of Done command passes by running nothing.
 
 - M8.7: there were nine error sites each formatting its own shape. A user learns the shape
   of a tool's errors the way they learn its output, by seeing the same thing twice, and

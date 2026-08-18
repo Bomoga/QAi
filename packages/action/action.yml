@@ -1,0 +1,130 @@
+name: 'QAi'
+description: 'Check that an application does what its spec said it would, and report where they disagree.'
+author: 'QAi'
+
+# A composite action, per modules/M8-cli-ci.md: install, run the check, upload the SARIF,
+# set the outputs. It holds no verification logic. Everything it could decide is decided
+# by the CLI, which is decided by core.
+
+branding:
+  icon: 'check-square'
+  color: 'blue'
+
+inputs:
+  # These mirror the global flags. A flag and an input that mean different things would
+  # be two surfaces to learn.
+  spec:
+    description: 'Spec files or globs. Defaults to spec/*.spec.yaml.'
+    required: false
+    default: ''
+  config:
+    description: 'Path to qai.config.yaml.'
+    required: false
+    default: ''
+  fail-on:
+    description: 'Lowest finding severity that makes the run fail: high, medium, or low.'
+    required: false
+    default: 'high'
+  fail-on-unverified:
+    description: 'Treat a requirement nobody could check as a failure. Off by default.'
+    required: false
+    default: 'false'
+  concurrency:
+    description: 'How many checks to run at once.'
+    required: false
+    default: ''
+  working-directory:
+    description: 'Directory to run in.'
+    required: false
+    default: '.'
+
+  # Not a flag. An Action needs it because uploading requires code scanning to be enabled
+  # on the repository, and a workflow that only wants the outputs should not fail on that.
+  upload-sarif:
+    description: 'Upload the SARIF report so findings appear inline on the pull request.'
+    required: false
+    default: 'true'
+
+outputs:
+  findings-total:
+    description: 'Every finding the run surfaced.'
+    value: ${{ steps.outputs.outputs.findings-total }}
+  findings-error:
+    description: 'Findings at SARIF level error, which is severity high.'
+    value: ${{ steps.outputs.outputs.findings-error }}
+  findings-warning:
+    description: 'Findings at SARIF level warning, which is severity medium.'
+    value: ${{ steps.outputs.outputs.findings-warning }}
+  findings-note:
+    description: 'Findings at SARIF level note, which is severity low or info.'
+    value: ${{ steps.outputs.outputs.findings-note }}
+  coverage-percent:
+    description: 'Requirements with at least one check that reached a verdict. Not a pass rate.'
+    value: ${{ steps.outputs.outputs.coverage-percent }}
+  requirements-unverified:
+    description: 'Requirements nobody could check.'
+    value: ${{ steps.outputs.outputs.requirements-unverified }}
+  model-assisted-checks:
+    description: 'Checks that were not fully deterministic.'
+    value: ${{ steps.outputs.outputs.model-assisted-checks }}
+  sarif-file:
+    description: 'Path to the SARIF report the run wrote.'
+    value: ${{ steps.check.outputs.sarif-file }}
+  exit-code:
+    description: 'The code qai check returned: 0, 1, 2, or 3.'
+    value: ${{ steps.check.outputs.exit-code }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run qai check
+      id: check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      # The exit code is captured rather than allowed to end the step. A run that found
+      # something still has a report worth uploading, and failing here would skip the
+      # upload and leave the findings invisible on the pull request. The workflow is
+      # failed at the end instead, with the code the CLI actually returned.
+      run: |
+        set +e
+        npx --yes qai check \
+          ${{ inputs.spec }} \
+          ${{ inputs.config && format('--config {0}', inputs.config) || '' }} \
+          ${{ inputs.concurrency && format('--concurrency {0}', inputs.concurrency) || '' }} \
+          ${{ inputs.fail-on-unverified == 'true' && '--fail-on-unverified' || '' }} \
+          --fail-on ${{ inputs.fail-on }} \
+          --format sarif \
+          --out qai-results.sarif
+        code=$?
+        set -e
+        echo "exit-code=${code}" >> "$GITHUB_OUTPUT"
+        echo "sarif-file=qai-results.sarif" >> "$GITHUB_OUTPUT"
+        if [ ! -f qai-results.sarif ]; then
+          echo "::error::qai check exited ${code} without writing a report. Codes 2 and 3 mean no run happened."
+          exit "${code}"
+        fi
+
+    - name: Read the report
+      id: outputs
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: node "${{ github.action_path }}/dist/index.js" qai-results.sarif
+
+    - name: Upload SARIF
+      if: ${{ inputs.upload-sarif == 'true' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.working-directory }}/qai-results.sarif
+        category: qai
+
+    - name: Apply the exit code
+      shell: bash
+      # Applied, never recomputed. core decided whether these findings are a failure and
+      # the CLI returned that decision; re-deriving it from the counts here would be a
+      # second policy that could disagree with the first.
+      run: |
+        code="${{ steps.check.outputs.exit-code }}"
+        if [ "${code}" != "0" ]; then
+          echo "::error::qai check exited ${code}"
+          exit "${code}"
+        fi
