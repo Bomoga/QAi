@@ -1,10 +1,12 @@
-import { resolve } from 'node:path';
+﻿import { resolve } from 'node:path';
 
 import { getGlobalDispatcher } from 'undici';
 
 import {
+  collectCoverageGaps,
   createActorSessions,
   createHttpClient,
+  formatCoverageGap,
   isConfigFailure,
   isLoadFailure,
   loadConfig,
@@ -142,18 +144,15 @@ async function main(): Promise<void> {
     process.stdout.write(`\n[${failure.severity}] ${failure.title}\n  ${failure.detail ?? ''}\n`);
   }
 
-  if (unverified.length > 0 || unplannable.length > 0) {
-    process.stdout.write(`\nunverified, with reasons\n`);
-    for (const entry of unverified) {
-      process.stdout.write(
-        `  ${entry.criterionId.padEnd(12)}${entry.reason}\n    ${entry.detail}\n`,
-      );
-    }
-    for (const entry of unplannable) {
-      process.stdout.write(
-        `  ${entry.criterionId.padEnd(12)}${entry.reason}\n    ${entry.detail}\n`,
-      );
-    }
+  // Both side channels through one collector, so neither can be printed without the
+  // other and the two scripts report a gap the same way.
+  const gaps = collectCoverageGaps({
+    behavioralUnplannable: unplannable,
+    behavioralUnverified: unverified,
+  });
+  if (gaps.length > 0) {
+    process.stdout.write(`\ncoverage gaps, with reasons\n`);
+    for (const gap of gaps) process.stdout.write(`  ${formatCoverageGap(gap)}\n`);
   }
 
   const warnings = validateAcceptanceCriteria(spec.spec, 'fixtures/ledger/spec/ledger.spec.yaml');

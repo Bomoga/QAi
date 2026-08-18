@@ -10,6 +10,7 @@
  * Pending: the rest of M5, the runners and the fuzzy path.
  */
 export * from './registry.ts';
+export * from './gaps.ts';
 export * from './result.ts';
 export * from './types.ts';
 export * from './access/index.ts';

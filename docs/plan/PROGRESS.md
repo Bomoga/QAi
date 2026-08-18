@@ -198,7 +198,8 @@ Surprises worth recording:
 - [x] M5.12c the actor axis on the sweep (commits adcff2a, 8199d07, aa954c5), approved 2026-08-17
 - [x] M5.13 the impostor actor, closing the last criterion in the fixture spec (commits 24bd43b and 3389dd9), approved 2026-08-17
 - [x] M5.14 AR-011-01 pointed at a resource that has routes, so the last unplannable access rule became a check (commits 1f6d690 and 53acdcd)
-- [x] M5.15 the S3 script prints coverage gaps with their reasons instead of counting them (commit backfilled below)
+- [x] M5.15 the S3 script prints coverage gaps with their reasons instead of counting them (commits 5ccbfd5 and 4b68276)
+- [x] M5.16 one collector for every coverage gap, so no caller has to remember three side channels (commit backfilled below)
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
@@ -257,6 +258,24 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.16: gaps arrived from three places, `planAccessChecks`, `planBehavioralChecks` and
+  `runBehavioralChecks`, and a caller that remembered two dropped the third silently.
+  `collectCoverageGaps` gathers all three, sorted by requirement then id, and both
+  demonstration scripts print from it. One place to read, one order, one format.
+- M5.16, and this corrects what M5.15 proposed: the open question suggested turning each
+  unplannable rule into a `CheckResult` with verdict `inconclusive` so gaps would sit in
+  the same table as everything else. That is wrong. 00-INDEX.md defines a check as a single
+  verification attempt producing one verdict, and an unplannable rule was never attempted,
+  so it would put work the tool never did into `summary.checks.total`. The contract already
+  has the right home, `unverifiedReasons` on the RunResult, keyed by requirement and drawn
+  from a closed set, and every gap shape already carries a reason from that set.
+- M5.16: one gap per rule or criterion, not per requirement. A requirement with two
+  unplannable rules has two things wrong with it and whoever is fixing them needs both
+  named. Collapsing per requirement is M7's job when it fills `unverifiedReasons`.
+- M5.16: a criterion reported by two sources at once is listed once, with the planning
+  reason winning, since planning happens first and its reason is the more actionable. A
+  gap listed twice reads as two problems.
 
 - M5.15, the actual reason AR-011-01 went unnoticed for two stages: `check-ledger.ts`
   printed `1 not` and threw the reasons away. `planAccessChecks` had been returning the

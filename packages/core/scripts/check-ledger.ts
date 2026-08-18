@@ -5,6 +5,8 @@ import { getGlobalDispatcher } from 'undici';
 import {
   createActorSessions,
   createHttpClient,
+  collectCoverageGaps,
+  formatCoverageGap,
   isConfigFailure,
   isLoadFailure,
   loadConfig,
@@ -114,11 +116,10 @@ async function main(): Promise<void> {
    * one of those runs and never reached the reader. A coverage gap reported as a number is
    * a coverage gap nobody acts on, and invariant I4 exists to say the opposite.
    */
-  if (unplannable.length > 0) {
+  const gaps = collectCoverageGaps({ accessUnplannable: unplannable });
+  if (gaps.length > 0) {
     process.stdout.write(`\ncoverage gaps, with reasons\n`);
-    for (const entry of unplannable) {
-      process.stdout.write(`  ${entry.ruleId.padEnd(12)}${entry.reason}\n    ${entry.detail}\n`);
-    }
+    for (const gap of gaps) process.stdout.write(`  ${formatCoverageGap(gap)}\n`);
   }
 
   const threshold = FAIL_ON['high'] ?? 3;
