@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T10:24:00Z
+Updated: 2026-08-18T10:32:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.2
+Next task: M8.3
 
 ## S0. Skeleton
 
@@ -254,8 +254,9 @@ Surprises worth recording:
 - [x] M7.7 golden RunResult files for both fixture configurations (capture command 14bb703,
   goldens and render tests 9b06153, module marked complete 6e0c3d0)
 - [x] M8.1 scaffold packages/cli with Commander, the qai binary, and the reporter
-  (commits a411409 and one backfilled below)
-- [ ] M8.2 configuration precedence and --verbose resolved config output
+  (commits a411409 and 352be6e)
+- [x] M8.2 configuration precedence and --verbose resolved config output
+  (commits ad295c4 and one backfilled below)
 - [ ] M8.3 init with scaffolding and the .gitignore entry
 - [ ] M8.4 validate
 - [ ] M8.5 check, the startup capability report, and exit code application
@@ -280,6 +281,39 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.2: the config file layer needed a schema change. `TargetConfigSchema` is strict, so
+  before this a project writing `format: sarif` into `qai.config.yaml` got a load error,
+  and the third layer of the precedence the module states could not exist. `defaults` is
+  a cross-module edit into M2's file, same shape as M3.2 and M2.8.
+- M8.2: every resolved setting carries the layer it came from, and `--verbose` prints it.
+  The value alone does not answer the question a confused user is asking. Somebody
+  staring at a `sarif` report they did not ask for needs to be told it came from
+  `QAI_FORMAT` in their shell profile, or the value sends them to the wrong file.
+- M8.2 proved by breaking it: swapping the flag and environment branches in `pick` failed
+  two tests, including the one that sets all four layers at once. Single-layer tests are
+  the trap here, since a resolver that reads only the layer a test supplies passes every
+  one of them and still gets the order wrong.
+- M8.2: an environment value outside its closed set is an error, not a fallback. Rule R2.
+  A bad `QAI_FORMAT` that quietly became text would hand somebody a report in a shape
+  their pipeline cannot read with nothing anywhere saying why.
+- M8.2: an empty variable counts as unset, and `QAI_FAIL_ON_UNVERIFIED=0` counts as off.
+  An empty variable is how a shell spells unset by accident, and reading either as on is
+  the surprise that costs a red build nobody can explain.
+- M8.2: an absent switch is undefined, never false. Commander leaves it undefined, and
+  reading that as an explicit false would make the flag layer always win and silence the
+  two layers beneath it. There is a test for exactly that.
+- M8.2: a missing config file is not an error while resolving settings, but a file that
+  exists and will not load is. `loadConfig` reports both identically as "could not read",
+  so the CLI checks existence first. Before `qai init` has run there is no file and
+  `qai --verbose` should still say what it resolved; reading a malformed config as absent
+  would run against built-in defaults and report on the wrong target.
+- M8.2: `--verbose` goes to stderr, like all diagnostics. Proved by breaking it: pointing
+  it at stdout failed three tests. A user running `qai check --format json --verbose | jq`
+  has to get a clean document.
+- M8.2 found by running the binary, not by the suite: `fail-on-unverified` is exactly
+  eighteen characters, so a column of eighteen ran the name straight into its value. The
+  suite only ever asserted that the words appear.
 
 - M8 is branched from `feat/m7-report`, not from `dev`, and that is a deliberate
   deviation from the one rule in 04-CONVENTIONS.md that says base every branch on `dev`.
