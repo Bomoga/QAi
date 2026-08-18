@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T05:00:00Z
-Current stage: S5 merged, and the follow-up merged with it. Nothing in progress
-Next task: S6, modules M7 and M8, when a human says to start it
+Updated: 2026-08-18T05:30:00Z
+Current stage: S6, module M7, branch feat/m7-report
+Next task: M7.2
 
 ## S0. Skeleton
 
@@ -245,7 +245,15 @@ Surprises worth recording:
 
 ## S6. Report and CI (M7, M8)
 
-- [ ] not started
+- [x] M7.1 assembleRun, the verdict rollup, and the closed reason set (commit backfilled below)
+- [ ] M7.2 renderJson with sorted, stable output
+- [ ] M7.3 renderText in the section order the module gives
+- [ ] M7.4 renderSarif, validated against the 2.1.0 schema
+- [ ] M7.5 renderJunit, inconclusive mapping to skipped
+- [ ] M7.6 computeExitCode with --fail-on and --fail-on-unverified
+- [ ] M7.7 golden RunResult files for both fixture configurations
+- Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
+- Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`. M8 gets its own branch per the one module per branch rule.
 
 ## S7. Store and delta (M6)
 
@@ -260,6 +268,24 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.1: the rollup is one exported function, `rollUpRequirement`, because the module says
+  it is the rule most likely to be reimplemented subtly differently somewhere else. It is
+  tested over the whole combination table, and the clause that matters is that all
+  inconclusive is unverified rather than verified. Proved by breaking it: forcing that
+  branch to fall through failed exactly the two tests written for it.
+- M7.1: coverage is requirements with at least one non-inconclusive check over total
+  requirements, and a failing check still counts as coverage, since the requirement was
+  established. A run with no requirements is 0 rather than a division that would report
+  perfect coverage of nothing.
+- M7.1: `findingsBySeverity` counts failures only. A passing check carries `info`, and
+  counting it would report a clean run as having findings.
+- M7.1: unverified reasons prefer a recorded coverage gap over the generic fallback, since
+  a gap names something the reader can act on. That is what `collectCoverageGaps` from
+  M5.16 feeds, so the three side channels reach the RunResult through one path.
+- M7.1: requirements are listed in spec order rather than in the order checks finished, so
+  a reader comparing two runs looks down the same list both times. Everything else is
+  sorted before it is returned, which is what M7.2's golden files will depend on.
 
 - M5.16: gaps arrived from three places, `planAccessChecks`, `planBehavioralChecks` and
   `runBehavioralChecks`, and a caller that remembered two dropped the third silently.
