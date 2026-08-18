@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T15:56:00Z
+Updated: 2026-08-18T16:00:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: the S6 stage boundary
+Next task: S7, on a branch cut from dev once PR #10 and the M8 PR are merged
 
 ## S0. Skeleton
 
@@ -268,6 +268,54 @@ Surprises worth recording:
 - [ ] M8.8 the GitHub Action, with SARIF upload and outputs
 - [ ] M8.9 end to end test of init, validate, and check against fixtures/ledger
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
+- Exit criterion, the parts that can be verified from a terminal: verified 2026-08-18.
+  `qai check` against the defective fixture writes conforming SARIF 2.1.0 with 15 results
+  across three rules and levels error, warning, and note, and exits 1. The Action reads
+  that document and produces 15 findings, 3 error, 7 warning, 5 note, coverage 87%, 2
+  unverified, 1 model assisted. `.github/workflows/qai.yml` runs the whole sequence.
+- Exit criterion, the part that cannot: whether the findings actually render inline on the
+  pull request has to be read in a browser. The `gh` token has no Checks or Actions
+  permission, and uploading SARIF to a private repository needs code scanning enabled,
+  which is a repository setting rather than anything in this branch. Left for the human.
+
+### S6 summary
+
+Built: run assembly and the verdict rollup, four emitters, the exit code recommendation,
+two golden run results captured from the real fixture, the whole `qai` command surface
+except `report`, error presentation in one voice, a composite GitHub Action, an end to end
+test, and the repository's first README. 1406 tests pass across 68 files, up from 1173
+across 50 at the start of the stage.
+
+The sequence 01-PRODUCT.md calls the definition of success is now real for its first five
+steps: `qai init` scaffolds, a hand written spec validates, `qai check` exits non-zero with
+access findings carrying a file reference and a request and response pair, the defect is
+fixed, and `qai check` exits zero. Only the sixth, `qai diff` showing a requirement move
+between runs, is missing, and that is S7.
+
+Deferred, with reasons recorded rather than assumed:
+
+- `qai report <runId>` re-renders a stored run and nothing stores one. Run persistence is
+  M6, in S7. The module header says M6 is required only by `diff`, which is not true of
+  `report` either, and that is a plan error rather than a coding decision.
+- SARIF conformance is checked against a transcription of the 2.1.0 schema rather than
+  against the published document, because no JSON Schema validator is approved and rule R9
+  forbids a test fetching one.
+
+Four cross-module edits into completed modules, each flagged in the owning module file:
+`Reporter` into M7's directory, `defaults` into M2's config schema, `files` onto M1's
+`LoadedSpec`, and two path fixes in M1's loader that only surfaced when a real command was
+handed a real Windows path.
+
+Surprises worth recording:
+
+- Every stage since S1 has carried a Definition of Done line that could not run because
+  the CLI did not exist. They all run now.
+- Running the binary found three things the suite could not: `qai --help` ended in a stack
+  trace, a column of eighteen characters ran a setting name into its value, and the text
+  report's second section was blank because nobody had passed it an Observation.
+- The M8 Definition of Done names `fixtures/ledger/qai.config.yaml`, which does not exist.
+  The criterion was demonstrated against the real path and both halves hold.
+
 - Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`.
 - M7 finished 2026-08-18 and opened as PR #10, eleven commits, unmerged. `feat/m8-cli-ci` is cut from `feat/m7-report` rather than from `dev`, because M8 imports emitters that do not exist on `dev` until #10 merges. Rebase onto `dev` once it does.
 
