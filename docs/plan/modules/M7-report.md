@@ -96,6 +96,19 @@ is the explicit equivalent.
 
 ## Open questions
 
+- **M7.7 is blocked on a human, and the blocker is the target rather than the code.** The
+  capture command is written and verified,
+  `pnpm --filter @qai/core capture:goldens <defective|fixed>`. Capturing the two goldens
+  needs `fixtures/ledger` restarted once per configuration, since the defect switches are
+  its environment and a restart is its reset. Port 3000 is held by PID 4880, a ledger
+  started from this repository at 00:13 on 2026-08-18 by something other than the session
+  that hit this. It cannot simply be reused: `INV-1001` reports `total_cents` 125003 where
+  the seed is 125000, so mutating checks have already written to it, and a golden captured
+  against drifted state would not reproduce from a fresh start. Stopping a process this
+  session did not start is the human's call. Separately, HEAD moved from `feat/m7-report`
+  to `dev` mid-session with nothing in the session running a checkout, so whether a second
+  session is live in this working tree needs settling before more commits land.
+
 - **M7.4, needs a dependency decision.** The Definition of Done says SARIF output
   validates against the published schema. Doing that literally means running a JSON
   Schema validator over `sarif-schema-2.1.0.json`, and no validator is on the approved
