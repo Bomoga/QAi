@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T09:26:00Z
+Updated: 2026-08-18T09:34:00Z
 Current stage: S6, module M7, branch feat/m7-report
-Next task: M7.7
+Next task: M7.7, blocked, see Blocked below
 
 ## S0. Skeleton
 
@@ -250,8 +250,9 @@ Surprises worth recording:
 - [x] M7.3 renderText in the section order the module gives (commit 2c7a182)
 - [x] M7.4 renderSarif, validated against the 2.1.0 schema (commit f406813)
 - [x] M7.5 renderJunit, inconclusive mapping to skipped (commit b0784a4)
-- [x] M7.6 computeExitCode with --fail-on and --fail-on-unverified (commit backfilled below)
-- [ ] M7.7 golden RunResult files for both fixture configurations
+- [x] M7.6 computeExitCode with --fail-on and --fail-on-unverified (commit 66c9cc2)
+- [~] M7.7 golden RunResult files for both fixture configurations: the capture command is
+  written and verified, the two goldens and the render tests are blocked on a human
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
 - Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`. M8 gets its own branch per the one module per branch rule.
 
@@ -268,6 +269,39 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.7 partial, and the reason it stopped is worth reading before anyone retries it. The
+  capture command exists, `pnpm --filter @qai/core capture:goldens <defective|fixed>`, and
+  it typechecks, lints, and formats. What it needs is a target in a known configuration,
+  and the machine has a `fixtures/ledger` on port 3000 that this session did not start,
+  running since 00:13 today, which is before this session began.
+- M7.7: that server cannot be used as it stands, and this is a fact rather than caution.
+  `INV-1001` reports `total_cents` 125003 where the seed in `fixtures/ledger/src/data.ts`
+  is 125000. M5.11 made an accepted write actually write, applying a fixed increment, so
+  three mutating checks have already landed on this process. A golden captured against it
+  would encode drifted state and would not reproduce from a fresh start, which is the one
+  property a golden has to have.
+- M7.7: the running server is otherwise in the defective configuration, established by
+  reading it rather than assuming. D1 on, a cross-organization read of `INV-1001` as
+  `outsider` returns 200. D2 and D4 on, the list as `outsider` returns the org-1 invoice
+  and carries `notes`. D5 on, `/api/debug/state` answers 200. D3 was deliberately not
+  probed, since probing it writes.
+- M7.7: capturing both goldens needs the ledger restarted twice, once per configuration,
+  which means stopping a process this session did not start. That is the human's call, so
+  the loop stopped here rather than killing it.
+- Worth flagging separately, and unrelated to the plan: HEAD moved from `feat/m7-report`
+  to `dev` partway through this session, between the M7.6 commit and the start of M7.7.
+  Nothing in this session ran a checkout. The reflog records it as
+  `checkout: moving from feat/m7-report to dev`, and the branch and all six commits were
+  intact, so nothing was lost. If a second session or tool is operating in this working
+  tree, that needs settling before more commits land, since committing to `dev` is
+  forbidden and a concurrent checkout could land one there.
+- M7.7: the capture pins `toolVersion`, `runId`, and both instants rather than reading
+  them, and uses `fixedDeps` for the clock and the identifier source. Without that every
+  capture differs in its timestamps and evidence ids and the file tests the calendar.
+- M7.7: nothing in the suite calls the capture command. 06-TESTING.md says to regenerate
+  goldens only with an explicit command whose diff a human reads, and a golden that
+  changed is a question rather than a chore.
 
 - M7.6: only 0 and 1 are computed here. 03-CONTRACTS.md gives 2 to an invalid spec or a
   configuration error and 3 to an unreachable target or a fatal runtime error, and both
@@ -1011,4 +1045,9 @@ Surprises worth recording:
 
 ## Blocked
 
-- none
+- **M7.7, the two golden files and their render tests.** Needs `fixtures/ledger` restarted
+  in each configuration. Port 3000 is held by PID 4880, a ledger started from this
+  repository at 00:13 today by something other than this session, and its state has
+  already drifted from the seed. Two questions for a human: may that process be stopped,
+  and is a second session active in this working tree, given that HEAD was moved from
+  `feat/m7-report` to `dev` mid-session by something this session did not run.
