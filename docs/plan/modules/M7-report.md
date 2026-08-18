@@ -1,6 +1,6 @@
 ﻿# M7: Run Assembly and Report Emitters
 
-**Status:** not started
+**Status:** complete
 **Owns:** `packages/core/src/report/`, run assembly in `packages/core/src/index.ts`
 **Depends on:** M1, M3, M4, M5
 **Depended on by:** M6, M8
@@ -96,18 +96,24 @@ is the explicit equivalent.
 
 ## Open questions
 
-- **M7.7 is blocked on a human, and the blocker is the target rather than the code.** The
-  capture command is written and verified,
-  `pnpm --filter @qai/core capture:goldens <defective|fixed>`. Capturing the two goldens
-  needs `fixtures/ledger` restarted once per configuration, since the defect switches are
-  its environment and a restart is its reset. Port 3000 is held by PID 4880, a ledger
-  started from this repository at 00:13 on 2026-08-18 by something other than the session
-  that hit this. It cannot simply be reused: `INV-1001` reports `total_cents` 125003 where
-  the seed is 125000, so mutating checks have already written to it, and a golden captured
-  against drifted state would not reproduce from a fresh start. Stopping a process this
-  session did not start is the human's call. Separately, HEAD moved from `feat/m7-report`
-  to `dev` mid-session with nothing in the session running a checkout, so whether a second
-  session is live in this working tree needs settling before more commits land.
+- **M7.7 resolved 2026-08-18.** The blocker was the target, not the code: a leftover
+  ledger held port 3000 and its state had already drifted from the seed. The human
+  authorized stopping it. Both goldens are captured, and each was captured twice from a
+  freshly restarted ledger to prove the file reproduces byte for byte. Capturing needs a
+  restart between configurations and between captures, since the run writes to the
+  target.
+- **Two contract questions the goldens surfaced, neither blocking.** First, an access
+  `detail` already ends with its own request, evidence, and suggestion references, so a
+  rendered report repeats the evidence line. M3.8 recorded that a suggested fix lives
+  inside `detail` because `CheckResult` has no field for one, and said a report wanting
+  to render them separately should raise the question. This is that report. Second,
+  REQ-006 comes back `check-error`, which reads as though something threw; nothing did,
+  the entity simply does not exist to count. The closed set in `03-CONTRACTS.md` has no
+  member for that and `assembleRun` falls back to `check-error`.
+- **One observation for M5.** Every behavioral finding is titled "Acceptance criterion
+  AC-001-01" while every access finding states what happened. Side by side in a rendered
+  report the difference is stark, and the title is the first line a reviewer reads in a
+  code scanning list.
 
 - **M7.4, needs a dependency decision.** The Definition of Done says SARIF output
   validates against the published schema. Doing that literally means running a JSON
