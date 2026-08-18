@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T09:10:00Z
+Updated: 2026-08-18T09:18:00Z
 Current stage: S6, module M7, branch feat/m7-report
-Next task: M7.4
+Next task: M7.5
 
 ## S0. Skeleton
 
@@ -247,8 +247,8 @@ Surprises worth recording:
 
 - [x] M7.1 assembleRun, the verdict rollup, and the closed reason set (commit 3683191)
 - [x] M7.2 renderJson with sorted, stable output (commit c55759a)
-- [x] M7.3 renderText in the section order the module gives (commit backfilled below)
-- [ ] M7.4 renderSarif, validated against the 2.1.0 schema
+- [x] M7.3 renderText in the section order the module gives (commit 2c7a182)
+- [x] M7.4 renderSarif, validated against the 2.1.0 schema (commit backfilled below)
 - [ ] M7.5 renderJunit, inconclusive mapping to skipped
 - [ ] M7.6 computeExitCode with --fail-on and --fail-on-unverified
 - [ ] M7.7 golden RunResult files for both fixture configurations
@@ -268,6 +268,46 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.4, the honest state of "validates against the published schema": it validates
+  against `report/sarif-schema.ts`, a Zod transcription of the SARIF 2.1.0 required
+  property lists, closed enumerations, and property types, not against the published
+  JSON Schema. Running the real document needs a JSON Schema validator, none is approved,
+  and rule R9 forbids a test fetching one. The transcription is not decorative: changing
+  `version` to `2.1` failed eighteen tests. Recorded in the M7 Open questions with three
+  ways out, since adding a dependency is a human's call.
+- M7.4: SARIF results are failed checks plus the structural disagreements. The module
+  asks for one rule per check type and the contract has a `structural` type, so the rule
+  needs something to carry, and 01-PRODUCT.md calls those entries structural findings.
+  Without them D6, the entity the spec declares and the application never built, never
+  reaches the GitHub UI, which is the one surface a CI user reads. `observedNotSpecified`
+  brings its own severity; the other two take the constants M4.8 exported for exactly
+  this caller, which is that note's open item closed.
+- M7.4 deviation: the module says a location with no source names the endpoint.
+  `CheckResultRecord` has no endpoint field and the route lives inside `detail` as prose,
+  so a check names its rule and requirement instead. Parsing a path back out of a
+  sentence would be a guess in the one place a reader is told where to look. A structural
+  endpoint entry does carry an id and does name it.
+- M7.4: `partialFingerprints` carries the content-hashed check id. Without it GitHub
+  opens a new alert every run instead of tracking one, which turns a stable finding into
+  a stream of duplicates and is the failure that makes hand-rolled SARIF worth testing.
+- M7.4: `executionSuccessful` is true even when the run found things. Whether findings
+  exist is what `level` says, and conflating the two reports a working tool as broken.
+- M7.4: only a trailing colon and digits is read as a line number out of `locationRef`.
+  A Windows path carries a colon too, and slicing on the first one would point a reader
+  at a file whose name lost its drive letter.
+- M7.4: keys are written in order rather than sorted, unlike `renderJson`. `version` and
+  `$schema` leading the document is what every reader and every tool expects, arrays are
+  sorted before they are written, and no golden file depends on the alphabet here.
+- M7.4: the message is one part per line, title first, because a code scanning list shows
+  the leading line and the alert page shows the rest. Joined with a space, which is how
+  it was first written and how it read when printed, the title runs into the request
+  summary and neither is a sentence. Read by running it, not inferred from a green suite.
+- M7.4 repeat of a known Windows trap: a Python heredoc writing a JavaScript escape
+  turned `split('
+')` into a literal newline inside a string and the whole test file
+  failed to parse. Build the backslash from `chr(92)` or use the file tools. The notes
+  said this at M5 and it still cost a cycle.
 
 - M7.3 deviation, needs review: `TextOptions` carries an optional `Observation`. Section 2
   of the report is entity and endpoint counts by origin and confidence, and RunResult
