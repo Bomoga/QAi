@@ -86,6 +86,15 @@ pnpm --filter @qai/cli exec qai check --config fixtures/ledger/qai.config.yaml -
 
 ## Open questions
 
+- **The branch cannot be pushed while it adds a workflow file.** The fine-grained token
+  `gh` is authenticated with has no `workflow` scope, so GitHub rejects the whole push:
+  `refusing to allow a Personal Access Token to create or update workflow
+  .github/workflows/qai.yml without workflow scope`. That file is what runs the check on
+  a pull request, so the S6 exit criterion cannot be demonstrated without it. Two ways
+  out, both a human's: add the Workflows permission to the token, or push the branch and
+  add the workflow file under a different credential. Nothing was dropped from the branch
+  to work around it, since the workflow is the part the criterion needs.
+
 - **M8.6 is half done: `probe` is implemented and `report <runId>` is blocked.** The
   command re-renders a stored run, and nothing stores one. `packages/core/src/store/`
   does not exist, M6 owns run persistence, and this module's header says M6 is

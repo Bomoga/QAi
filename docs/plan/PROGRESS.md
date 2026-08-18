@@ -1428,6 +1428,12 @@ Surprises worth recording:
 
 ## Blocked
 
+- **Pushing `feat/m8-cli-ci`, and with it the S6 exit criterion.** The token has no
+  `workflow` scope, so GitHub rejects the entire push because one commit adds
+  `.github/workflows/qai.yml`. The workflow is what runs `qai check` on a pull request, so
+  removing it to get the push through would discard the thing the criterion needs. A human
+  either adds the Workflows permission to the token or pushes under another credential.
+
 - none. The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the
   leftover ledger, and confirmed the mid-session HEAD move was their own accident rather
   than a second session.
