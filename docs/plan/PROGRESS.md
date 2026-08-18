@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T09:18:00Z
+Updated: 2026-08-18T09:24:00Z
 Current stage: S6, module M7, branch feat/m7-report
-Next task: M7.5
+Next task: M7.6
 
 ## S0. Skeleton
 
@@ -248,8 +248,8 @@ Surprises worth recording:
 - [x] M7.1 assembleRun, the verdict rollup, and the closed reason set (commit 3683191)
 - [x] M7.2 renderJson with sorted, stable output (commit c55759a)
 - [x] M7.3 renderText in the section order the module gives (commit 2c7a182)
-- [x] M7.4 renderSarif, validated against the 2.1.0 schema (commit backfilled below)
-- [ ] M7.5 renderJunit, inconclusive mapping to skipped
+- [x] M7.4 renderSarif, validated against the 2.1.0 schema (commit f406813)
+- [x] M7.5 renderJunit, inconclusive mapping to skipped (commit backfilled below)
 - [ ] M7.6 computeExitCode with --fail-on and --fail-on-unverified
 - [ ] M7.7 golden RunResult files for both fixture configurations
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
@@ -268,6 +268,44 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.5: inconclusive maps to `skipped`, and the reason is worth stating rather than
+  remembering. A dashboard counts red and green and has no third column, so a check that
+  reached no verdict has to land in the one that means nobody knows. Reporting it as a
+  failure would also train the reader to ignore failures, which costs more than the gap
+  it hid. Proved by breaking it: disabling the branch failed three tests and nothing else.
+- M7.5: a requirement with no checks still gets a suite, holding one skipped case named
+  with its reason from `unverifiedReasons`. Emitting nothing drops the requirement out of
+  the dashboard, and a reader comparing two runs sees a requirement disappear rather than
+  a gap appear. Proved by breaking it: dropping the empty suite failed exactly one test.
+- M7.5: the test found a real gap rather than confirming the code. A model assisted check
+  that came back inconclusive was losing its label, because the failure path said
+  "Model assisted" and the skipped path only carried `detail`. A skipped case is exactly
+  where a reader asks why nobody knows, so it says so now.
+- M7.5: counts are computed from the cases that were emitted, not copied from `summary`.
+  Two sources for one number is how a report starts contradicting itself, and the root
+  totals are summed from the suites for the same reason.
+- M7.5: a check with no requirement id goes into an `unassigned` suite rather than being
+  dropped. A dropped check is a lost finding, and a structural result is the obvious case.
+- M7.5: the case name carries the check id as well as the rule id, because two actors
+  against one access rule are two checks sharing a rule id, per M3.1. A dashboard
+  tracking a case across runs needs the name to identify one check.
+- M7.5: `time` is on the root only, computed from the recorded instants rather than a
+  clock, per rule R6. Per-case timing is not recorded anywhere and writing zero for it
+  would claim a measurement nobody took.
+- M7.5: `errors` is written as zero rather than left off. Rule R4 turns a thrown check
+  into an inconclusive result, so nothing reaching this emitter is an error in the JUnit
+  sense, and an absent attribute reads as unknown where zero reads as a fact.
+- M7.5: XML escaping covers the five entities and strips the control bytes XML 1.0 cannot
+  represent. A raw byte in a captured detail would produce a document no parser reads,
+  which loses the whole report rather than one character of one message.
+- M7.5, the Windows escape trap for the third time this session: writing a regex over
+  control characters through a shell heredoc put literal control bytes into the source
+  file, and writing `split('
+')` the same way produced a real newline inside a string
+  literal and broke the parse. Both times the fix was to build the escape from `chr(92)`
+  or to use the file tools. This is now the single most expensive recurring mistake in
+  this repository.
 
 - M7.4, the honest state of "validates against the published schema": it validates
   against `report/sarif-schema.ts`, a Zod transcription of the SARIF 2.1.0 required
