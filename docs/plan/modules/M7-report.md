@@ -1,4 +1,4 @@
-# M7: Run Assembly and Report Emitters
+﻿# M7: Run Assembly and Report Emitters
 
 **Status:** not started
 **Owns:** `packages/core/src/report/`, run assembly in `packages/core/src/index.ts`
@@ -96,4 +96,39 @@ is the explicit equivalent.
 
 ## Open questions
 
-- None blocking.
+- **M7.4, needs a dependency decision.** The Definition of Done says SARIF output
+  validates against the published schema. Doing that literally means running a JSON
+  Schema validator over `sarif-schema-2.1.0.json`, and no validator is on the approved
+  list in `04-CONVENTIONS.md`, while rule R9 forbids a test fetching the schema at run
+  time. What is implemented instead is `report/sarif-schema.ts`, a Zod transcription of
+  the required property lists, the closed enumerations, and the types of every property
+  this emitter writes, named against its published source. It catches a real
+  non-conforming document: changing `version` to `2.1` fails eighteen tests. It is still
+  a transcription rather than the schema. Three ways out: approve a JSON Schema validator
+  as a dev dependency and vendor the published schema, accept the transcription and
+  reword the Definition of Done to say so, or leave it and verify conformance once against
+  a real consumer at the stage boundary, since GitHub rejects a malformed upload.
+- **M7.4 deviation, minor.** The module says a result with no source uses a logical
+  location naming the endpoint. `CheckResultRecord` has no endpoint field and the route
+  appears only inside `detail` as prose, so a check's logical location names its rule and
+  requirement instead. Parsing a path back out of a sentence would be a guess in the one
+  place a reader is told where to look. A structural entry does carry an endpoint id and
+  does name it.
+- **M7.4 scope call, worth confirming.** SARIF results are failed checks plus the
+  structural disagreements. `01-PRODUCT.md` calls those structural findings,
+  `03-CONTRACTS.md` reserves a `structural` check type, and the module asks for one rule
+  per check type, so the rule needs something to carry. Without them D6, the entity the
+  spec declares and the application never built, never reaches the GitHub UI at all. The
+  two entry kinds that carry no severity field take the defaults M4.8 exported for
+  exactly this caller.
+- **M7.3 deviation, needs review.** `TextOptions` carries an optional `Observation`.
+  Section 2 of the text report is entity and endpoint counts by origin and confidence,
+  and RunResult carries only `observation.ref`, so those counts are not derivable from
+  the argument the Public API hands `renderText`. Putting them on RunResult is a contract
+  change; taking the object the caller already holds is not. If the intent was that
+  RunResult summarizes its own Observation, that is the contract question to raise, and
+  the other three emitters would want it too.
+- The Definition of Done's second command,
+  `pnpm --filter @qai/cli exec qai check --format sarif`, cannot run until M8 builds the
+  command surface. Same shape as every stage since S1. M7 is demonstrated through a
+  script in `packages/core/scripts/` until then.
