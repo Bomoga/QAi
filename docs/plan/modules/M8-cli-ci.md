@@ -86,6 +86,16 @@ pnpm --filter @qai/cli exec qai check --config fixtures/ledger/qai.config.yaml -
 
 ## Open questions
 
+- **M8.6 is half done: `probe` is implemented and `report <runId>` is blocked.** The
+  command re-renders a stored run, and nothing stores one. `packages/core/src/store/`
+  does not exist, M6 owns run persistence, and this module's header says M6 is
+  "required only by the `diff` subcommand", which is not true of `report` either. Three
+  ways out, none taken here because the layout is M6's to choose: implement `report`
+  after M6 in S7 alongside `diff`; have M8 write `.qai/runs/<runId>.json` from `check`
+  and read it back, which invents a persistence layout M6 would then have to adopt or
+  migrate; or change the command to take a path rather than a run id, which is a change
+  to the command surface and needs approval. Recorded rather than guessed.
+
 - **The Definition of Done names a config path that does not exist.** It runs
   `qai check --config fixtures/ledger/qai.config.yaml`, and this repository's target
   configuration lives at the root as `qai.config.yaml`. `fixtures/ledger/` holds the
