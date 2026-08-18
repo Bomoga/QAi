@@ -47,6 +47,8 @@ export {
 export {
   registerCommands,
   runInit,
+  runValidate,
+  DEFAULT_SPEC_GLOB,
   SPEC_PATH,
   GITIGNORE_ENTRY,
   type CommandIo,

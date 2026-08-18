@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T10:39:00Z
+Updated: 2026-08-18T14:00:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.4
+Next task: M8.5
 
 ## S0. Skeleton
 
@@ -257,8 +257,8 @@ Surprises worth recording:
   (commits a411409 and 352be6e)
 - [x] M8.2 configuration precedence and --verbose resolved config output
   (commits ad295c4 and 4345562)
-- [x] M8.3 init with scaffolding and the .gitignore entry (commit backfilled below)
-- [ ] M8.4 validate
+- [x] M8.3 init with scaffolding and the .gitignore entry (commit 4dd2495)
+- [x] M8.4 validate (commits 44aa7c7 and one backfilled below)
 - [ ] M8.5 check, the startup capability report, and exit code application
 - [ ] M8.6 probe and report; diff needs M6 and lands in S7
 - [ ] M8.7 error presentation for exit codes 2 and 3
@@ -281,6 +281,36 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.4: an error exits 2 and a warning does not. `diagnostics.ts` already says the two
+  are different things, an error meaning no Spec could be produced and a warning meaning
+  the spec loaded and something is worth saying out loud. Failing the command over a
+  warning would teach people to stop reading warnings, which costs more than the warning
+  was worth. Proved by breaking it: treating every diagnostic as an error failed the two
+  tests written for that split.
+- M8.4: nothing to validate is a failure. A clean summary over zero matched files is the
+  vacuous green this repository keeps catching, so a glob that matched nothing exits 2.
+- M8.4: two real path bugs, both found by running the command rather than by reading it.
+  `readAndValidate` joined cwd and file with a slash, which is wrong for an absolute path
+  and on Windows produced a path with two drive letters. And `resolveFiles` handed
+  backslashes to fast-glob, which treats them as escape characters, so a Windows path
+  matched nothing and the loader said no spec files matched the one that was named. Both
+  fixed in M1's file, both proved by reverting them one at a time.
+- M8.4: `LoadedSpec` now reports `files`, the paths actually read. A caller hands in
+  patterns and gets one merged Spec, so nothing downstream could say where it came from.
+  `RunResult.spec.files` is exactly that list and M8.5 needs it, and `validate` has to
+  name what it read or a user cannot tell a passing spec from a glob that matched the
+  wrong directory. A cross-module edit into M1's file.
+- M8.4: `--format` is reported as inapplicable rather than ignored. The emitters project
+  a RunResult and a spec summary is not one. A silently ignored flag is a user believing
+  they configured something they did not, which is the same rule the program applies to
+  an unknown option.
+- M8.4 test bug worth remembering: two spec files in one glob cannot both declare
+  REQ-001. The loader calls that a conflicting redefinition, correctly, and the test that
+  wrote the same spec twice was asserting the wrong thing about the glob.
+- M8.4 verified against the real fixture spec, and the numbers match the M1.8 record
+  exactly: 4 actors, 4 entities, 15 requirements, 8 access rules, 16 criteria of which 1
+  is model assisted, 4 parsed conditions, and 1 warning for REQ-007 having no checks.
 
 - M8.3: `init` never overwrites, and that is invariant I7 landing in the one command that
   writes. An existing file is left alone and named, and running init twice is a success

@@ -3,6 +3,7 @@ import type { Command } from 'commander';
 import type { Stream } from '../reporter.ts';
 import { resolveConfigPath, type Flags } from '../settings.ts';
 import { runInit } from './init.ts';
+import { runValidate } from './validate.ts';
 
 /**
  * Where the command surface is wired to its implementations.
@@ -50,7 +51,23 @@ export function registerCommands(
       });
     });
 
+  program
+    .command('validate')
+    .argument('[paths...]', 'spec files or globs, defaulting to spec/*.spec.yaml')
+    .description('load the specs and report what they contain and what is wrong with them')
+    .action(async (paths: string[]) => {
+      const flags = program.opts<Flags>();
+      outcome.code = await runValidate({
+        cwd: io.cwd,
+        paths,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        ...(flags.format === undefined ? {} : { format: flags.format }),
+      });
+    });
+
   return program;
 }
 
 export { runInit, SPEC_PATH, GITIGNORE_ENTRY, CONFIG_TEMPLATE, SPEC_TEMPLATE } from './init.ts';
+export { runValidate, DEFAULT_SPEC_GLOB } from './validate.ts';
