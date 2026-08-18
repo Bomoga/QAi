@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T09:24:00Z
+Updated: 2026-08-18T09:26:00Z
 Current stage: S6, module M7, branch feat/m7-report
-Next task: M7.6
+Next task: M7.7
 
 ## S0. Skeleton
 
@@ -249,8 +249,8 @@ Surprises worth recording:
 - [x] M7.2 renderJson with sorted, stable output (commit c55759a)
 - [x] M7.3 renderText in the section order the module gives (commit 2c7a182)
 - [x] M7.4 renderSarif, validated against the 2.1.0 schema (commit f406813)
-- [x] M7.5 renderJunit, inconclusive mapping to skipped (commit backfilled below)
-- [ ] M7.6 computeExitCode with --fail-on and --fail-on-unverified
+- [x] M7.5 renderJunit, inconclusive mapping to skipped (commit b0784a4)
+- [x] M7.6 computeExitCode with --fail-on and --fail-on-unverified (commit backfilled below)
 - [ ] M7.7 golden RunResult files for both fixture configurations
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
 - Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`. M8 gets its own branch per the one module per branch rule.
@@ -268,6 +268,28 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.6: only 0 and 1 are computed here. 03-CONTRACTS.md gives 2 to an invalid spec or a
+  configuration error and 3 to an unreachable target or a fatal runtime error, and both
+  describe a run that did not happen or did not finish. A function handed a finished
+  RunResult is by construction in neither case, and a test sweeps the whole option space
+  asserting no other value is ever produced.
+- M7.6: nothing in the file exits, per rule R5. It returns a number and M8 applies it,
+  which is what keeps the rule structural rather than a convention somebody remembers.
+- M7.6: the threshold table is asserted as a four by four grid rather than as four
+  lookups. A comparator inverted in one direction can agree with itself across a handful
+  of single assertions; it cannot agree with the whole grid. Proved by breaking it:
+  flipping the comparison failed two tests including the grid.
+- M7.6: the unverified opt in reads `summary.requirements.unverified`, not the
+  inconclusive check tally. A requirement with one inconclusive check and one that passed
+  is verified and is not a coverage gap, so counting checks would fail a run that has no
+  gaps at all. A test states exactly that case.
+- M7.6: gaps are off by default and that is a product decision rather than a default
+  nobody chose. A requirement nobody could check is not a requirement that failed, and
+  turning gaps red by default makes the honest verdict the one people switch off.
+- M7.6: `--fail-on info` cannot turn a clean run red, because `findingsBySeverity` counts
+  failures only and a passing check carrying `info` was never a finding. That is the
+  M7.1 tally decision paying for itself in a second place.
 
 - M7.5: inconclusive maps to `skipped`, and the reason is worth stating rather than
   remembering. A dashboard counts red and green and has no third column, so a check that
