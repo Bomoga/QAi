@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
 
 import fastGlob from 'fast-glob';
 import { parse as parseYaml } from 'yaml';
@@ -37,6 +38,16 @@ export interface LoadedSpec {
   readonly diagnostics: readonly LoadDiagnostic[];
   /** Parsed conditions, keyed by access rule id. Populated for every rule that has one. */
   readonly conditions: ReadonlyMap<string, ConditionAst>;
+  /**
+   * The files that were actually read, glob-expanded and sorted.
+   *
+   * Added at M8.4. The caller hands in patterns and gets back one merged Spec, so
+   * without this nothing downstream can say which files it came from.
+   * `RunResult.spec.files` in 03-CONTRACTS.md is exactly that list, and `qai validate`
+   * has to name what it read or a user cannot tell a passing spec from a glob that
+   * matched the wrong directory.
+   */
+  readonly files: readonly string[];
 }
 
 export interface LoadFailure {
@@ -67,7 +78,14 @@ function formatPath(segments: readonly (string | number | symbol)[]): string {
  * on every machine. Rule R6: nothing about a load may depend on filesystem ordering.
  */
 function resolveFiles(paths: readonly string[], cwd: string): string[] {
-  const matches = fastGlob.sync([...paths], {
+  // fast-glob only understands forward slashes: a backslash is an escape character to
+  // it, so a Windows path matches nothing and the loader reports no spec files rather
+  // than the one the user named. Normalizing here is what the library's own
+  // documentation asks callers to do, and 04-CONVENTIONS.md wants Windows to work
+  // without a shell assumption.
+  const patterns = paths.map((pattern) => pattern.replaceAll('\\', '/'));
+
+  const matches = fastGlob.sync(patterns, {
     cwd,
     absolute: false,
     onlyFiles: true,
@@ -83,7 +101,11 @@ function readAndValidate(
 ): Spec | undefined {
   let text: string;
   try {
-    text = readFileSync(`${cwd}/${file}`, 'utf8');
+    // Resolved rather than concatenated. Joining with a slash is wrong for an absolute
+    // path, and on Windows it produces a path with two drive letters in it, so the read
+    // fails naming something nobody wrote. Found at M8.4 by handing `qai validate` an
+    // absolute spec path.
+    text = readFileSync(resolvePath(cwd, file), 'utf8');
   } catch (cause) {
     const reason = cause instanceof Error ? cause.message : 'unreadable';
     diagnostics.push(error(file, '', `could not read the file: ${reason}`));
@@ -429,5 +451,12 @@ export function loadSpec(paths: readonly string[], options: LoadOptions = {}): L
     };
   }
 
-  return { spec, hash: hashSpec(spec), diagnostics, conditions };
+  // Only the files a Spec was actually read from, not every pattern that was asked for.
+  return {
+    spec,
+    hash: hashSpec(spec),
+    diagnostics,
+    conditions,
+    files: parsed.map((one) => one.file),
+  };
 }
