@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T10:10:00Z
-Current stage: S6, module M7, branch feat/m7-report
-Next task: M8.1, on a new branch
+Updated: 2026-08-18T10:24:00Z
+Current stage: S6, module M8, branch feat/m8-cli-ci
+Next task: M8.2
 
 ## S0. Skeleton
 
@@ -252,9 +252,20 @@ Surprises worth recording:
 - [x] M7.5 renderJunit, inconclusive mapping to skipped (commit b0784a4)
 - [x] M7.6 computeExitCode with --fail-on and --fail-on-unverified (commit 66c9cc2)
 - [x] M7.7 golden RunResult files for both fixture configurations (capture command 14bb703,
-  goldens and render tests backfilled below)
+  goldens and render tests 9b06153, module marked complete 6e0c3d0)
+- [x] M8.1 scaffold packages/cli with Commander, the qai binary, and the reporter
+  (commits a411409 and one backfilled below)
+- [ ] M8.2 configuration precedence and --verbose resolved config output
+- [ ] M8.3 init with scaffolding and the .gitignore entry
+- [ ] M8.4 validate
+- [ ] M8.5 check, the startup capability report, and exit code application
+- [ ] M8.6 probe and report; diff needs M6 and lands in S7
+- [ ] M8.7 error presentation for exit codes 2 and 3
+- [ ] M8.8 the GitHub Action, with SARIF upload and outputs
+- [ ] M8.9 end to end test of init, validate, and check against fixtures/ledger
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
-- Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`. M8 gets its own branch per the one module per branch rule.
+- Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`.
+- M7 finished 2026-08-18 and opened as PR #10, eleven commits, unmerged. `feat/m8-cli-ci` is cut from `feat/m7-report` rather than from `dev`, because M8 imports emitters that do not exist on `dev` until #10 merges. Rebase onto `dev` once it does.
 
 ## S7. Store and delta (M6)
 
@@ -269,6 +280,51 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8 is branched from `feat/m7-report`, not from `dev`, and that is a deliberate
+  deviation from the one rule in 04-CONVENTIONS.md that says base every branch on `dev`.
+  M8's CLI imports `renderSarif`, `renderJunit`, and `computeExitCode`, none of which
+  exist on `dev` until PR #10 merges, and merging that PR is not the agent's call. PR #2
+  stacked on the S0 branch for the same reason, and since S1 removed the `pull_request`
+  branch filter a stacked PR still gets CI. Rebase M8 onto `dev` once #10 merges.
+- M8.1: `Reporter` did not exist. 03-CONTRACTS.md lists it among the shared runtime types
+  with M7 as its owner, and M7 completed without building it, so this is a cross-module
+  edit into `packages/core/src/report/` from the M8 branch. Same shape as M3.2 adding
+  `resources` to M2's file and M2.8 adding `stateActor`.
+- M8.1, stated plainly so nobody assumes otherwise: nothing in `core` accepts a
+  `Reporter` yet. `probe`, `runAccessChecks`, and `runBehavioralChecks` report no progress
+  at all, and threading one through them changes signatures owned by M4 and M5. Declaring
+  the port is what makes that a mechanical follow-up instead of a design question.
+- M8.1: the reporter writes every level to stderr and never to stdout, because stdout
+  carries the report and nothing else so `qai check --format json | jq` works. Proved by
+  breaking it: pointing the writer at stdout failed four tests, led by the one written
+  for exactly that.
+- M8.1: a bad invocation exits 2, not 1. Commander's own default for a usage error is 1,
+  and 1 is spoken for by 03-CONTRACTS.md as a run that completed and found something at
+  or above the threshold. A misspelled flag exiting 1 would tell CI the application has
+  findings, which is the worst lie available here.
+- M8.1: `exitOverride` makes Commander throw for `--help` and `--version` too, after the
+  output has already printed. The first run of the built binary ended `qai --help` in a
+  stack trace because of it. `main` now treats those three Commander codes as a clean 0.
+  Found by running the binary, not by reading the suite.
+- M8.1: `packages/cli/vitest.config.ts` exists for the M1.2 trap, which that note
+  predicted would arrive here. Without it vitest walks to the root config, whose include
+  patterns are relative to the repository root, matches nothing, and exits 0. M8's
+  Definition of Done runs `pnpm --filter @qai/cli test`, so it would have passed by
+  running nothing.
+- M8.1: the CLI dts build reads `@qai/core` from its `dist`, not its source, so adding an
+  export to core and building only the CLI fails with the export missing. Build core
+  first, or run `pnpm build` at the root, which builds in dependency order.
+- M8.1: `bin/qai.js` imports `process` from `node:process` rather than taking the global,
+  so the file needs no lint environment of its own. ESLint flagged the global, and the
+  import is a smaller fix than a config carve out.
+- M8.1: `picocolors` is now a dependency of `@qai/cli` as well as `@qai/core`. pnpm's
+  strict layout will not let one workspace package reach another's dependency, and it is
+  right not to.
+- M8.1 left for M8.2 and M8.7: Commander writes its help and its usage errors straight to
+  the real streams, so the CLI suite is noisy and the wording is Commander's rather than
+  this project's. Routing that through injected streams belongs with configuration
+  resolution and error presentation.
 
 - M7.7 done. Both goldens captured against a freshly started `fixtures/ledger`, one per
   configuration. Defective: 15 requirements, 7 verified, 6 failed, 2 unverified, 24
