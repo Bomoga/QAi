@@ -1,7 +1,9 @@
 import type { Command } from 'commander';
 
-import type { Stream } from '../reporter.ts';
+import { createReporter, type Stream } from '../reporter.ts';
+import { describeContext, isContextError, resolveContext } from '../context.ts';
 import { resolveConfigPath, type Flags } from '../settings.ts';
+import { runCheck } from './check.ts';
 import { runInit } from './init.ts';
 import { runValidate } from './validate.ts';
 
@@ -24,6 +26,13 @@ export interface CommandIo {
   readonly stderr: Stream;
   readonly env: Readonly<Record<string, string | undefined>>;
   readonly cwd: string;
+  /**
+   * Whether each stream is a terminal. Two answers, not one: progress goes to stderr
+   * and the report goes to stdout, and piping one does not pipe the other. Passed in
+   * rather than sniffed, per rule R6.
+   */
+  readonly stderrTty?: boolean;
+  readonly stdoutTty?: boolean;
 }
 
 /** Filled in by whichever command ran, and left empty when none did. */
@@ -66,8 +75,49 @@ export function registerCommands(
       });
     });
 
+  program
+    .command('check')
+    .argument('[paths...]', 'spec files or globs, defaulting to spec/*.spec.yaml')
+    .description('probe the target, run the checks, and report where it disagrees with the spec')
+    .action(async (paths: string[]) => {
+      const flags = program.opts<Flags & { verbose?: boolean; color?: boolean }>();
+      const context = resolveContext({ flags, env: io.env, cwd: io.cwd });
+
+      if (isContextError(context)) {
+        io.stderr.write(`error: ${context.message}
+`);
+        if ('suggestion' in context && context.suggestion !== undefined) {
+          io.stderr.write(`  ${context.suggestion}
+`);
+        }
+        outcome.code = 2;
+        return;
+      }
+
+      if (flags.verbose === true) io.stderr.write(describeContext(context));
+
+      outcome.code = await runCheck({
+        cwd: io.cwd,
+        env: io.env,
+        paths,
+        ...(context.config === undefined ? { config: undefined } : { config: context.config }),
+        configPath: context.configPath.value,
+        settings: context.settings,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        color: flags.color !== false && io.stdoutTty === true,
+        reporter: createReporter({
+          stdout: io.stdout,
+          stderr: io.stderr,
+          tty: io.stderrTty === true,
+          ...(flags.color === false ? { color: false } : {}),
+        }),
+      });
+    });
+
   return program;
 }
 
 export { runInit, SPEC_PATH, GITIGNORE_ENTRY, CONFIG_TEMPLATE, SPEC_TEMPLATE } from './init.ts';
 export { runValidate, DEFAULT_SPEC_GLOB } from './validate.ts';
+export { runCheck, type CheckOptions } from './check.ts';

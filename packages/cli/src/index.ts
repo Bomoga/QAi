@@ -48,6 +48,7 @@ export {
   registerCommands,
   runInit,
   runValidate,
+  runCheck,
   DEFAULT_SPEC_GLOB,
   SPEC_PATH,
   GITIGNORE_ENTRY,
@@ -84,6 +85,9 @@ export interface MainOptions {
   readonly stderr?: Stream;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly cwd?: string;
+  /** Whether each stream is a terminal. The binary knows; nothing else sniffs for it. */
+  readonly stderrTty?: boolean;
+  readonly stdoutTty?: boolean;
 }
 
 /**
@@ -111,7 +115,18 @@ export async function main(argv: readonly string[], options: MainOptions = {}): 
 
   const program = createProgram();
   const outcome: CommandOutcome = {};
-  registerCommands(program, { stdout, stderr, env, cwd }, outcome);
+  registerCommands(
+    program,
+    {
+      stdout,
+      stderr,
+      env,
+      cwd,
+      stderrTty: options.stderrTty ?? false,
+      stdoutTty: options.stdoutTty ?? false,
+    },
+    outcome,
+  );
 
   try {
     await program.parseAsync([...argv]);

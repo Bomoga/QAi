@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T14:00:00Z
+Updated: 2026-08-18T14:10:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.5
+Next task: M8.6
 
 ## S0. Skeleton
 
@@ -258,8 +258,9 @@ Surprises worth recording:
 - [x] M8.2 configuration precedence and --verbose resolved config output
   (commits ad295c4 and 4345562)
 - [x] M8.3 init with scaffolding and the .gitignore entry (commit 4dd2495)
-- [x] M8.4 validate (commits 44aa7c7 and one backfilled below)
-- [ ] M8.5 check, the startup capability report, and exit code application
+- [x] M8.4 validate (commits 44aa7c7 and 55bc6f5)
+- [x] M8.5 check, the startup capability report, and exit code application
+  (commits fcf8d2f and one backfilled below)
 - [ ] M8.6 probe and report; diff needs M6 and lands in S7
 - [ ] M8.7 error presentation for exit codes 2 and 3
 - [ ] M8.8 the GitHub Action, with SARIF upload and outputs
@@ -281,6 +282,45 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.5: `qai check` runs end to end against the real fixture and the numbers match the
+  M7.7 goldens exactly. Defects on: 15 requirements, 7 verified, 6 failed, 2 unverified,
+  24 checks, 13 pass, 9 fail, 2 inconclusive, exit 1. Defects off: 13 verified, 0 failed,
+  22 pass, exit 0. That is the M8 Definition of Done met, and the first time the emitters
+  have been driven by the command rather than by a script.
+- M8.5: the M7 Definition of Done command finally runs. `qai check --format sarif` writes
+  a conforming document with 15 results across all three rules and levels error, warning,
+  and note. Every stage since S1 has carried a Definition of Done line that could not run
+  until the CLI existed; this is where they stop being deferred.
+- M8.5: the M8 Definition of Done names `fixtures/ledger/qai.config.yaml`, which does not
+  exist. The target configuration is at the repository root and `fixtures/ledger` holds
+  the application and its spec. The criterion was demonstrated against the real path and
+  both halves hold, so the written path is what is wrong. Recorded in the M8 open
+  questions rather than corrected unilaterally.
+- M8.5: exit 3 is established by one unauthenticated request to the base URL before any
+  other work, so an unreachable target is reported as one rather than as a report full of
+  inconclusive checks. Whether the root answers 200 or 401 is a fact about the
+  application; whether anything answered at all is what that request asks. Proved by
+  breaking it: returning 1 there failed the two tests that pin the refusal codes.
+- M8.5: nothing that failed to start may return 1. 03-CONTRACTS.md gives 1 to a completed
+  run with findings, so a missing config, an unloadable spec, an absent baseUrl, and an
+  unreachable target are 2, 2, 2, and 3. A test sweeps all of them together rather than
+  asserting one at a time, since the risk is one drifting onto 1 later.
+- M8.5: the capability report prints before any work and states the available half as
+  well as the gaps. `createTargetContext` already phrases every gap as what will not be
+  checked and the contract calls those lines something a surface prints verbatim, so they
+  are printed verbatim. The browser line is added here, since Playwright detection lives
+  in M5 and the context does not know about it.
+- M8.5: the M7.3 deviation pays off exactly where it was meant to. `check` holds the
+  Observation, so it passes it into `renderText` and the report's second section shows 4
+  endpoints by origin and confidence instead of saying no probe was recorded. Without it
+  the section was blank in a real run, which is how the gap became visible.
+- M8.5: terminal detection is two answers, not one. Progress goes to stderr and the
+  report to stdout, and piping one does not pipe the other, so `stderrTty` and
+  `stdoutTty` travel separately from the binary. Nothing below the binary sniffs.
+- M8.5: `pnpm --filter @qai/cli exec qai ...` does not resolve until `pnpm install` has
+  run since the `bin` entry was added. The workspace link is created at install time, so
+  adding a bin to a package.json is not enough on its own.
 
 - M8.4: an error exits 2 and a warning does not. `diagnostics.ts` already says the two
   are different things, an error meaning no Spec could be produced and a warning meaning
