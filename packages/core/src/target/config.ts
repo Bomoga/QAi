@@ -126,6 +126,32 @@ export const ResourceConfigSchema = z
   })
   .strict();
 
+/**
+ * Run settings a project can write down instead of passing every time.
+ *
+ * Added at M8.2, a cross-module edit into M2's file with the same shape as M3.2 adding
+ * `resources` and M2.8 adding `stateActor`. The M8 module states a precedence of command
+ * line flag, then environment variable, then config file, then built-in default, and
+ * this schema is `.strict()`, so without a section for them the config file layer of
+ * that precedence could not exist at all: writing `format: sarif` would be a load error.
+ *
+ * Everything here is optional and everything here is overridable. These are defaults, not
+ * policy, which is why the section is named for what it holds rather than for the
+ * commands that read it.
+ *
+ * `--config` is deliberately absent. A file cannot name its own path, so that one
+ * resolves from the flag and the environment only.
+ */
+export const DefaultsSectionSchema = z
+  .object({
+    format: z.enum(['text', 'json', 'sarif', 'junit']).optional(),
+    out: z.string().min(1).optional(),
+    failOn: z.enum(['high', 'medium', 'low']).optional(),
+    failOnUnverified: z.boolean().optional(),
+    concurrency: z.int().min(1).optional(),
+  })
+  .strict();
+
 export const TargetConfigSchema = z
   .object({
     target: TargetSectionSchema,
@@ -146,6 +172,8 @@ export const TargetConfigSchema = z
      */
     stateActor: z.string().min(1).optional(),
     redaction: RedactionSectionSchema.default({ extraPatterns: [] }),
+    /** Run settings a flag or an environment variable overrides. See the note above. */
+    defaults: DefaultsSectionSchema.default({}),
   })
   .strict();
 
@@ -158,6 +186,7 @@ export type TargetSection = z.infer<typeof TargetSectionSchema>;
 export type ResourceInstance = z.infer<typeof ResourceInstanceSchema>;
 export type ResourceRoutes = z.infer<typeof ResourceRoutesSchema>;
 export type ResourceConfig = z.infer<typeof ResourceConfigSchema>;
+export type DefaultsSection = z.infer<typeof DefaultsSectionSchema>;
 export type TargetConfig = z.infer<typeof TargetConfigSchema>;
 
 export interface ConfigError {
