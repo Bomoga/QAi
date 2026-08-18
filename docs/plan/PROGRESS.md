@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T15:53:00Z
+Updated: 2026-08-18T15:56:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.9
+Next task: the S6 stage boundary
 
 ## S0. Skeleton
 
@@ -284,6 +284,27 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.9 drives `main` rather than spawning the binary. Spawning would test that pnpm linked
+  a bin, which is true or false regardless of anything in this repository, and would make
+  every assertion about a subprocess's stdout rather than about the command. `main` takes
+  its streams, environment, and working directory as arguments for exactly this reason.
+- M8.9 pins both directions, exit 1 with the defects on and 0 with them off, so a command
+  that always failed or always passed breaks one of them. Proved by breaking it: forcing
+  the exit code to 0 failed three tests including that one.
+- M8.9: the verdict counts reached through the command match the M7.7 goldens exactly, 15
+  requirements as 7, 6, and 2 and 24 checks as 13, 9, and 2. The goldens were captured by
+  a script, so this is what says the command and the script agree rather than each being
+  separately plausible.
+- M8.9: each test starts its own ledger on an ephemeral port and writes a config naming
+  it, so nothing depends on a server somebody left running. That is the hazard that cost
+  this session an hour at M7.7, turned into a test.
+- M8.9: the probe test asserts D5 both ways. A probe that reported the debug endpoint
+  whatever the switch said would be describing something other than the application in
+  front of it, and one that never reported it would pass just as quietly.
+- M8 is complete. Every command in the module's table exists except `report <runId>`,
+  which is blocked on M6 run persistence and recorded in the module's open questions, and
+  `diff`, which the module already assigns to S7.
 
 - M8.8: the Action runs `qai check` once, never twice. A second run to collect counts in
   another format would double the traffic against the target and could disagree with the
