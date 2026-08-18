@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-17T12:20:00Z
-Current stage: S5 complete, pull request open, awaiting review
-Next task: S6, modules M7 and M8, after the merge decision
+Updated: 2026-08-18T05:00:00Z
+Current stage: S5 merged, and the follow-up merged with it. Nothing in progress
+Next task: S6, modules M7 and M8, when a human says to start it
 
 ## S0. Skeleton
 
@@ -203,7 +203,9 @@ Surprises worth recording:
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
-- Pull request #7 opened into `dev` on 2026-08-17, 22 commits, not squashed. Awaiting review; the merge decision is the human's.
+- Pull request #7 opened into `dev` on 2026-08-17, 22 commits. Merged as `556d41c`, not squashed.
+- Follow-up pull request #8, `fix/ar-011-01-resource`, carried the work that landed after #7 merged: M5.14 through M5.16. Six commits, merged as `0aed8f9`, not squashed.
+- Both merges happened mid-session and both deleted their branch, which a later push resurrected each time. Work that lands after a stage pull request merges belongs on a new branch cut from `dev`, not on the branch that was just merged. Noticed the first time only because `git push` reported a new branch.
 - Exit criterion: **met as restated**, verified 2026-08-17 via `packages/core/scripts/check-behavior-ledger.ts` against a live ledger, both directions, and re-run after M5.10 changed the counts. Defective: 15 criteria planned, 7 pass, 6 fail, 2 unverified, exit 1, with D4 reported at medium severity carrying request evidence. Repaired: 13 pass, 0 fail, 2 unverified, exit 0. The same 15 checks run in both, so the runs compare. With Playwright absent, `AC-005-02` is unverified with reason `capability-unavailable` and the install line, and the exit code is unaffected in both directions. Re-run after M5.13, which closed the last criterion: 16 criteria planned and 0 not, giving 8 pass, 6 fail, 2 unverified, exit 1 defective, and 14 pass, 0 fail, 2 unverified, exit 0 repaired. The two unverified are the fuzzy criterion with no Playwright and the audit log the application never built. Authoring warnings went from 1 to 0 when M5.10 closed the last unexpressible `then`. M5.11 did not move the counts, since AC-003-01 was already failing on its status clause; what changed is what the finding says, which now reads `status 200, Invoice INV-1001 changed across the action: total_cents`. `qai check` is M8 and lands in S6, so the command itself does not exist yet.
 - **Raised at M5.1 and needing a decision before M5.8: only 4 of the 14 deterministic criteria in `fixtures/ledger/spec/ledger.spec.yaml` can be expressed in the assertion vocabulary.** The fixture spec was authored at M1.8 in prose, before the vocabulary existed. Six of the ten are straightforwardly rewritable, for example "the body reports status ok" into `body.status equals "ok"` and "no response body contains a token field" into `body omits field User.token`. Four are genuinely outside the table: the two "the invoice is unchanged" clauses need before and after state, "every returned invoice has org_id equal to the caller organization" is a per-row comparison against an actor attribute, and AC-013-01 compares the status of two different requests. The plan's own instruction covers this, warn and suggest a rewrite or `mode: fuzzy`, so the rewrite belongs with M5.8. Nothing pins the fixture spec hash as a literal, so rewriting the clauses is safe; `fixture-spec.test.ts` only asserts the hash is stable across loads.
 
