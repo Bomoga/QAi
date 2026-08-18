@@ -10,3 +10,9 @@ docs/plan/
 # Generated from the Zod schema and asserted byte for byte in a test.
 # Reformatting it here would make that test fail for a reason nobody can act on.
 schema/
+
+# Canonical run results, captured by `capture:goldens` and asserted byte for byte.
+# `renderJson` is the format these files are in, and prettier collapses its short arrays
+# onto one line, so letting it rewrite them would fail the round trip test against a
+# change nobody made. Same reason as `schema/` above.
+packages/core/src/report/goldens/

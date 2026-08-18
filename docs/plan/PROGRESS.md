@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T09:34:00Z
+Updated: 2026-08-18T10:10:00Z
 Current stage: S6, module M7, branch feat/m7-report
-Next task: M7.7, blocked, see Blocked below
+Next task: M8.1, on a new branch
 
 ## S0. Skeleton
 
@@ -251,8 +251,8 @@ Surprises worth recording:
 - [x] M7.4 renderSarif, validated against the 2.1.0 schema (commit f406813)
 - [x] M7.5 renderJunit, inconclusive mapping to skipped (commit b0784a4)
 - [x] M7.6 computeExitCode with --fail-on and --fail-on-unverified (commit 66c9cc2)
-- [~] M7.7 golden RunResult files for both fixture configurations: the capture command is
-  written and verified, the two goldens and the render tests are blocked on a human
+- [x] M7.7 golden RunResult files for both fixture configurations (capture command 14bb703,
+  goldens and render tests backfilled below)
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
 - Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`. M8 gets its own branch per the one module per branch rule.
 
@@ -269,6 +269,46 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.7 done. Both goldens captured against a freshly started `fixtures/ledger`, one per
+  configuration. Defective: 15 requirements, 7 verified, 6 failed, 2 unverified, 24
+  checks, 13 pass, 9 fail, 2 inconclusive, 4 endpoints observed. Fixed: the same 15 and
+  24, 13 verified, 0 failed, 2 unverified, 22 pass, 3 endpoints observed. Coverage is 87%
+  either way, which is the point: fixing a defect is not coverage.
+- M7.7, the property that matters, proved rather than assumed: each golden was captured
+  twice from a freshly restarted ledger and the two files are byte identical. A capture
+  against a target that has already been run is not, because the run writes. `INV-1001`
+  goes from 125000 to 125003 in the defective configuration and to 125001 in the fixed
+  one, since one authenticated write still lands with D3 off. Restart between captures.
+- M7.7: that drift is exactly what made the pre-existing server unusable. It reported
+  125003, meaning one full run had already hit it, and a golden encoding that state would
+  not have reproduced from a fresh start.
+- M7.7: `packages/core/src/report/goldens/` is in `.prettierignore`. `renderJson` is the
+  format, the round trip test asserts the file byte for byte, and prettier collapses a
+  short array onto one line, so letting it rewrite them fails a test against a change
+  nobody made. This is the M1.7 `schema/` trap arriving a second time, and it was
+  predicted before it fired.
+- M7.7 proved by breaking it: changing the JSON indent to four failed both round trip
+  tests and nothing else; rendering an inconclusive check as a JUnit failure failed both
+  invariant I4 tests. Both goldens carry inconclusive checks, so neither direction of
+  that test can pass vacuously.
+- M7.7 observation for M5, not M7 to fix: every behavioral finding is titled
+  "Acceptance criterion AC-001-01" while every access finding states what happened. Read
+  side by side in a rendered report the difference is stark, and the title is the line a
+  reviewer sees first in a code scanning list.
+- M7.7 observation, and it is the M3.8 contract question arriving as predicted: an access
+  `detail` already ends with "Request: ... Evidence: ... Suggestion: ...", so the text
+  report prints an evidence reference the detail just gave. M3.8 recorded that a
+  suggested fix lives inside `detail` because `CheckResult` has no field for one, and
+  said a report wanting to render them separately should raise the contract question.
+  This is a report wanting exactly that. Sniffing the string from the emitter would be
+  worse than the duplication.
+- M7.7 observation: REQ-006 comes back `check-error`, which reads as though something
+  threw. Nothing did. AC-006-01 is inconclusive because D6 is the entity the spec
+  declares and the application never built, so there is nowhere to count records. The
+  closed set in 03-CONTRACTS.md has no member for that, and `assembleRun` falls back to
+  `check-error` whenever checks ran and none reached a verdict. Either the set needs a
+  member or the fallback needs a better default; both are contract questions.
 
 - M7.7 partial, and the reason it stopped is worth reading before anyone retries it. The
   capture command exists, `pnpm --filter @qai/core capture:goldens <defective|fixed>`, and
@@ -1045,9 +1085,6 @@ Surprises worth recording:
 
 ## Blocked
 
-- **M7.7, the two golden files and their render tests.** Needs `fixtures/ledger` restarted
-  in each configuration. Port 3000 is held by PID 4880, a ledger started from this
-  repository at 00:13 today by something other than this session, and its state has
-  already drifted from the seed. Two questions for a human: may that process be stopped,
-  and is a second session active in this working tree, given that HEAD was moved from
-  `feat/m7-report` to `dev` mid-session by something this session did not run.
+- none. The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the
+  leftover ledger, and confirmed the mid-session HEAD move was their own accident rather
+  than a second session.
