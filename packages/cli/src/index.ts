@@ -1,5 +1,6 @@
 import process from 'node:process';
 
+import { registerCommands, type CommandOutcome } from './commands/index.ts';
 import { describeContext, isContextError, resolveContext } from './context.ts';
 import { createProgram } from './program.ts';
 import type { Flags } from './settings.ts';
@@ -43,6 +44,14 @@ export {
   type Context,
   type ContextError,
 } from './context.ts';
+export {
+  registerCommands,
+  runInit,
+  SPEC_PATH,
+  GITIGNORE_ENTRY,
+  type CommandIo,
+  type CommandOutcome,
+} from './commands/index.ts';
 
 /**
  * Commander's own terminations that are not failures.
@@ -93,11 +102,14 @@ export interface MainOptions {
  * and one suggested fix, is M8.7. Until then Commander's own wording reaches the user.
  */
 export async function main(argv: readonly string[], options: MainOptions = {}): Promise<number> {
+  const stdout = options.stdout ?? process.stdout;
   const stderr = options.stderr ?? process.stderr;
   const env = options.env ?? process.env;
   const cwd = options.cwd ?? process.cwd();
 
   const program = createProgram();
+  const outcome: CommandOutcome = {};
+  registerCommands(program, { stdout, stderr, env, cwd }, outcome);
 
   try {
     await program.parseAsync([...argv]);
@@ -106,6 +118,10 @@ export async function main(argv: readonly string[], options: MainOptions = {}): 
     if (isCommanderError(error)) return 2;
     throw error;
   }
+
+  // A command that ran owns the outcome. `init` writes files and reports on them, and
+  // resolving settings afterwards would be work nobody asked for.
+  if (outcome.code !== undefined) return outcome.code;
 
   const flags = program.opts<Flags & { verbose?: boolean; color?: boolean }>();
   const context = resolveContext({ flags, env, cwd });
@@ -122,8 +138,14 @@ export async function main(argv: readonly string[], options: MainOptions = {}): 
 
   // Written to stderr, not stdout, because stdout carries the report. A user piping a
   // report somewhere and passing --verbose should still get a clean document.
-  if (flags.verbose === true) stderr.write(describeContext(context));
+  if (flags.verbose === true) {
+    stderr.write(describeContext(context));
+    return 0;
+  }
 
+  // No subcommand and nothing asked for. Help is what every other tool does here, and
+  // it is better than succeeding silently, which reads as though something ran.
+  stdout.write(program.helpInformation());
   return 0;
 }
 

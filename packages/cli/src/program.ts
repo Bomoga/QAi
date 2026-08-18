@@ -92,5 +92,14 @@ export function createProgram(): Command {
     .option('--no-color', 'never emit terminal escape codes')
     .option('--verbose', 'print the resolved configuration and full error detail');
 
+  // An explicit no-op action on the root.
+  //
+  // Without it, Commander sees a program that has subcommands and no handler, decides
+  // the user must have meant to name one, prints help and throws before anything else
+  // runs. That preempts `qai --verbose`, whose whole job is to say what configuration
+  // was resolved. What happens when no subcommand is given is decided in `main`, where
+  // the resolved configuration is available to decide it with.
+  program.action(() => {});
+
   return program;
 }

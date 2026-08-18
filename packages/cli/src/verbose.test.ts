@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -49,11 +49,13 @@ async function run(
 }
 
 describe('the verbose configuration output', () => {
-  it('prints nothing without the flag', async () => {
+  it('prints help rather than the configuration when nothing was asked for', async () => {
+    // Better than succeeding silently, which reads as though something ran.
     const { code, out, err } = await run([]);
 
     expect(code).toBe(0);
-    expect(out).toBe('');
+    expect(out).toContain('Usage: qai');
+    expect(out).not.toContain('Resolved configuration');
     expect(err).toBe('');
   });
 
@@ -105,5 +107,41 @@ describe('the verbose configuration output', () => {
 
     expect(code).toBe(0);
     expect(err).toContain('No config file at');
+  });
+});
+
+describe('the init command through main', () => {
+  it('writes the starter files and exits 0', async () => {
+    const { code, out } = await run(['init']);
+
+    expect(code).toBe(0);
+    expect(out).toContain('qai.config.yaml');
+    expect(existsSync(join(dir, 'qai.config.yaml'))).toBe(true);
+    expect(existsSync(join(dir, 'spec/app.spec.yaml'))).toBe(true);
+    expect(existsSync(join(dir, '.gitignore'))).toBe(true);
+  });
+
+  it('honours --config when deciding where to write', async () => {
+    // The same precedence that decides where a config is read from decides where init
+    // puts one, or a user who set QAI_CONFIG gets a file their next command ignores.
+    await run(['init', '--config', 'nested/qai.yaml']);
+
+    expect(existsSync(join(dir, 'nested/qai.yaml'))).toBe(true);
+  });
+
+  it('honours QAI_CONFIG when deciding where to write', async () => {
+    await run(['init'], { QAI_CONFIG: 'from-env.yaml' });
+
+    expect(existsSync(join(dir, 'from-env.yaml'))).toBe(true);
+  });
+
+  it('resolves the config it just wrote on the next invocation', async () => {
+    // The end to end shape of the first two commands a user runs. A starter config the
+    // very next command cannot load would be worse than no starter at all.
+    await run(['init']);
+    const { code, err } = await run(['--verbose']);
+
+    expect(code).toBe(0);
+    expect(err).not.toContain('No config file at');
   });
 });

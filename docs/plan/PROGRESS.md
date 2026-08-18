@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T10:32:00Z
+Updated: 2026-08-18T10:39:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.3
+Next task: M8.4
 
 ## S0. Skeleton
 
@@ -256,8 +256,8 @@ Surprises worth recording:
 - [x] M8.1 scaffold packages/cli with Commander, the qai binary, and the reporter
   (commits a411409 and 352be6e)
 - [x] M8.2 configuration precedence and --verbose resolved config output
-  (commits ad295c4 and one backfilled below)
-- [ ] M8.3 init with scaffolding and the .gitignore entry
+  (commits ad295c4 and 4345562)
+- [x] M8.3 init with scaffolding and the .gitignore entry (commit backfilled below)
 - [ ] M8.4 validate
 - [ ] M8.5 check, the startup capability report, and exit code application
 - [ ] M8.6 probe and report; diff needs M6 and lands in S7
@@ -281,6 +281,35 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.3: `init` never overwrites, and that is invariant I7 landing in the one command that
+  writes. An existing file is left alone and named, and running init twice is a success
+  rather than an error: refusing would be hostile to exactly the user who is unsure
+  whether they ran it already. Proved by breaking it: removing the existence check failed
+  three tests.
+- M8.3, the tests that are actually worth having: the generated config is run through
+  `loadConfig` and the generated spec through `loadSpec`, and the spec test asserts zero
+  diagnostics rather than merely no error. A starter that produces authoring warnings
+  makes a user's first `qai validate` red over a file they did not write. That is why the
+  template's actors are all referenced by an access rule and every criterion is written
+  in the request and assertion vocabularies.
+- M8.3: the `.gitignore` append adds a newline first when the existing file does not end
+  with one. Without it the entry is glued to the last line as `dist/.qai/`, which ignores
+  neither. Found by writing the test before the code.
+- M8.3: the starter config names environment variables and never holds a value. M2.1
+  rejects a literal at load time, and a template that taught the habit would be worse
+  than the check that catches it. A test asserts no bare `token:` appears.
+- M8.3 surprise from registering the first subcommand: Commander sees a program with
+  subcommands and no root action, decides the user must have meant to name one, and
+  prints help and throws before anything else runs. That silently preempted
+  `qai --verbose` and turned three passing tests red. The root now has an explicit no-op
+  action and `main` decides what a bare invocation does.
+- M8.3 behavior change, deliberate: a bare `qai` now prints help instead of succeeding
+  silently. Succeeding silently reads as though something ran. `qai --verbose` still
+  prints the resolved configuration, since that is what the flag is for.
+- M8.3: commands record an exit code in an outcome object rather than exiting, and `main`
+  reads it. Commander action handlers return nothing useful, and keeping the single place
+  that ends the process in the binary is the same rule that keeps `core` from exiting.
 
 - M8.2: the config file layer needed a schema change. `TargetConfigSchema` is strict, so
   before this a project writing `format: sarif` into `qai.config.yaml` got a load error,
