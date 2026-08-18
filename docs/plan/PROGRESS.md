@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T05:30:00Z
+Updated: 2026-08-18T09:10:00Z
 Current stage: S6, module M7, branch feat/m7-report
-Next task: M7.3
+Next task: M7.4
 
 ## S0. Skeleton
 
@@ -246,8 +246,8 @@ Surprises worth recording:
 ## S6. Report and CI (M7, M8)
 
 - [x] M7.1 assembleRun, the verdict rollup, and the closed reason set (commit 3683191)
-- [x] M7.2 renderJson with sorted, stable output (commit backfilled below)
-- [ ] M7.3 renderText in the section order the module gives
+- [x] M7.2 renderJson with sorted, stable output (commit c55759a)
+- [x] M7.3 renderText in the section order the module gives (commit backfilled below)
 - [ ] M7.4 renderSarif, validated against the 2.1.0 schema
 - [ ] M7.5 renderJunit, inconclusive mapping to skipped
 - [ ] M7.6 computeExitCode with --fail-on and --fail-on-unverified
@@ -268,6 +268,46 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.3 deviation, needs review: `TextOptions` carries an optional `Observation`. Section 2
+  of the report is entity and endpoint counts by origin and confidence, and RunResult
+  carries `observation.ref` and nothing else, so those counts are not derivable from the
+  argument the module's Public API hands this function. Putting them on RunResult is a
+  contract change and therefore a stop; taking the object the caller already holds is
+  not, and the emitter stays a pure function either way. If the intent was that RunResult
+  summarizes its own Observation, that is the contract question to raise, and the other
+  three emitters would want it too.
+- M7.3: with no Observation the section names the reference rather than reporting counts
+  of zero. Zero entities is a claim about the application; this is an absence of data
+  about it, and the two read identically once a number is printed. A run that recorded no
+  probe at all says so in a different sentence again.
+- M7.3: color is a parameter, never a detection. `createColors(enabled)` is used rather
+  than picocolors' default export, which sniffs the process: with the default, output
+  would depend on how the suite was launched, and rule R6 keeps core out of the
+  environment. Whether the destination is a TTY is M8's fact to establish and pass in. A
+  test asserts the colored render, stripped of escapes, is byte identical to the plain
+  one, so color stays decoration over one document rather than a second document.
+- M7.3: `picocolors` was added to `@qai/core`. It is named by the module and is on the
+  approved runtime list in 04-CONVENTIONS.md, so it is not a dependency stop.
+- M7.3: findings are failures only, sorted by severity then requirement id then check id.
+  A passing check carries `info`, so listing passes here would report a clean run as
+  having findings, the same mistake `tallyFindings` refuses to make in the summary.
+- M7.3: coverage is labeled coverage and the line says what it counts, "of requirements
+  with at least one check that reached a verdict". The label alone is what stops a reader
+  taking the number for a grade, and it is cheaper to say than to correct later.
+- M7.3 proved by breaking it, three ways, each failing exactly its own tests and nothing
+  else: relabeling coverage as a pass rate failed the two coverage tests; emptying the
+  unverified list failed the two invariant I4 tests; dropping the severity term from the
+  finding comparator failed the one ordering test.
+- M7.3 test bug, the third of this family after M3.6 and M7.2: a sweep of the whole
+  document for forbidden finding terms failed on `cve`, which is inside `specVersion` in
+  the run header. The assertion is scoped to the findings section now and reuses the
+  exported `FORBIDDEN_FINDING_TERMS` rather than a second copy of the list, so the two
+  cannot drift. A test that greps a serialized document has to say which part of it.
+- M7.3: the M7 Definition of Done's second command,
+  `pnpm --filter @qai/cli exec qai check --format sarif`, cannot run. The command surface
+  is M8 and lands later in this stage. Stated rather than skipped quietly; the same shape
+  as every stage since S1.
 
 - M7.2: keys are sorted at every level, arrays are never reordered. `JSON.stringify` emits
   keys in insertion order, so two structurally identical results can differ byte for byte
