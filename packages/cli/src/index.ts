@@ -49,6 +49,7 @@ export {
   runInit,
   runValidate,
   runCheck,
+  runProbe,
   DEFAULT_SPEC_GLOB,
   SPEC_PATH,
   GITIGNORE_ENTRY,

@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T14:10:00Z
+Updated: 2026-08-18T15:40:00Z
 Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: M8.6
+Next task: M8.7
 
 ## S0. Skeleton
 
@@ -260,8 +260,9 @@ Surprises worth recording:
 - [x] M8.3 init with scaffolding and the .gitignore entry (commit 4dd2495)
 - [x] M8.4 validate (commits 44aa7c7 and 55bc6f5)
 - [x] M8.5 check, the startup capability report, and exit code application
-  (commits fcf8d2f and one backfilled below)
-- [ ] M8.6 probe and report; diff needs M6 and lands in S7
+  (commits fcf8d2f and 13cd02c)
+- [~] M8.6 probe done (commits f93e5f8 and one backfilled below); report is blocked on
+  M6 run persistence, recorded in the M8 open questions; diff was already S7
 - [ ] M8.7 error presentation for exit codes 2 and 3
 - [ ] M8.8 the GitHub Action, with SARIF upload and outputs
 - [ ] M8.9 end to end test of init, validate, and check against fixtures/ledger
@@ -282,6 +283,32 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.6 is half done and the half that is missing is blocked, not skipped. `probe` is
+  implemented. `report <runId>` re-renders a stored run and nothing stores one:
+  `packages/core/src/store/` does not exist and run persistence is M6. The module header
+  says M6 is "required only by the `diff` subcommand", which is not true of `report`
+  either, and that is a plan error rather than a coding decision. Three ways out are in
+  the M8 open questions; none was taken, because the persistence layout belongs to M6 and
+  inventing one here would leave that module adopting somebody else's choice.
+- M8.6: `probe` loads the spec and still does not give it to the probe. M4 is deliberate
+  that an Observation shaped by the spec cannot support a finding that the two disagree.
+  The spec is read for its `sensitive: true` fields, which redaction needs before any
+  response is written, per rule R8.
+- M8.6: probing with no spec at all is allowed, since the point of the command is
+  answering what is in here before a spec exists. It warns, because redaction then covers
+  only credentials and the configured patterns. Two tests, one each way, so the warning
+  cannot pass by always firing.
+- M8.6: `probe` can never exit 1. It produces no findings, so the failure threshold has
+  nothing to act on, and 1 would tell CI an application has findings from a command that
+  judged nothing. Swept across every refusal path in one test.
+- M8.6: `--format sarif` and `--format junit` on a probe say so rather than emitting an
+  empty document. An empty findings document reports a clean application, where the truth
+  is an unjudged one.
+- M8.6 test bug caught while writing it: the first version of the redaction warning test
+  asserted a tautology, `!x || x`, which passes whatever happens. Replaced with a
+  capturing reporter and a negative case. Worth remembering that a test written to make a
+  suite green is easier to write than one that can fail.
 
 - M8.5: `qai check` runs end to end against the real fixture and the numbers match the
   M7.7 goldens exactly. Defects on: 15 requirements, 7 verified, 6 failed, 2 unverified,

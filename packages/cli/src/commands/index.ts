@@ -5,6 +5,7 @@ import { describeContext, isContextError, resolveContext } from '../context.ts';
 import { resolveConfigPath, type Flags } from '../settings.ts';
 import { runCheck } from './check.ts';
 import { runInit } from './init.ts';
+import { runProbe } from './probe.ts';
 import { runValidate } from './validate.ts';
 
 /**
@@ -115,9 +116,45 @@ export function registerCommands(
       });
     });
 
+  program
+    .command('probe')
+    .argument('[paths...]', 'spec files or globs, read only for the sensitive field list')
+    .description('describe what the target actually contains, judging nothing')
+    .action(async (paths: string[]) => {
+      const flags = program.opts<Flags & { verbose?: boolean; color?: boolean }>();
+      const context = resolveContext({ flags, env: io.env, cwd: io.cwd });
+
+      if (isContextError(context)) {
+        io.stderr.write(`error: ${context.message}
+`);
+        outcome.code = 2;
+        return;
+      }
+
+      if (flags.verbose === true) io.stderr.write(describeContext(context));
+
+      outcome.code = await runProbe({
+        cwd: io.cwd,
+        env: io.env,
+        paths,
+        ...(context.config === undefined ? { config: undefined } : { config: context.config }),
+        configPath: context.configPath.value,
+        settings: context.settings,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        reporter: createReporter({
+          stdout: io.stdout,
+          stderr: io.stderr,
+          tty: io.stderrTty === true,
+          ...(flags.color === false ? { color: false } : {}),
+        }),
+      });
+    });
+
   return program;
 }
 
 export { runInit, SPEC_PATH, GITIGNORE_ENTRY, CONFIG_TEMPLATE, SPEC_TEMPLATE } from './init.ts';
 export { runValidate, DEFAULT_SPEC_GLOB } from './validate.ts';
 export { runCheck, type CheckOptions } from './check.ts';
+export { runProbe, type ProbeOptions } from './probe.ts';
