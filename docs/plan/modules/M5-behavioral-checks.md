@@ -207,6 +207,7 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 15. **M5.13** Configure an `impostor` actor carrying a token belonging to no user, closing AC-011-01. Approved 2026-08-17. A target change rather than a vocabulary one, and it makes a third credential variable mandatory for every script.
 16. **M5.14** Point AR-011-01 at a resource the target serves, so the last unplannable access rule became a check. The S3 demonstration was re-run rather than left to drift.
 17. **M5.15** Print coverage gaps with their reasons in the S3 demonstration rather than counting them. The reasons existed on every run since M3.2 and never reached a reader.
+18. **M5.16** Gather every coverage gap through one collector, so no caller has to remember three side channels. Records why gaps are not `CheckResult`s.
 
 ## Definition of Done
 
