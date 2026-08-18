@@ -285,12 +285,16 @@ requirements:
     accessRules:
       # Named `anonymous` until M5.13, which was a weaker claim than the requirement:
       # a caller presenting nothing is REQ-010. This one is about a credential that
-      # belongs to nobody. Still unplannable, since the target serves no User route,
-      # and that was true before the actor changed.
+      # belongs to nobody.
+      #
+      # It named `User` until M5.14 and could never be planned, because the target
+      # serves no User route. Invoice is the resource this application actually
+      # protects, so the rule is now checkable rather than being coverage on paper.
+      # What it asserts is unchanged: a forged credential is refused.
       - id: AR-011-01
         actor: impostor
         action: read
-        resource: User
+        resource: Invoice
         effect: deny
     acceptanceCriteria:
       # The last gap in this file, and it was never a vocabulary one: every request

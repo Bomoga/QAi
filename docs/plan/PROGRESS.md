@@ -1,4 +1,4 @@
-# Progress
+﻿# Progress
 
 Updated: 2026-08-17T12:20:00Z
 Current stage: S5 complete, pull request open, awaiting review
@@ -107,6 +107,7 @@ Surprises worth recording:
 - Exit criterion: `qai check` against `fixtures/ledger` reports the seeded cross-owner leak as a high severity finding with request and response evidence and exits 1; fixing the fixture app makes it exit 0
 - Known blockers on the criterion, same shape as S1: `qai check` is M8 and lands in S6, and the module Definition of Done names `pnpm --filter @qai/cli exec qai check`. The fixture implemented only D1; D2 and D3 were added at M3.9.
 - Exit criterion: **behavior met, command still M8**. Verified 2026-08-16 via `packages/core/scripts/check-ledger.ts` against a live ledger. Defective: 3 fail, 4 pass, exit 1, with the cross-owner leak reported high severity carrying request and response evidence. Fixed: 7 pass, 0 fail, exit 0. The same seven checks run in both, so the runs compare.
+- Re-verified 2026-08-17 at M5.14, after the fixture spec gained an actor and AR-011-01 was pointed at a resource that has routes. Defective: 8 planned and 0 unplannable, 3 fail, 5 pass, exit 1. Fixed: 8 pass, 0 fail, exit 0. The three failures are the same three defects; the extra passing check is the forged credential being refused, which was unplannable when the criterion was first verified. The 2026-08-16 numbers above are left as they were recorded rather than edited, since they describe the run that actually happened that day.
 
 ### S3 summary
 
@@ -195,7 +196,10 @@ Surprises worth recording:
 - [x] M5.12 the cross-request status comparison (commits 049e8b3, d986c5e, 06eb606), approved 2026-08-17
 - [x] M5.12b the endpoint sweep (commits 0e126b0, 284ed8c, c93c02b), approved 2026-08-17
 - [x] M5.12c the actor axis on the sweep (commits adcff2a, 8199d07, aa954c5), approved 2026-08-17
-- [x] M5.13 the impostor actor, closing the last criterion in the fixture spec (commit backfilled below), approved 2026-08-17
+- [x] M5.13 the impostor actor, closing the last criterion in the fixture spec (commits 24bd43b and 3389dd9), approved 2026-08-17
+- [x] M5.14 AR-011-01 pointed at a resource that has routes, so the last unplannable access rule became a check (commits 1f6d690 and 53acdcd)
+- [x] M5.15 the S3 script prints coverage gaps with their reasons instead of counting them (commits 5ccbfd5 and 4b68276)
+- [x] M5.16 one collector for every coverage gap, so no caller has to remember three side channels (commit backfilled below)
 - Exit criterion, as restated at the boundary on 2026-08-17: deterministic acceptance criteria pass and fail correctly against `fixtures/ledger`; the fuzzy path is built and bounded by invariant I1; skipping Playwright degrades to `unverified` with a reason, never to an error
 - **Exit criterion restated, by the human's decision at the boundary.** It asked for a fuzzy criterion to run under Playwright and be labeled model assisted. Playwright is installable; no model SDK is approved, so the only judge available is a scripted one, and running it would have printed "model assisted" over a run no model touched. Options put up were restating the criterion, approving a model SDK, installing Playwright with a scripted judge labeled as scripted, and opening the PR partially met. The choice was to restate. `05-BUILD-ORDER.md` and the M5 Open questions both say so.
 - **Screenshots ruled on at the same time: opt in stands.** The module said a fuzzy check captures one, rule R8 says never write an unredacted response to disk, and an image cannot be redacted. The module was corrected rather than the rule.
@@ -254,6 +258,60 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M5.16: gaps arrived from three places, `planAccessChecks`, `planBehavioralChecks` and
+  `runBehavioralChecks`, and a caller that remembered two dropped the third silently.
+  `collectCoverageGaps` gathers all three, sorted by requirement then id, and both
+  demonstration scripts print from it. One place to read, one order, one format.
+- M5.16, and this corrects what M5.15 proposed: the open question suggested turning each
+  unplannable rule into a `CheckResult` with verdict `inconclusive` so gaps would sit in
+  the same table as everything else. That is wrong. 00-INDEX.md defines a check as a single
+  verification attempt producing one verdict, and an unplannable rule was never attempted,
+  so it would put work the tool never did into `summary.checks.total`. The contract already
+  has the right home, `unverifiedReasons` on the RunResult, keyed by requirement and drawn
+  from a closed set, and every gap shape already carries a reason from that set.
+- M5.16: one gap per rule or criterion, not per requirement. A requirement with two
+  unplannable rules has two things wrong with it and whoever is fixing them needs both
+  named. Collapsing per requirement is M7's job when it fills `unverifiedReasons`.
+- M5.16: a criterion reported by two sources at once is listed once, with the planning
+  reason winning, since planning happens first and its reason is the more actionable. A
+  gap listed twice reads as two problems.
+
+- M5.15, the actual reason AR-011-01 went unnoticed for two stages: `check-ledger.ts`
+  printed `1 not` and threw the reasons away. `planAccessChecks` had been returning the
+  rule id, a reason from the closed set, and a sentence naming the fix on every run since
+  M3.2, and no reader ever saw any of it. The script prints them now, under a heading that
+  says what they are.
+- M5.15, proved by putting the defect back: with AR-011-01 pointed at `User` again the run
+  reports `AR-011-01 unsupported-condition` and `No route is known for read on "User".
+  Configure resources[].routes.read for it, or run a probe first.` Pointed at `Invoice` it
+  reports no gaps at all. The count alone was what made a two-stage-old gap look exactly
+  like a fresh one.
+- M5.15, what this does not fix, stated so nobody mistakes it for solved: a gap that has
+  been open since M1.8 still reads identically to one introduced this morning. Telling them
+  apart needs run history, which is M6, and a report that can compare against it, which is
+  M7. Neither exists. The honest position is that gaps are now legible, not that they are
+  ranked.
+- M5.15 for M7 to decide: an unplannable rule reaches the caller in a side channel next to
+  the results, so any renderer that shows results and forgets the side channel loses it
+  again. Turning each one into a `CheckResult` with verdict `inconclusive` would put gaps
+  in the same table as everything else and make forgetting them structurally harder. That
+  changes what the results list means and belongs to whoever assembles the RunResult.
+
+- M5.14: AR-011-01 named `User`, which the target serves no route for, so it could never be
+  planned. It names `Invoice` now and the rule is checked rather than being coverage on
+  paper. What it asserts did not change: a forged credential is refused. With that, both
+  halves of the fixture spec are fully planned, 8 access rules and 16 criteria, 0
+  unplannable on either side.
+- M5.14: the S3 exit criterion was re-verified rather than left to drift, since changing a
+  rule changes what that script reports. Defective 3 fail 5 pass exit 1, fixed 8 pass 0 fail
+  exit 0, against 3 fail 4 pass and 7 pass when it was first run. The original numbers are
+  left in place as the record of the run that happened on the day, with the re-run recorded
+  beneath them.
+- M5.14 worth watching: an unplannable rule is quiet. AR-011-01 sat unplannable from M1.8 to
+  here, reported honestly every run, and nobody looked at it until an unrelated change made
+  the loader warn about an unreferenced actor. The reasons are in the output; what is
+  missing is anything that makes a long-standing gap harder to ignore than a new one.
 
 - M5.13, approved by the human on 2026-08-17: `qai.config.yaml` configures an `impostor`
   actor carrying a bearer token that matches no seeded user, which closes AC-011-01. Every

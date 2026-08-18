@@ -1,4 +1,4 @@
-# M5: Behavioral Checks
+﻿# M5: Behavioral Checks
 
 **Status:** complete
 **Owns:** `packages/core/src/checks/behavioral/`
@@ -205,6 +205,9 @@ Read that last mapping carefully. A model alone can never produce `fail`. This i
 13. **M5.12b** Add the endpoint sweep, closing AC-014-01 over endpoints. Approved 2026-08-17. It quantifies over an Observation and is unevaluable without one, so a run with no probe cannot pass it by checking nothing.
 14. **M5.12c** Add the actor axis to the sweep, closing the rest of AC-014-01. Approved 2026-08-17. Written out in the criterion, since it multiplies the request count by the number of configured actors.
 15. **M5.13** Configure an `impostor` actor carrying a token belonging to no user, closing AC-011-01. Approved 2026-08-17. A target change rather than a vocabulary one, and it makes a third credential variable mandatory for every script.
+16. **M5.14** Point AR-011-01 at a resource the target serves, so the last unplannable access rule became a check. The S3 demonstration was re-run rather than left to drift.
+17. **M5.15** Print coverage gaps with their reasons in the S3 demonstration rather than counting them. The reasons existed on every run since M3.2 and never reached a reader.
+18. **M5.16** Gather every coverage gap through one collector, so no caller has to remember three side channels. Records why gaps are not `CheckResult`s.
 
 ## Definition of Done
 
