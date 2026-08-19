@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T20:48:00Z
+Updated: 2026-08-18T21:00:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: M6.3
+Next task: M6.4
 
 ## S0. Skeleton
 
@@ -322,8 +322,8 @@ Surprises worth recording:
 ## S7. Store and delta (M6)
 
 - [x] M6.1 the SQLite schema, migrations, and schema_version handling (commits bbac9f2, cb3062f)
-- [x] M6.2 saveRun and evidence file writing with referential integrity (commit backfilled below)
-- [ ] M6.3 stable checkId hashing, proved against response changes and re-runs
+- [x] M6.2 saveRun and evidence file writing with referential integrity (commits 93dd4e7, 794a232, fd108fd)
+- [x] M6.3 stable checkId hashing, proved against response changes and re-runs (commit backfilled below)
 - [ ] M6.4 diffRuns for requirement verdict transitions
 - [ ] M6.5 structural delta including access loosening detection
 - [ ] M6.6 comparability handling for differing spec hashes
@@ -343,6 +343,40 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.3 found a real divergence between the plan and the code, and the plan was right. The
+  module says a check id hashes requirement id, rule or criterion id, actor id, resource,
+  and action. Both planners were passing the resolved route as the action, so the id
+  embedded a URL: a regeneration that moved an endpoint to /v2 would have changed every
+  check id that touched it, and the delta would have reported each check as gone and
+  replaced. That is precisely the noise the module calls out, in the one place it calls
+  load bearing. Identity now carries `resource` and the spec's own action.
+- M6.3: dropping the route from the identity meant `identityFor` no longer needed a
+  method or a path, and the compiler said so. Better types find more than they cost, for
+  the third time in this project.
+- M6.3: the goldens were regenerated deliberately, and the diff was checked rather than
+  accepted. All 24 check ids changed in each and nothing else did: the summary, the
+  requirement verdicts, the structural findings, and the set of checks compared field for
+  field ignoring ids are all identical. The diff looks enormous only because `assembleRun`
+  sorts checks by id, so new ids reorder the array.
+- M6.3 worth knowing: nothing in the suite caught the goldens going stale. The golden
+  tests render a stored RunResult, so they never re-hash anything, and the integration
+  test asserts counts rather than ids. A change to identity is invisible to the suite by
+  construction, which is an argument for regenerating deliberately rather than waiting to
+  be told.
+- M6.3: `checks/result.ts` joins the identity fields with a NUL, which is why git and grep
+  treat that file as binary. It is the right separator, since without one a boundary
+  moving between two adjacent fields collides, and it is now commented so the next reader
+  does not think the file is corrupt.
+- M6.3, two weak tests found by breaking the code and watching nothing go red. Removing
+  `resource` from the access planner broke no access test, because a rule id already
+  disambiguates within a single spec; there is now a planner-level test, and one that
+  pins the same id across two different routes. And the separator test used actorId and
+  ruleId, which are not adjacent in the join, so it passed with no separator at all; it
+  uses requirementId and ruleId now. Third and fourth vacuous tests caught this stage.
+- M6.3: the one literal id in the identity test is read from a real run rather than
+  computed in the test. The first version invented a hash that was simply wrong, which is
+  the honest failure mode: a recomputed expectation would have passed against anything.
 
 - Run ids now carry seconds, `RUN-20260818-180338`. At minute resolution two runs a few
   seconds apart produced the same id, which the store refuses rather than overwriting, so

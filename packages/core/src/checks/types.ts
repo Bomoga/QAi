@@ -21,7 +21,16 @@ export interface CheckIdentity {
   readonly ruleId?: string;
   /** The actor the check acts as. Two actors against one rule are two checks. */
   readonly actorId?: string;
-  /** Stable description of the action, for example `GET /api/invoices/:id`. */
+  /** The entity acted on, for example `Invoice`. */
+  readonly resource?: string;
+  /**
+   * The action in the spec's words, for example `read` or `list`.
+   *
+   * Deliberately not a method and a path. A route is a fact about the application today,
+   * and a regeneration that renames one would change every check id that touched it,
+   * which is the noise M6 exists to avoid. What a check is remains "outsider reads
+   * Invoice" whichever URL that happens to be.
+   */
   readonly action?: string;
 }
 
