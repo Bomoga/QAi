@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T20:18:00Z
+Updated: 2026-08-18T20:48:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: M6.2
+Next task: M6.3
 
 ## S0. Skeleton
 
@@ -321,8 +321,8 @@ Surprises worth recording:
 
 ## S7. Store and delta (M6)
 
-- [x] M6.1 the SQLite schema, migrations, and schema_version handling (commit backfilled below)
-- [ ] M6.2 saveRun and evidence file writing with referential integrity
+- [x] M6.1 the SQLite schema, migrations, and schema_version handling (commits bbac9f2, cb3062f)
+- [x] M6.2 saveRun and evidence file writing with referential integrity (commit backfilled below)
 - [ ] M6.3 stable checkId hashing, proved against response changes and re-runs
 - [ ] M6.4 diffRuns for requirement verdict transitions
 - [ ] M6.5 structural delta including access loosening detection
@@ -343,6 +343,37 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.2: the store writes no evidence body. M2's writer already put it under
+  `.qai/evidence/`, redacted at capture time, before the store sees a record, and rule R8
+  says redaction happens on capture. A store that re-serialized a body it never read
+  would be inventing content. What `saveRun` does instead is record the reference and
+  report which bodies are actually on disk, which is what referential integrity means
+  when half the data is in a database and half is in a directory.
+- M6.2: a body that is missing is reported, not thrown on. A run assembled without an
+  evidence writer is legitimate and so is one whose bodies were pruned; the store implying
+  a body exists when it does not is what would not be.
+- M6.2: a duplicate run id is refused and nothing is overwritten. This store exists so two
+  runs can be compared, and silently replacing one is the single thing it must not do.
+  Proved by breaking it: switching to INSERT OR REPLACE failed exactly that test.
+- M6.2, and this is the important one: **the first atomicity test was vacuous.** It passed
+  a malformed Evidence record and asserted the run did not land, but validation happens
+  before the transaction opens, so the run never landed either way and dropping the
+  transaction entirely failed nothing. The real test makes the failure happen inside the
+  transaction, with two records sharing an id colliding on the primary key after the run
+  row is already in. Caught by breaking the code and watching nothing go red, which is the
+  only way this kind of test gets found.
+- M6.2: reads validate through `RunResultSchema` on the way out, since a row off disk is a
+  boundary per rule R2, and a database written by a build with a different idea of
+  RunResult should fail loudly rather than produce a delta from an unchecked shape. Writes
+  validate too, which is cheap and names the bug at the point it happened.
+- M6.2: `listRuns` reads the summary out of the stored run rather than keeping it in its
+  own columns. Two copies of one number is how a listing starts disagreeing with the run
+  it claims to describe, and the module's Do Not rules out an analytics store anyway.
+- M6.2 defect found, in M8 rather than here: `runIdFrom` builds `RUN-YYYYMMDD-HHMM`, so
+  two runs in the same minute collide on the store's primary key. The store is right to
+  refuse them; the id is what needs widening, and the S7 exit criterion compares two runs
+  that will be seconds apart. Fixing it next.
 
 - M6.1: `better-sqlite3` is a native module and pnpm blocks build scripts by default, which
   is the right default. `pnpm-workspace.yaml` already carried a placeholder,
