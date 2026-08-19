@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T16:00:00Z
-Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: S7, on a branch cut from dev once PR #10 and the M8 PR are merged
+Updated: 2026-08-18T20:18:00Z
+Current stage: S7, module M6, branch feat/m6-store-delta
+Next task: M6.2
 
 ## S0. Skeleton
 
@@ -321,6 +321,17 @@ Surprises worth recording:
 
 ## S7. Store and delta (M6)
 
+- [x] M6.1 the SQLite schema, migrations, and schema_version handling (commit backfilled below)
+- [ ] M6.2 saveRun and evidence file writing with referential integrity
+- [ ] M6.3 stable checkId hashing, proved against response changes and re-runs
+- [ ] M6.4 diffRuns for requirement verdict transitions
+- [ ] M6.5 structural delta including access loosening detection
+- [ ] M6.6 comparability handling for differing spec hashes
+- [ ] M6.7 retention and pruning with a reported summary
+- [ ] M6.8 integration test over the defective and fixed fixture, both directions
+- Exit criterion: `qai diff <runA> <runB>` reports a requirement moving from failed to verified, an endpoint newly appearing, and an access rule newly loosening, on runs taken before and after a deliberate regeneration of the fixture app
+- Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
+
 - [ ] not started
 
 ## S8. Corpus run
@@ -332,6 +343,36 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.1: `better-sqlite3` is a native module and pnpm blocks build scripts by default, which
+  is the right default. `pnpm-workspace.yaml` already carried a placeholder,
+  `better-sqlite3: set this to true or false`, waiting on the decision. Set to true with
+  the reasoning beside it: the package is named in 04-CONVENTIONS.md and required by name
+  in the module, and it cannot load without its binding. It is the only runtime dependency
+  here allowed to run a build script. Worth a human's eye even so.
+- M6.1: pnpm 11 no longer reads the `pnpm` field in `package.json`. The setting lives in
+  `pnpm-workspace.yaml` now, and putting it in the old place fails silently with only a
+  warning, which is the kind of thing that looks configured and is not.
+- M6.1: `@types/better-sqlite3` is a devDependency, since the package ships no types. The
+  approved list in 04-CONVENTIONS.md governs runtime dependencies, and a types package
+  follows whatever it types rather than being a decision of its own.
+- M6.1: a database at a version newer than the build understands is refused, never opened.
+  An older qai cannot know what a later one added, and writing to it would corrupt history
+  already on disk. Proved by breaking it: removing the guard failed exactly that test.
+- M6.1: each migration runs inside a transaction with its own version bump, so a failure
+  halfway leaves the database at the last version it fully reached rather than at one it
+  only partly is. Proved by breaking it: bumping the version before the DDL and dropping
+  the transaction failed exactly that test.
+- M6.1 real bug found by a failing test rather than by review: when `migrate` threw,
+  `openDatabase` left the handle open, and on Windows that keeps a lock on the file, so a
+  clear refusal became a file nothing else could touch either. The handle is closed before
+  the error escapes now.
+- M6.1: the whole RunResult is one JSON column with a few indexed columns beside it, which
+  are exactly what `listRuns` sorts and filters on. The module's Do Not says this is not an
+  analytics store, and `diffRuns` takes two RunResults rather than querying fields.
+- M6.1 test bug worth remembering: `nothing` is a SQLite keyword, from `ON CONFLICT DO
+  NOTHING`, so `CREATE TABLE runs (nothing TEXT)` is a syntax error rather than the column
+  collision the test intended.
 
 - M8.9 drives `main` rather than spawning the binary. Spawning would test that pnpm linked
   a bin, which is true or false regardless of anything in this repository, and would make
