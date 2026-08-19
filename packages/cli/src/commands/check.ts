@@ -78,19 +78,27 @@ export interface CheckOptions {
   readonly deps?: Deps;
 }
 
-/** `RUN-20260818-1400`, derived from the injected clock rather than read from one. */
-function runIdFrom(instant: string): string {
+/** `RUN-20260818-180338`, derived from the injected clock rather than read from one. */
+export function runIdFrom(instant: string): string {
   return `RUN-${stamp(instant)}`;
 }
 
 /** The run's Observation, named off the same instant so the pair reads as one run. */
-function observationIdFrom(instant: string): string {
+export function observationIdFrom(instant: string): string {
   return `OBS-${stamp(instant)}`;
 }
 
+/**
+ * `20260818-180338` from an ISO instant: date, then hours, minutes, and seconds.
+ *
+ * Seconds are in it because the store keys runs by id and refuses a duplicate rather than
+ * overwriting one. At minute resolution two runs a few seconds apart collided, which is
+ * exactly what happens when somebody checks, fixes something, and checks again, and is
+ * also what the S7 exit criterion does on purpose.
+ */
 function stamp(instant: string): string {
   const digits = instant.replace(/\D/g, '');
-  return `${digits.slice(0, 8)}-${digits.slice(8, 12)}`;
+  return `${digits.slice(0, 8)}-${digits.slice(8, 14)}`;
 }
 
 /**

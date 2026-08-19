@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Stream } from '../reporter.ts';
 import { BUILT_IN_DEFAULTS, type Settings } from '../settings.ts';
-import { runCheck } from './check.ts';
+import { observationIdFrom, runCheck, runIdFrom } from './check.ts';
 
 /**
  * The paths through `check` that need no target.
@@ -186,5 +186,31 @@ describe('qai check, before a run can start', () => {
     writeFileSync(join(dir, 'spec', 'app.spec.yaml'), SPEC, 'utf8');
 
     expect((await check({ config: configWith(CLOSED_PORT_URL) })).out).toBe('');
+  });
+});
+
+describe('the run id', () => {
+  it('carries seconds, so two runs seconds apart cannot collide', () => {
+    // The store keys runs by id and refuses a duplicate rather than overwriting one, so
+    // a minute-resolution id made two runs a few seconds apart unstorable. That is
+    // exactly what happens when somebody checks, fixes something, and checks again, and
+    // it is what the S7 exit criterion does on purpose.
+    const first = runIdFrom('2026-08-18T18:03:38.000Z');
+    const second = runIdFrom('2026-08-18T18:03:41.000Z');
+
+    expect(first).toBe('RUN-20260818-180338');
+    expect(second).toBe('RUN-20260818-180341');
+    expect(first).not.toBe(second);
+  });
+
+  it('matches the shape the contract requires of a run id', () => {
+    expect(runIdFrom('2026-08-18T18:03:38.000Z')).toMatch(/^RUN-[A-Za-z0-9-]+$/);
+  });
+
+  it('names the observation off the same instant, so the pair reads as one run', () => {
+    const instant = '2026-08-18T18:03:38.000Z';
+
+    expect(observationIdFrom(instant)).toBe('OBS-20260818-180338');
+    expect(observationIdFrom(instant).slice(4)).toBe(runIdFrom(instant).slice(4));
   });
 });
