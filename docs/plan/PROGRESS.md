@@ -344,16 +344,20 @@ Surprises worth recording:
 
 ## Notes carried forward
 
-- Run ids now carry seconds, . At minute resolution two runs a few
+- Run ids now carry seconds, `RUN-20260818-180338`. At minute resolution two runs a few
   seconds apart produced the same id, which the store refuses rather than overwriting, so
   checking, fixing something, and checking again was unstorable. That is also precisely
   what the S7 exit criterion does. Fixed in M8's file from the M6 branch, since the store
   is what surfaced it and the branch stacks on M8 anyway.
 - The first test written for that fix was vacuous in the same way the M6.2 atomicity test
   was: it recomputed the stamp inside the test instead of calling the code, so it would
-  have passed against any implementation.  and  are exported
+  have passed against any implementation. `runIdFrom` and `observationIdFrom` are exported
   now and asserted for the strings they actually produce. Two vacuous tests caught in one
   task is worth noticing as a pattern rather than as two accidents.
+- Shell trap worth adding to the list: backticks inside a heredoc passed to python through
+  the Bash tool are command-substituted before python sees them, so every backticked
+  identifier in that note came out as an empty string. The commit still landed, silently
+  missing words. Write prose with the file tools, not through a shell.
 
 - M6.2: the store writes no evidence body. M2's writer already put it under
   `.qai/evidence/`, redacted at capture time, before the store sees a record, and rule R8
