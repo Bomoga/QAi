@@ -120,6 +120,16 @@ is the explicit equivalent.
   RunResult knows, and it catches D5 in the fixture, but an endpoint that is both
   specified and observed in both runs is invisible to it, correctly, and one that changes
   shape without changing presence is invisible too.
+- **Retention cannot hold five runs of evidence while evidence ids repeat.** Evidence
+  ids come from a per-run counter in `systemDeps`, so every run writes
+  `.qai/evidence/EV-000001.json` and each run overwrites the last one's bodies. The
+  database keeps five runs of evidence rows as the policy says; the directory holds the
+  newest run's files whatever the policy says. `pruneEvidence` is correct either way,
+  because it unlinks a body only when no surviving row still names it, but the file half
+  of the window is not real until an evidence id is unique across runs. That identifier
+  belongs to M2, and 03-CONTRACTS.md already says check and evidence identifiers are
+  content hashed at runtime, which the evidence id is not. Recorded rather than fixed
+  here, since changing it changes what every stored run refers to.
 - **`accessLoosened[].endpoint` holds a rule id when nothing better exists.** A
   `CheckResultRecord` carries no endpoint, which M7.4 already ran into: the route appears
   only inside `detail` as prose and parsing it back out would be a guess. The entry also
