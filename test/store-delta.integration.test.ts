@@ -277,6 +277,86 @@ describe('check records the run it produced', () => {
   }, 30_000);
 });
 
+describe('diff and report through the command surface', () => {
+  let dir: string;
+  let defectiveId: string;
+  let fixedId: string;
+
+  beforeAll(async () => {
+    // One directory, two checks, exactly as a user fixing something would do it. Both
+    // runs land in one store, which is what `qai diff` with no arguments reads.
+    dir = workspace();
+    workspaces.push(dir);
+    copyFileSync(FIXTURE_SPEC, join(dir, 'spec', 'ledger.spec.yaml'));
+
+    writeConfig(dir, await startLedger(ALL_DEFECTS_ON));
+    const before = await runCli(dir, ['check', '--format', 'json']);
+    defectiveId = RunResultSchema.parse(JSON.parse(before.out)).runId;
+
+    // A run id carries seconds, so two checks a fraction of a second apart collide on it
+    // and the store refuses the second rather than overwriting the first. Somebody
+    // fixing a defect between two checks takes longer than this; a test does not.
+    await new Promise((done) => setTimeout(done, 1100));
+
+    // The repaired application answers on a different port, which is deliberately not a
+    // reason for two runs to be incomparable.
+    writeConfig(dir, await startLedger(ALL_DEFECTS_OFF));
+    const after = await runCli(dir, ['check', '--format', 'json']);
+    fixedId = RunResultSchema.parse(JSON.parse(after.out)).runId;
+
+    expect(defectiveId).not.toBe(fixedId);
+  }, 30_000);
+
+  it('compares the last two runs when told nothing else', async () => {
+    const { code, out } = await runCli(dir, ['diff']);
+
+    expect(code).toBe(0);
+    expect(out).toContain(`Delta ${defectiveId} to ${fixedId}`);
+    expect(out).toContain('Fixed (6)');
+    expect(out).toContain('Regressed (0)');
+  }, 30_000);
+
+  it('compares two named runs, in the order they were named', async () => {
+    const { code, out } = await runCli(dir, ['diff', fixedId, defectiveId, '--format', 'json']);
+    const delta = JSON.parse(out) as {
+      from: string;
+      requirements: { regressed: unknown[]; fixed: unknown[] };
+      structural: { accessLoosened: unknown[]; endpointsAdded: string[] };
+    };
+
+    expect(code).toBe(0);
+    expect(delta.from).toBe(fixedId);
+    expect(delta.requirements.regressed).toHaveLength(6);
+    expect(delta.requirements.fixed).toHaveLength(0);
+    expect(delta.structural.accessLoosened).toHaveLength(3);
+    expect(delta.structural.endpointsAdded).toContain(DEBUG_ENDPOINT);
+  }, 30_000);
+
+  it('renders a stored run again, and refuses an id it does not hold', async () => {
+    const rendered = await runCli(dir, ['report', defectiveId]);
+
+    expect(rendered.code).toBe(0);
+    expect(rendered.out).toContain(defectiveId);
+    expect(rendered.out).toContain('15 total, 7 verified, 6 failed, 2 unverified');
+
+    const missing = await runCli(dir, ['report', 'RUN-nope']);
+    expect(missing.code).toBe(2);
+    expect(missing.err).toContain(defectiveId);
+  }, 30_000);
+
+  it('refuses to diff in a directory that has recorded nothing', async () => {
+    // An empty delta here would read as an application that did not change, which is the
+    // most misleading thing this could report.
+    const empty = workspace();
+    workspaces.push(empty);
+
+    const { code, err } = await runCli(empty, ['diff']);
+
+    expect(code).toBe(2);
+    expect(err).toContain('nothing has been recorded here yet');
+  }, 30_000);
+});
+
 describe('a regeneration that fixes one thing and breaks another', () => {
   // The shape the S7 exit criterion asks for, and the shape a real regeneration takes: a
   // build is not uniformly better or worse than the one before it. All three signals have

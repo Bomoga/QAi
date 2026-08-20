@@ -50,8 +50,11 @@ export const GLOBAL_FLAGS = [
  *
  * `Number.parseInt` turns `"4x"` into 4 and `"x"` into `NaN`, and a concurrency of `NaN`
  * would surface much later as a run that does nothing, blamed on the target.
+ *
+ * Exported because `--last` on `diff` wants the same refusal. A second copy would be a
+ * second chance to accept something this one rejects.
  */
-function positiveInteger(value: string): string {
+export function positiveInteger(value: string): string {
   if (!/^[1-9]\d*$/.test(value)) {
     throw new InvalidArgumentError('expected a positive whole number, for example 4');
   }

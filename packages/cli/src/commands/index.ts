@@ -3,10 +3,13 @@ import type { Command } from 'commander';
 import { createReporter, type Stream } from '../reporter.ts';
 import { describeContext, isContextError, resolveContext } from '../context.ts';
 import { presentContextError } from '../errors.ts';
+import { positiveInteger } from '../program.ts';
 import { resolveConfigPath, type Flags } from '../settings.ts';
 import { runCheck } from './check.ts';
+import { runDiff } from './diff.ts';
 import { runInit } from './init.ts';
 import { runProbe } from './probe.ts';
+import { runReport } from './report.ts';
 import { runValidate } from './validate.ts';
 
 /**
@@ -153,6 +156,69 @@ export function registerCommands(
       });
     });
 
+  program
+    .command('report')
+    .argument('<runId>', 'a run id the store holds, for example RUN-20260820-143012')
+    .description('render a stored run again, in any format')
+    .action((runId: string) => {
+      const flags = program.opts<Flags>();
+      const context = resolveContext({ flags, env: io.env, cwd: io.cwd });
+
+      if (isContextError(context)) {
+        outcome.code = presentContextError(context, {
+          stderr: io.stderr,
+          ...(flags.verbose === true ? { verbose: true } : {}),
+        });
+        return;
+      }
+
+      if (flags.verbose === true) io.stderr.write(describeContext(context));
+
+      outcome.code = runReport({
+        cwd: io.cwd,
+        runId,
+        settings: context.settings,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        color: flags.color !== false && io.stdoutTty === true,
+        ...(flags.verbose === true ? { verbose: true } : {}),
+      });
+    });
+
+  program
+    .command('diff')
+    .argument('[runs...]', 'two run ids, oldest first, or none to compare the most recent two')
+    .option(
+      '--last <n>',
+      'compare the newest run with the nth most recent, defaulting to the one before it',
+      positiveInteger,
+    )
+    .description('report what changed about the application between two runs')
+    .action((runs: string[], commandFlags: { last?: string }) => {
+      const flags = program.opts<Flags>();
+      const context = resolveContext({ flags, env: io.env, cwd: io.cwd });
+
+      if (isContextError(context)) {
+        outcome.code = presentContextError(context, {
+          stderr: io.stderr,
+          ...(flags.verbose === true ? { verbose: true } : {}),
+        });
+        return;
+      }
+
+      if (flags.verbose === true) io.stderr.write(describeContext(context));
+
+      outcome.code = runDiff({
+        cwd: io.cwd,
+        runs,
+        ...(commandFlags.last === undefined ? {} : { last: Number(commandFlags.last) }),
+        settings: context.settings,
+        stdout: io.stdout,
+        stderr: io.stderr,
+        ...(flags.verbose === true ? { verbose: true } : {}),
+      });
+    });
+
   return program;
 }
 
@@ -160,3 +226,5 @@ export { runInit, SPEC_PATH, GITIGNORE_ENTRY, CONFIG_TEMPLATE, SPEC_TEMPLATE } f
 export { runValidate, DEFAULT_SPEC_GLOB } from './validate.ts';
 export { runCheck, type CheckOptions } from './check.ts';
 export { runProbe, type ProbeOptions } from './probe.ts';
+export { runReport, renderStoredRun, type ReportOptions } from './report.ts';
+export { runDiff, DEFAULT_LAST, type DiffOptions } from './diff.ts';
