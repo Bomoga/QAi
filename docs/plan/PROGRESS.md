@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T21:00:00Z
+Updated: 2026-08-19T10:55:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: M6.4
+Next task: M6.5
 
 ## S0. Skeleton
 
@@ -323,8 +323,8 @@ Surprises worth recording:
 
 - [x] M6.1 the SQLite schema, migrations, and schema_version handling (commits bbac9f2, cb3062f)
 - [x] M6.2 saveRun and evidence file writing with referential integrity (commits 93dd4e7, 794a232, fd108fd)
-- [x] M6.3 stable checkId hashing, proved against response changes and re-runs (commit backfilled below)
-- [ ] M6.4 diffRuns for requirement verdict transitions
+- [x] M6.3 stable checkId hashing, proved against response changes and re-runs (commit 6d17ed6)
+- [x] M6.4 diffRuns for requirement verdict transitions (commit backfilled below)
 - [ ] M6.5 structural delta including access loosening detection
 - [ ] M6.6 comparability handling for differing spec hashes
 - [ ] M6.7 retention and pruning with a reported summary
@@ -343,6 +343,34 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.4: the four buckets are exhaustive and mutually exclusive over the nine verdict
+  pairs, and the test reads them as a three by three grid rather than as nine assertions.
+  A rule wired to the wrong bucket can hide behind whichever cases nobody wrote down;
+  it cannot hide from the grid. Proved by breaking it: narrowing regressed to only
+  verified-to-failed failed the grid and nothing else.
+- M6.4: the module's shape has `newlyUnverified` but no `newlyVerified`, which looks
+  asymmetric until you notice every entry carries `from` and `to`. A coverage gap closing
+  and a failure being repaired both land in `fixed` and stay distinguishable by their
+  `from`. No fifth bucket, and nothing lost.
+- M6.4: `verified` to `verified` and `unverified` to `unverified` land in no bucket at
+  all. A delta that listed everything would be a report. `stillFailing` is the one thing
+  reported without having moved, because a failure nobody fixed is still the answer to
+  what is wrong with this application.
+- M6.4: a transition names the checks whose verdict moved, not every check on the
+  requirement. A requirement with six checks where one broke has to point at the one, or
+  the reader diffs two runs by hand to find it.
+- M6.4: a check that ran before and does not now counts as moved, and it is the case a
+  reader is most likely hunting for. Something quietly no longer being checked leaves no
+  failing check behind to point at. Proved by breaking it: dropping that branch failed
+  exactly the test written for it.
+- M6.4: a requirement present in only one run is skipped rather than reported as a
+  transition. It appeared or vanished because the spec changed, not because the
+  application did, and M6.6 owns saying so.
+- M6.4: `diffRuns(a, b)` reads from a to b, and a test asserts that reversing the
+  arguments turns a fix into a regression. That is the one mistake a caller makes with a
+  two argument diff, and reporting a fix as a regression is the worst available way to be
+  wrong.
 
 - M6.3 found a real divergence between the plan and the code, and the plan was right. The
   module says a check id hashes requirement id, rule or criterion id, actor id, resource,
