@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-19T11:04:00Z
+Updated: 2026-08-20T12:10:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: M6.7
+Next task: M6.8
 
 ## S0. Skeleton
 
@@ -326,8 +326,8 @@ Surprises worth recording:
 - [x] M6.3 stable checkId hashing, proved against response changes and re-runs (commit 6d17ed6)
 - [x] M6.4 diffRuns for requirement verdict transitions (commit 39ec523)
 - [x] M6.5 structural delta including access loosening detection (commit 54ae396)
-- [x] M6.6 comparability handling for differing spec hashes (commit backfilled below)
-- [ ] M6.7 retention and pruning with a reported summary
+- [x] M6.6 comparability handling for differing spec hashes (commit c711cc7)
+- [x] M6.7 retention and pruning with a reported summary (commit backfilled below)
 - [ ] M6.8 integration test over the defective and fixed fixture, both directions
 - Exit criterion: `qai diff <runA> <runB>` reports a requirement moving from failed to verified, an endpoint newly appearing, and an access rule newly loosening, on runs taken before and after a deliberate regeneration of the fixture app
 - Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
@@ -343,6 +343,49 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.7: pruning is reported through the save report rather than through a method somebody
+  has to remember to call. The module's Do Not says do not prune silently, and a report
+  nobody requests is a report nobody reads, so `saveRun` returns what retention removed
+  alongside what it stored.
+- M6.7, the rule that matters and the reason it exists: a body file is unlinked only when
+  no surviving evidence row still names it. That is not defensive coding. Evidence ids
+  come from a per-run counter in `systemDeps`, so every run writes `EV-000001.json` to the
+  same path, and two runs genuinely point at one file today. Deleting the older run's body
+  would delete the newer run's evidence, which is the artifact behind a finding somebody
+  is reading. Proved by breaking it: dropping the guard failed exactly the test written
+  for it, and both directions are tested, since a guard that never released a file would
+  be indistinguishable from one that worked until the directory filled up.
+- M6.7 consequence of that same counter, recorded in the M6 open questions: while every
+  run writes the same filenames, `.qai/evidence/` holds the newest run's bodies and not
+  five runs of them, because each run overwrites the last. The pruner is correct either
+  way and the window is real for the rows; the files cannot honour it until an evidence
+  id is unique across runs. That is M2's identifier, not this module's.
+- M6.7: the surviving reference set is read after the deletions, never before. Asking
+  first counts the rows that are about to go and keeps every file forever. Proved by
+  breaking it: computing it from the pre-deletion snapshot failed six tests.
+- M6.7: rows go in one transaction, files are unlinked after it, outside. A filesystem
+  does not roll back, and pretending otherwise would put a deletion in the report that a
+  failed transaction had undone in the database only.
+- M6.7: retention reads recency exactly as `listRuns` does, `started_at DESC` with the run
+  id as tiebreak. Two opinions about which runs are recent is how a user watches the top
+  of their list get pruned. Proved by breaking it: ordering oldest first failed twelve
+  tests.
+- M6.7: `keepRuns` of zero is refused rather than clamped, since pruning happens on write
+  and a zero window would delete the run the caller just handed over. `keepEvidence` of
+  zero is allowed, because keeping no evidence is a real choice and keeping no runs is
+  not. `keepEvidence` above `keepRuns` is bounded by `keepRuns`: evidence for a run that
+  is gone has nothing to belong to.
+- M6.7 edge left deliberate rather than special-cased: a run stamped older than everything
+  already stored is outside the window the moment it lands, so the write that saved it
+  also prunes it. The save report names it. A rule that kept the newest twenty except for
+  the one just written would be a second retention rule nobody could state in a sentence.
+- M6.7 shell trap, a new member of a familiar family: a SQL comment written into
+  `schema.ts` carried a path in backticks, and that SQL lives inside a template literal,
+  so the first backtick ended the literal and the file failed to parse with
+  `evidence is not defined`. The suite said so immediately. Backticks are hazardous in a
+  heredoc and hazardous inside a template literal, for unrelated reasons, and the fix is
+  the same both times: do not reach for them.
 
 - M6.6: a requirement present in only one run is named in `added` or `removed`, never
   folded into a transition. The dangerous direction is removal: somebody deleting a

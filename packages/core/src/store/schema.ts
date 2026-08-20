@@ -70,7 +70,9 @@ export const MIGRATIONS: readonly Migration[] = [
         kind          TEXT NOT NULL,
         captured_at   TEXT NOT NULL,
         actor_id      TEXT,
-        -- Relative to the state directory. The body itself is a file, never a row.
+        -- The Evidence record's bodyRef verbatim, which is relative to the project root
+        -- and already carries the state directory, as in .qai/evidence/EV-000001.json.
+        -- The body itself is a file, never a row.
         body_path     TEXT,
         record_json   TEXT NOT NULL,
         PRIMARY KEY (run_id, evidence_id)

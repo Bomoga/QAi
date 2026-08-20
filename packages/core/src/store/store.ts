@@ -8,6 +8,7 @@ import {
   type RunResult,
   type Summary,
 } from '../contracts/index.ts';
+import { pruneStore, resolvePrunePolicy, type PrunePolicy, type PruneReport } from './prune.ts';
 import { openDatabase, type StoreDatabase } from './schema.ts';
 
 /**
@@ -29,6 +30,11 @@ import { openDatabase, type StoreDatabase } from './schema.ts';
  * **Reads validate.** Rule R2: a row coming off disk is a boundary, and a database
  * written by a build with a different idea of RunResult should fail loudly here rather
  * than produce a delta from a shape nobody checked.
+ *
+ * **Retention runs on write, and reports.** Every `saveRun` prunes to the configured
+ * window and hands the report back with the save report, so nothing has to remember to
+ * ask. See `prune.ts` for what the window means and why a body file can outlive the run
+ * that recorded it.
  */
 
 export interface SaveReport {
@@ -42,6 +48,13 @@ export interface SaveReport {
    * legitimate is the store implying a body exists when it does not.
    */
   readonly bodiesMissing: readonly string[];
+  /**
+   * What retention removed as part of this write.
+   *
+   * Carried here rather than left for a caller to ask about, because the module's Do Not
+   * says pruning is reported, and a report nobody requests is a report nobody reads.
+   */
+  readonly pruned: PruneReport;
 }
 
 export interface RunSummary {
@@ -63,9 +76,21 @@ export interface Store {
   saveRun(result: RunResult, evidence: readonly Evidence[]): SaveReport;
   getRun(runId: string): RunResult | null;
   listRuns(opts?: ListOptions): RunSummary[];
+  /** Applies retention now. Defaults to the window this store was opened with. */
+  pruneEvidence(policy?: PrunePolicy): PruneReport;
   /** The state directory this store lives in, for whoever resolves an evidence path. */
   readonly stateDir: string;
   close(): void;
+}
+
+export interface StoreOptions {
+  /**
+   * The window every write prunes to. Defaults to twenty runs and five runs of evidence.
+   *
+   * Configurable because a corpus run and a laptop want different windows, and because a
+   * test proving the rule should not have to write twenty one runs to reach it.
+   */
+  readonly retention?: PrunePolicy;
 }
 
 /** How many runs `listRuns` returns when the caller does not say. */
@@ -106,8 +131,11 @@ function bodyExists(projectDir: string, bodyRef: string | undefined): boolean {
   return existsSync(isAbsolute(bodyRef) ? bodyRef : resolve(projectDir, bodyRef));
 }
 
-export function openStore(dir: string): Store {
+export function openStore(dir: string, options: StoreOptions = {}): Store {
   const projectDir = resolve(dir);
+  // Resolved at open time so a policy that would empty the store fails where it was
+  // configured, rather than on the first write that acts on it.
+  const retention = resolvePrunePolicy(options.retention);
   const { db, stateDir } = openDatabase(projectDir);
 
   const insertRun = db.prepare(
@@ -183,7 +211,12 @@ export function openStore(dir: string): Store {
 
       write();
 
-      return { runId: result.runId, evidenceRecorded: records.length, bodiesMissing };
+      // Prune on write, as the module says. The run just saved is subject to the window
+      // like any other: a run older than everything already stored is pruned immediately,
+      // and the report names it rather than letting it vanish.
+      const pruned = pruneStore(db, projectDir, retention);
+
+      return { runId: result.runId, evidenceRecorded: records.length, bodiesMissing, pruned };
     },
 
     getRun(runId) {
@@ -224,6 +257,10 @@ export function openStore(dir: string): Store {
           summary: run.summary,
         };
       });
+    },
+
+    pruneEvidence(policy = retention) {
+      return pruneStore(db, projectDir, policy);
     },
 
     close() {
