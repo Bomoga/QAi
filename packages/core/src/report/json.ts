@@ -42,5 +42,18 @@ function sortKeysDeep(value: unknown): unknown {
  * diffs, so it is formatted for the reader rather than for the wire.
  */
 export function renderJson(result: RunResult): string {
-  return `${JSON.stringify(sortKeysDeep(result), null, 2)}\n`;
+  return renderJsonDocument(result);
+}
+
+/**
+ * The same projection for anything else this tool serializes as JSON, currently the
+ * RunDelta that `qai diff` prints.
+ *
+ * Exported rather than copied. A second sorted serializer would be two answers to one
+ * question, which is the thing the note above says this file is not: `stableStringify` in
+ * `spec/hash.ts` differs because it feeds a digest, and a delta document wants exactly
+ * what a run document wants.
+ */
+export function renderJsonDocument(value: unknown): string {
+  return `${JSON.stringify(sortKeysDeep(value), null, 2)}\n`;
 }
