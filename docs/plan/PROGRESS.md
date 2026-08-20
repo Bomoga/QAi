@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-20T12:10:00Z
+Updated: 2026-08-20T21:15:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: the diff and report commands
+Next task: none, S7 is complete and waiting on review
 
 ## S0. Skeleton
 
@@ -330,10 +330,61 @@ Surprises worth recording:
 - [x] M6.6 comparability handling for differing spec hashes (commit c711cc7)
 - [x] M6.7 retention and pruning with a reported summary (commits 2c7f56f, 219ce40, 0145583)
 - [x] M6.8 integration test over the defective and fixed fixture, both directions
-  (commit backfilled below)
-- [ ] the diff and report commands, deferred into this stage by M8.6
+  (commit 820e437)
+- [x] the diff and report commands, deferred into this stage by M8.6
+  (commits 11cec1e, 6066568, 425aa69)
 - Exit criterion: `qai diff <runA> <runB>` reports a requirement moving from failed to verified, an endpoint newly appearing, and an access rule newly loosening, on runs taken before and after a deliberate regeneration of the fixture app
+- Exit criterion: met 2026-08-20, run for real against two configurations of
+  `fixtures/ledger` on ports 3101 and 3102. Build A refuses the cross-organization read
+  and has an unscoped list, leaked notes, an unauthenticated mutation, and no debug
+  endpoint; build B is the regeneration, with the list and the notes repaired, the
+  cross-organization read now allowed, and a debug endpoint nobody specified. Both runs
+  exit 1. `qai diff --last 2` reports, in one delta: `AR-001-01` newly loosened, naming
+  the request and the response; `REQ-002` and `REQ-004` moving failed to verified;
+  `REQ-001`, `REQ-005`, and `REQ-013` moving verified to failed; `REQ-003` still failing,
+  since nobody fixed the unauthenticated mutation; and `GET /api/debug/state` under
+  endpoints appeared. `qai report RUN-20260820-210052` re-renders the earlier run and
+  exits 0. Full output is in the pull request.
 - Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
+- Not rebased onto `dev` at the stage boundary, deliberately. PRs #10 and #11 were still
+  open on 2026-08-20, so `assembleRun` and the whole command surface are still absent
+  from `dev` and a rebase would produce a branch that does not build. The stack collapses
+  when those two merge, and that is the moment to do it.
+
+### S7 summary
+
+Built: run persistence and the run to run delta, both ends of it. The SQLite schema with
+forward-only migrations, `saveRun` with referential integrity across a database and a
+directory, stable check identity, requirement transitions, the structural delta with
+access loosening, comparability across differing spec hashes, retention with a reported
+summary, an integration test over the real fixture in both directions, two ways to render
+a delta, and the last two commands in M8's table. 1562 tests pass across 79 files, up from
+1406 across 68 at the start of S6.
+
+The sequence 01-PRODUCT.md calls the definition of success is now real end to end. Its
+sixth step, `qai diff` showing a requirement move between two runs, was the only one
+missing, and the criterion above is that step run against a real regeneration.
+
+Every command in M8's table now exists. `report` was deferred out of M8.6 because it needs
+a store and nothing had one; `diff` was assigned to this stage from the start.
+
+Decisions worth carrying, all recorded in full under the notes below: a check id hashes
+what a check is and never the route it hit; a duplicate run id is refused rather than
+replaced; the store writes no evidence body; a requirement present in only one run is
+named rather than reported as a transition; `comparable` is false only when two runs share
+no requirement; access loosening fires only on a deny rule check moving pass to fail; and
+retention reports what it removed, unlinking a body file only when no surviving evidence
+row still names it.
+
+Deferred, with reasons rather than assumptions:
+
+- The other half of the access loosening rule, which fires when an endpoint's
+  `authRequired` moves away from `true`. A RunResult carries `observation.ref` and no
+  endpoint list. Two modules have now needed the same absent data and it is a contract
+  change, so it is a human's call.
+- The file half of the evidence retention window. Evidence ids come from a per-run
+  counter, so every run writes the same filenames and overwrites the run before it. The
+  rows honour the window; the directory cannot until an evidence id is unique across runs.
 
 - [ ] not started
 
@@ -346,6 +397,54 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- S7, `diff` and `report`: both exit 0 or 2 and never 1, which is what M8's table says and
+  is worth the sentence. 1 belongs to a run that completed and found something at or above
+  the threshold, and neither command completes a run. A delta describes change; whether
+  change is bad is a judgment `check` makes and these two do not.
+- S7: a threshold flag is reported as inapplicable rather than ignored, and only when it
+  was actually typed. `--fail-on` has a default, so reading its value alone would print
+  the note on every invocation and teach the reader to skip the line. That is what
+  `Setting.source` is for, and the first use of it outside `--verbose`.
+- S7: `diff` takes the order the caller gave when both runs are named, and picks oldest
+  first when it chooses them itself. Reversing that turns every fix into a regression.
+  Proved by breaking it: swapping the pair picked by `--last` failed six tests, and
+  sorting named runs by their timestamps failed the one written for exactly that.
+- S7: too few stored runs is a refusal rather than an empty delta. An empty delta reads as
+  an application that did not change, which is the most misleading thing this could
+  report, and it is the same reason `comparable` carries a reason.
+- S7: `--last n` compares the newest run with the nth most recent. The module writes the
+  flag as `--last 2` and does not say what other values mean; this reading makes 2 the
+  common case rather than a special one, and it is in the help text.
+- S7: `check` records every run, and not behind a flag. The command table has no flag for
+  it and adding one would be a change to the surface. A store that will not open or will
+  not write warns and leaves the exit code alone, because the report is the product and it
+  exists by then.
+- S7: the Evidence records reach a CheckResult as ids only, so `check` wraps the writer
+  that `createTargetContext` already accepts rather than changing a signature owned by M3
+  or M5. The alternative was threading the records back through both runners.
+- S7 defect found and not fixed, because the fix is a surface decision: a run id carries
+  seconds, so two checks less than a second apart collide and the store refuses the
+  second. The refusal is safe and loud, the user is told, and in the real workflow of
+  check, fix, check a second always passes. It cost one deliberate wait in an integration
+  test, which is commented. Widening the id again would change every id's shape and the
+  human has already made that call once.
+- S7 correction to an earlier note: `pnpm --filter @qai/cli exec qai ...` does not resolve
+  and never did. The M8.5 note blamed a missing `pnpm install`; the real reason is that
+  pnpm does not link a package's own bin into its own `node_modules/.bin`, so `exec` finds
+  nothing whatever is installed. Confirmed by running it after a fresh install, and by
+  `qai` being absent from every `node_modules/.bin` in the workspace. Every Definition of
+  Done line written in that form, in M6 and M8 alike, has to be run as
+  `node packages/cli/bin/qai.js ...` instead. Recorded in the M6 open questions.
+- S7: the demonstration found a stale build before it found anything else. `bin/qai.js`
+  runs `dist`, so a command added to `src` does not exist to the binary until `pnpm build`
+  has run, and the first attempt reported `unknown option '--last'` against code that had
+  been passing its tests for an hour. The suite drives `main` from source and cannot see
+  this. Build before demonstrating.
+- S7 exit criterion, the shape of it: a real regeneration is not uniformly better or worse
+  than the build before it, so the demonstration turns two defects off and two on. All
+  three signals the criterion names then land in one delta, along with a requirement that
+  was failing before and is failing still.
 
 - M6.8: the two runs come out of `qai check --format json` rather than being assembled in
   the test, and go through the store before they are compared. A delta over hand-built
