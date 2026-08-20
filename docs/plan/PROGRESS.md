@@ -263,10 +263,11 @@ Surprises worth recording:
   (commits fcf8d2f and 13cd02c)
 - [~] M8.6 probe done (commits f93e5f8 and 4bbab25); report is blocked on M6 run
   persistence, recorded in the M8 open questions; diff was already S7
-- [x] M8.7 error presentation for exit codes 2 and 3 (commit backfilled below)
-- [ ] M8.7 error presentation for exit codes 2 and 3
-- [ ] M8.8 the GitHub Action, with SARIF upload and outputs
-- [ ] M8.9 end to end test of init, validate, and check against fixtures/ledger
+- [x] M8.7 error presentation for exit codes 2 and 3 (commit 9176cf5)
+- [x] M8.8 the GitHub Action, with SARIF upload and outputs (commits db897ad and a50d323,
+  the workflow held back at the tip because pushing it needs a token scope)
+- [x] M8.9 end to end test of init, validate, and check against fixtures/ledger
+  (commit e75e1b8)
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
 - Exit criterion, the parts that can be verified from a terminal: verified 2026-08-18.
   `qai check` against the defective fixture writes conforming SARIF 2.1.0 with 15 results
