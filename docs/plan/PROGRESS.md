@@ -2,7 +2,7 @@
 
 Updated: 2026-08-20T12:10:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: M6.8
+Next task: the diff and report commands
 
 ## S0. Skeleton
 
@@ -328,8 +328,10 @@ Surprises worth recording:
 - [x] M6.4 diffRuns for requirement verdict transitions (commit 39ec523)
 - [x] M6.5 structural delta including access loosening detection (commit 54ae396)
 - [x] M6.6 comparability handling for differing spec hashes (commit c711cc7)
-- [x] M6.7 retention and pruning with a reported summary (commit backfilled below)
-- [ ] M6.8 integration test over the defective and fixed fixture, both directions
+- [x] M6.7 retention and pruning with a reported summary (commits 2c7f56f, 219ce40, 0145583)
+- [x] M6.8 integration test over the defective and fixed fixture, both directions
+  (commit backfilled below)
+- [ ] the diff and report commands, deferred into this stage by M8.6
 - Exit criterion: `qai diff <runA> <runB>` reports a requirement moving from failed to verified, an endpoint newly appearing, and an access rule newly loosening, on runs taken before and after a deliberate regeneration of the fixture app
 - Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
 
@@ -344,6 +346,46 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.8: the two runs come out of `qai check --format json` rather than being assembled in
+  the test, and go through the store before they are compared. A delta over hand-built
+  RunResults would only prove `diffRuns` agrees with something the test invented, and the
+  round trip is what says the store returns what the command produced. Proved by breaking
+  it: making `getRun` return null failed the whole file rather than passing quietly, which
+  is what says the store is really in the path.
+- M6.8: the run ids are rewritten to fixed values before saving. The command derives an id
+  from the clock to the second, two checks a fraction apart can collide, and the store is
+  right to refuse a duplicate. A test whose success depends on how fast the machine is has
+  no business being in the suite.
+- M6.8: the assertions were written before the first run and matched it. Backward names
+  exactly `AR-001-01`, `AR-002-01`, and `AR-003-01`, which are outsider read, outsider
+  list, and anonymous update, the three deny rules D1, D2, and D3 break. `AR-003-02`,
+  anonymous delete, is refused in both runs and does not appear. The mapping came out of
+  the fixture spec rather than out of the delta, so this is a claim about the application
+  rather than a transcription of the output.
+- M6.8, the sixth vacuous test of this stage, and the only one that could not be repaired:
+  asserting that the forward delta loosens nothing does not catch dropping the deny class
+  filter, because no access check in this fixture fails at any severity but high. The
+  first break attempt failed nothing at all. The test now names the exact rule ids in both
+  directions, which catches direction inversion and a rule that never moved, and it says
+  in a comment what it still cannot prove. M6.5's unit test is what pins that an allow
+  rule failing is a tightening.
+- M6.8: a third scenario was added because the two the task names cannot exercise
+  everything. An all-on run and an all-off run never leave anything failing on both sides,
+  so `stillFailing` is empty and "already loose is not newly loosened" has nothing to be
+  wrong about. The mixed regeneration leaves D3 on in both runs, and with it two more
+  breaks go red: reporting an already broken rule as newly loosened, and folding
+  `stillFailing` into `regressed`.
+- M6.8: that mixed scenario is also the shape the S7 exit criterion asks for. A real
+  regeneration is not uniformly better or worse than the build before it, and all three
+  signals the criterion names, a requirement repaired, an endpoint appearing, and an
+  access rule loosening, only coexist in a delta where some defects went out and others
+  came in.
+- M6.8 cross-module edit, flagged: the ledger harness moved out of
+  `test/cli.integration.test.ts` into `test/support/ledger.ts` and both files use it.
+  Two copies of the fixture's configuration would drift, and the drift shows up as a test
+  failing for a reason unrelated to what it tests. `test/support/` is not matched by the
+  vitest include patterns, so nothing there is collected as a suite.
 
 - M6.7: pruning is reported through the save report rather than through a method somebody
   has to remember to call. The module's Do Not says do not prune silently, and a report
