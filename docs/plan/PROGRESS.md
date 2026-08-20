@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-19T11:00:00Z
+Updated: 2026-08-19T11:04:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: M6.6
+Next task: M6.7
 
 ## S0. Skeleton
 
@@ -325,8 +325,8 @@ Surprises worth recording:
 - [x] M6.2 saveRun and evidence file writing with referential integrity (commits 93dd4e7, 794a232, fd108fd)
 - [x] M6.3 stable checkId hashing, proved against response changes and re-runs (commit 6d17ed6)
 - [x] M6.4 diffRuns for requirement verdict transitions (commit 39ec523)
-- [x] M6.5 structural delta including access loosening detection (commit backfilled below)
-- [ ] M6.6 comparability handling for differing spec hashes
+- [x] M6.5 structural delta including access loosening detection (commit 54ae396)
+- [x] M6.6 comparability handling for differing spec hashes (commit backfilled below)
 - [ ] M6.7 retention and pruning with a reported summary
 - [ ] M6.8 integration test over the defective and fixed fixture, both directions
 - Exit criterion: `qai diff <runA> <runB>` reports a requirement moving from failed to verified, an endpoint newly appearing, and an access rule newly loosening, on runs taken before and after a deliberate regeneration of the fixture app
@@ -343,6 +343,29 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.6: a requirement present in only one run is named in `added` or `removed`, never
+  folded into a transition. The dangerous direction is removal: somebody deleting a
+  requirement is not the application breaking, and reporting it as a regression teaches a
+  reader to distrust every real regression the tool ever reports. That is the sentence
+  the module ends the rule with.
+- M6.6: a differing spec restricts the comparison, it does not abandon it. The overlap is
+  exactly where a real change shows up, and a spec gaining a requirement says nothing
+  about the requirements it already had.
+- M6.6: `comparable` is false only when the two runs share no requirement at all, and it
+  carries a reason. An empty delta with no explanation is indistinguishable from nothing
+  having changed, which is the most misleading thing this could report.
+- M6.6 deliberate non-rule: a differing base URL does not make two runs incomparable. An
+  ephemeral port and a staging host are both legitimate ways for one application to answer
+  at two addresses, and refusing there would break the delta exactly where it is most
+  wanted. Every integration test in this repository starts its fixture on a fresh port,
+  so the alternative would have been self-defeating. There is a test pinning it.
+- M6.6, the fifth weak test caught this stage: the added-requirement test asserted only
+  that `fixed` was empty, so a break that filed the addition under `newlyUnverified`
+  passed all ten tests. Both spec-change tests now assert that no transition bucket
+  contains it, through one helper. The pattern across all five is the same: asserting the
+  absence of the one wrong answer I happened to think of, rather than the absence of every
+  wrong answer.
 
 - M6.5: access loosening has its own detection path, as the module insists. Letting it
   fall out of the generic verdict diff would bury the one transition that matters among

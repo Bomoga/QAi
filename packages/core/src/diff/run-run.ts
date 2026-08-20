@@ -42,6 +42,15 @@ export interface RequirementDelta {
   readonly stillFailing: readonly RequirementTransition[];
   /** Nobody could check it this time, and somebody could before. */
   readonly newlyUnverified: readonly RequirementTransition[];
+  /**
+   * Requirements in the newer run and not the older one, and the reverse.
+   *
+   * These moved because the spec moved, not because the application did, so they are
+   * named here rather than folded into a transition. A requirement that vanished with
+   * its spec is not a regression, and one that arrived with it is not a fix.
+   */
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
 }
 
 export interface FieldAdded {
@@ -74,7 +83,14 @@ export interface StructuralDelta {
 export interface RunDelta {
   readonly from: string;
   readonly to: string;
+  /**
+   * False when the two runs have no requirement in common, so there is nothing a
+   * comparison could say. Everything else still reports, and `specChanged` covers the
+   * far more common case of a spec that moved without becoming a different spec.
+   */
   readonly comparable: boolean;
+  /** Why not, when not. An empty delta with no reason reads as "nothing changed". */
+  readonly incomparableReason?: string;
   readonly specChanged: boolean;
   readonly requirements: RequirementDelta;
   readonly structural: StructuralDelta;
@@ -227,6 +243,13 @@ function structuralDelta(older: RunResult, newer: RunResult): StructuralDelta {
  */
 export function diffRuns(a: RunResult, b: RunResult): RunDelta {
   const before = new Map(a.requirements.map((one) => [one.requirementId, one] as const));
+  const afterIds = new Set(b.requirements.map((one) => one.requirementId));
+
+  // Named rather than folded into a transition. A requirement that vanished with its
+  // spec is not a regression and one that arrived with it is not a fix, and saying
+  // otherwise is exactly the "as though the application changed" the module forbids.
+  const added = b.requirements.map((one) => one.requirementId).filter((id) => !before.has(id));
+  const removed = [...before.keys()].filter((id) => !afterIds.has(id));
 
   const regressed: RequirementTransition[] = [];
   const fixed: RequirementTransition[] = [];
@@ -265,14 +288,27 @@ export function diffRuns(a: RunResult, b: RunResult): RunDelta {
     else newlyUnverified.push(transition(moved));
   }
 
+  // Nothing in common means nothing to compare. A differing base URL deliberately does
+  // not count: an ephemeral port and a staging host are both legitimate ways for one
+  // application to answer at two addresses, and refusing there would make the delta
+  // useless exactly where it is most wanted.
+  const shared = [...before.keys()].filter((id) => afterIds.has(id));
+  const comparable = shared.length > 0;
+
   return {
     from: a.runId,
     to: b.runId,
-    // M6.6 decides what makes two runs incomparable. Until then a comparison was asked
-    // for and one is given.
-    comparable: true,
+    comparable,
+    ...(comparable
+      ? {}
+      : {
+          incomparableReason:
+            a.requirements.length === 0 && b.requirements.length === 0
+              ? 'neither run checked any requirement, so there is nothing to compare'
+              : 'the two runs share no requirement, so they describe different specs rather than one application changing',
+        }),
     specChanged: a.spec.hash !== b.spec.hash,
-    requirements: { regressed, fixed, stillFailing, newlyUnverified },
+    requirements: { regressed, fixed, stillFailing, newlyUnverified, added, removed },
     structural: structuralDelta(a, b),
   };
 }
