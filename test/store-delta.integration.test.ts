@@ -226,6 +226,57 @@ describe('the defective fixture and the fixed one, compared both ways', () => {
   });
 });
 
+describe('check records the run it produced', () => {
+  it('stores the run under the id its own report carries', async () => {
+    // Nothing else puts a run in the store, so a check that did not record its result
+    // would leave `qai diff` and `qai report` with nothing to read, which is the sixth
+    // step of the success sequence in 01-PRODUCT.md.
+    const dir = workspace();
+    workspaces.push(dir);
+    copyFileSync(FIXTURE_SPEC, join(dir, 'spec', 'ledger.spec.yaml'));
+    writeConfig(dir, await startLedger(ALL_DEFECTS_ON));
+
+    const { out, err } = await runCli(dir, ['check', '--format', 'json']);
+    const result = RunResultSchema.parse(JSON.parse(out));
+
+    const store = openStore(dir);
+    stores.push(store);
+
+    expect(store.getRun(result.runId)).toStrictEqual(result);
+    expect(store.listRuns().map((one) => one.runId)).toStrictEqual([result.runId]);
+    // Said out loud on stderr, since a user who never learns a run was recorded cannot
+    // know there is anything to diff against.
+    expect(err).toContain(`recorded ${result.runId}`);
+  }, 30_000);
+
+  it('records the evidence it captured, and the bodies are really on disk', async () => {
+    // The whole loop: capture writes a redacted body, the store records the reference,
+    // and pruning finds the file where the record said it would be. Each half of that
+    // is tested on its own elsewhere; nothing else joins them.
+    const dir = workspace();
+    workspaces.push(dir);
+    copyFileSync(FIXTURE_SPEC, join(dir, 'spec', 'ledger.spec.yaml'));
+    writeConfig(dir, await startLedger(ALL_DEFECTS_OFF));
+
+    const { err } = await runCli(dir, ['check', '--format', 'json']);
+
+    const reported = /recorded RUN-\S+ with (\d+) evidence record\(s\)/.exec(err);
+    expect(reported).not.toBeNull();
+    const count = Number(reported?.[1]);
+    expect(count).toBeGreaterThan(0);
+
+    const store = openStore(dir);
+    stores.push(store);
+
+    // Dropping every run's evidence is how a test reads the evidence table, since the
+    // store offers no query for it and the module's Do Not rules one out.
+    const pruned = store.pruneEvidence({ keepRuns: 1, keepEvidence: 0 });
+    expect(pruned.evidenceRemoved).toHaveLength(count);
+    expect(pruned.bodiesDeleted.length).toBeGreaterThan(0);
+    expect(pruned.bodiesMissing).toStrictEqual([]);
+  }, 30_000);
+});
+
 describe('a regeneration that fixes one thing and breaks another', () => {
   // The shape the S7 exit criterion asks for, and the shape a real regeneration takes: a
   // build is not uniformly better or worse than the one before it. All three signals have

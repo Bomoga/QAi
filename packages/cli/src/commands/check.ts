@@ -5,8 +5,10 @@ import {
   assembleRun,
   collectCoverageGaps,
   computeExitCode,
+  createEvidenceWriter,
   createTargetContext,
   diffSpecObservation,
+  openStore,
   isLoadFailure,
   isTransportError,
   loadSpec,
@@ -26,10 +28,14 @@ import {
   type BehavioralPlan,
   type CapabilityReport,
   type CheckResultRecord,
+  type Evidence,
+  type EvidenceWriter,
   type Observation,
   type Deps,
+  type PruneReport,
   type Reporter,
   type RunResult,
+  type SaveReport,
   type TargetConfig,
 } from '@qai/core';
 
@@ -57,6 +63,18 @@ import { DEFAULT_SPEC_GLOB } from './validate.ts';
  * recomputed. 2 and 3 are this package's, because they describe conditions under which
  * no RunResult exists: an invalid spec or configuration, and a target that could not be
  * reached at all.
+ *
+ * **Every run is recorded.** `qai diff` and `qai report` read runs out of `.qai/runs.db`
+ * and nothing else puts one there, so a check that did not store its result would leave
+ * the sixth step of the success sequence in 01-PRODUCT.md unreachable. It is not behind
+ * a flag: the command table in the module has no flag for it, and adding one would be a
+ * change to the surface.
+ *
+ * **A store that will not write does not fail the run.** The report is the product and
+ * it has already been produced by then; turning a completed run into an error because a
+ * database file could not be written would report the wrong thing about the application.
+ * It is a warning, and a loud one, because a user who never notices will wonder later
+ * why `qai diff` has nothing to compare.
  */
 
 export interface CheckOptions {
@@ -140,6 +158,84 @@ function reportCapabilities(
   }
 }
 
+/**
+ * The real writer, plus a list of what it wrote.
+ *
+ * The Evidence records exist inside the session layer and reach a CheckResult as ids
+ * only, so this is how the command gets the records themselves without changing a
+ * signature owned by M3 or M5. `createTargetContext` already takes a writer, so nothing
+ * new had to be invented for it.
+ */
+function recordingWriter(cwd: string, into: Evidence[]): EvidenceWriter {
+  const real = createEvidenceWriter({ cwd });
+  return {
+    write(capture) {
+      real.write(capture);
+      into.push(capture.evidence);
+    },
+  };
+}
+
+/** What retention removed, or nothing at all when it removed nothing. */
+function describePrune(report: PruneReport): string | undefined {
+  const { runsRemoved, evidenceRemoved, bodiesDeleted } = report;
+  if (runsRemoved.length === 0 && evidenceRemoved.length === 0) return undefined;
+
+  const parts = [
+    `kept the last ${report.policy.keepRuns} run(s) and the evidence for ${report.policy.keepEvidence}`,
+  ];
+
+  if (runsRemoved.length > 0) parts.push(`removed ${runsRemoved.join(', ')}`);
+  if (evidenceRemoved.length > 0) {
+    parts.push(
+      `dropped ${evidenceRemoved.length} evidence record(s) and ${bodiesDeleted.length} body file(s)`,
+    );
+  }
+
+  return `retention: ${parts.join('; ')}`;
+}
+
+/**
+ * Records the run, and says what that cost. Never throws: see the note at the top.
+ */
+function store(
+  cwd: string,
+  result: RunResult,
+  evidence: readonly Evidence[],
+  reporter: Reporter,
+): void {
+  let saved: SaveReport;
+  // The open is inside the guard as well as the write. A database written by a newer
+  // build is refused rather than opened, and that refusal must not take a finished run
+  // with it.
+  let opened: ReturnType<typeof openStore> | undefined;
+
+  try {
+    opened = openStore(cwd);
+    saved = opened.saveRun(result, evidence);
+  } catch (error) {
+    reporter.warn(
+      `the run was not recorded, so "qai diff" and "qai report" will not see it: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return;
+  } finally {
+    opened?.close();
+  }
+
+  reporter.info(`recorded ${saved.runId} with ${saved.evidenceRecorded} evidence record(s)`);
+
+  if (saved.bodiesMissing.length > 0) {
+    reporter.warn(
+      `${saved.bodiesMissing.length} evidence record(s) name a body file that is not on disk: ${saved.bodiesMissing.join(', ')}`,
+    );
+  }
+
+  // Pruning is reported rather than done silently, which is the module's rule and the
+  // reason the store hands the report back with the save.
+  const pruned = describePrune(saved.pruned);
+  if (pruned !== undefined) reporter.info(pruned);
+}
+
 function render(
   result: RunResult,
   format: Settings['format']['value'],
@@ -198,7 +294,13 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   }
 
   const startedAt = deps.now();
-  const target = createTargetContext(config, loaded.spec, { env, deps, cwd });
+  const evidence: Evidence[] = [];
+  const target = createTargetContext(config, loaded.spec, {
+    env,
+    deps,
+    cwd,
+    writer: recordingWriter(cwd, evidence),
+  });
   const browser = await resolveBrowserCapability();
   reportCapabilities(target.capabilities, browser.kind === 'available', reporter);
 
@@ -298,6 +400,9 @@ export async function runCheck(options: CheckOptions): Promise<number> {
       behavioralUnverified: unverified,
     }),
   });
+
+  reporter.step('Recording the run');
+  store(cwd, result, evidence, reporter);
 
   const document = render(result, settings.format.value, observation, options.color === true);
   const outPath = settings.out.value;
