@@ -1816,6 +1816,21 @@ Deferred, with reasons rather than assumptions:
   removing it to get the push through would discard the thing the criterion needs. A human
   either adds the Workflows permission to the token or pushes under another credential.
 
+- **Pushing `feat/m6-store-delta`, and with it the S7 pull request.** The same rejection,
+  for the same one file, because `a50d323` is an ancestor of this branch. Attempted
+  2026-08-20 with the stage complete and the tree clean:
+
+  ```
+  ! [remote rejected] feat/m6-store-delta -> feat/m6-store-delta
+    (refusing to allow a Personal Access Token to create or update workflow
+     `.github/workflows/qai.yml` without `workflow` scope)
+  ```
+
+  Nothing was rewritten to get around it. Dropping the commit from this branch would make
+  it diverge from the head of PR #11, and rewriting a branch with an open pull request is
+  forbidden by 04-CONVENTIONS.md. One credential fix unblocks both pushes at once. S7 is
+  complete and committed locally, at `fb6c849`, waiting only on that.
+
 - none. The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the
   leftover ledger, and confirmed the mid-session HEAD move was their own accident rather
   than a second session.
