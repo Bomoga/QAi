@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-19T10:55:00Z
+Updated: 2026-08-19T11:00:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: M6.5
+Next task: M6.6
 
 ## S0. Skeleton
 
@@ -324,8 +324,8 @@ Surprises worth recording:
 - [x] M6.1 the SQLite schema, migrations, and schema_version handling (commits bbac9f2, cb3062f)
 - [x] M6.2 saveRun and evidence file writing with referential integrity (commits 93dd4e7, 794a232, fd108fd)
 - [x] M6.3 stable checkId hashing, proved against response changes and re-runs (commit 6d17ed6)
-- [x] M6.4 diffRuns for requirement verdict transitions (commit backfilled below)
-- [ ] M6.5 structural delta including access loosening detection
+- [x] M6.4 diffRuns for requirement verdict transitions (commit 39ec523)
+- [x] M6.5 structural delta including access loosening detection (commit backfilled below)
 - [ ] M6.6 comparability handling for differing spec hashes
 - [ ] M6.7 retention and pruning with a reported summary
 - [ ] M6.8 integration test over the defective and fixed fixture, both directions
@@ -343,6 +343,31 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M6.5: access loosening has its own detection path, as the module insists. Letting it
+  fall out of the generic verdict diff would bury the one transition that matters among
+  every other one, which is the opposite of a headline.
+- M6.5: a check does not record whether its rule was deny or allow, so the signal is an
+  access check failing at high severity, which M3.2 fixes as the deny class. An allow
+  rule breaking is a tightening, not a loosening: a legitimate user being refused is a
+  bug worth reporting and the opposite of something forbidden becoming reachable. Proved
+  by breaking it: dropping the severity filter made an allow failure read as a loosening.
+- M6.5: only pass to fail counts. Already loose is not newly loosened, and a check that
+  is new has no earlier verdict to loosen from. Proved by breaking it: dropping that
+  filter failed both tests written for it.
+- M6.5, the half that could not be built: the rule also fires when an endpoint's
+  `authRequired` moves away from `true`, and a RunResult carries `observation.ref` with
+  no endpoint list. That is the same absence that stopped `renderText` filling its second
+  section at M7.3. **Two modules now need a summary of the Observation on the RunResult**,
+  which is a change to 03-CONTRACTS.md and therefore a human's call. Recorded in the M6
+  open questions; the deny rule half is implemented and the fixture exercises it.
+- M6.5: `endpointsAdded` is derived from the two structural lists rather than from an
+  endpoint list. Leaving `specifiedNotObserved` means an endpoint appeared, and entering
+  `observedNotSpecified` means one appeared. Reading only the second would miss every
+  specified endpoint, which is what the second test exists to catch, and it did when the
+  first branch was removed.
+- M6.5: an entity in `specifiedNotObserved` is not an endpoint. D6 belongs in the
+  structural findings of every run and in the delta of none, and there is a test saying so.
 
 - M6.4: the four buckets are exhaustive and mutually exclusive over the nine verdict
   pairs, and the test reads them as a three by three grid rather than as nine assertions.

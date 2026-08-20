@@ -1,4 +1,4 @@
-# M6: Run Store and Delta
+﻿# M6: Run Store and Delta
 
 **Status:** not started
 **Owns:** `packages/core/src/store/`, `packages/core/src/diff/run-run.ts`
@@ -105,4 +105,22 @@ is the explicit equivalent.
 
 ## Open questions
 
-- None blocking.
+- **Half of the access loosening rule cannot be computed, and the cause has now bitten
+  twice.** The rule fires when a deny rule check moves from pass to fail, which a
+  RunResult can answer, or when an endpoint's `authRequired` moves away from `true`,
+  which it cannot: a RunResult carries `observation.ref` and no endpoint list. The same
+  gap stopped `renderText` filling its "what was built" section at M7.3, where it was
+  worked around by passing the Observation through an option. Two modules needing the
+  same absent data is the argument for `RunResult` carrying a summary of its own
+  Observation, which is a change to `03-CONTRACTS.md` and therefore a human's call. The
+  deny rule half is implemented and the fixture exercises it.
+- **`endpointsAdded` is derived from the two structural lists rather than from an
+  endpoint list.** An endpoint that leaves `specifiedNotObserved` has appeared, and one
+  that enters `observedNotSpecified` has appeared. That is complete with respect to what a
+  RunResult knows, and it catches D5 in the fixture, but an endpoint that is both
+  specified and observed in both runs is invisible to it, correctly, and one that changes
+  shape without changing presence is invisible too.
+- **`accessLoosened[].endpoint` holds a rule id when nothing better exists.** A
+  `CheckResultRecord` carries no endpoint, which M7.4 already ran into: the route appears
+  only inside `detail` as prose and parsing it back out would be a guess. The entry also
+  carries `requirementId` and `ruleId` so a reader is not relying on the one field.

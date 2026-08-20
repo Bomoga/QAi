@@ -44,12 +44,40 @@ export interface RequirementDelta {
   readonly newlyUnverified: readonly RequirementTransition[];
 }
 
+export interface FieldAdded {
+  readonly entity: string;
+  readonly field: string;
+}
+
+export interface AccessLoosening {
+  /**
+   * What loosened.
+   *
+   * A `CheckResultRecord` carries no endpoint, which M7.4 already ran into: the route
+   * appears only inside `detail` as prose, and parsing it back out would be a guess in
+   * the one place a reader is told where to look. So this holds the rule the check came
+   * from when nothing better exists, and `detail` carries what the check actually saw.
+   */
+  readonly endpoint: string;
+  readonly detail: string;
+  readonly requirementId?: string;
+  readonly ruleId?: string;
+}
+
+export interface StructuralDelta {
+  readonly endpointsAdded: readonly string[];
+  readonly endpointsRemoved: readonly string[];
+  readonly fieldsAdded: readonly FieldAdded[];
+  readonly accessLoosened: readonly AccessLoosening[];
+}
+
 export interface RunDelta {
   readonly from: string;
   readonly to: string;
   readonly comparable: boolean;
   readonly specChanged: boolean;
   readonly requirements: RequirementDelta;
+  readonly structural: StructuralDelta;
 }
 
 /** Checks that reached a different verdict, restricted to one requirement. */
@@ -81,6 +109,113 @@ function failingChecks(newer: RunResult, requirementId: string): string[] {
     .filter((check) => check.requirementId === requirementId && check.verdict === 'fail')
     .map((check) => check.checkId)
     .sort((left, right) => left.localeCompare(right));
+}
+
+/**
+ * Endpoints a run knows are absent, and endpoints it knows are present.
+ *
+ * A RunResult carries no endpoint list, only `observation.ref`, so these two structural
+ * lists are the whole of what it says about which routes exist. An endpoint the spec
+ * declares and the probe did not see is known absent; one the probe saw and no
+ * requirement mentions is known present. An endpoint that is both specified and observed
+ * appears in neither, which is correct: nothing about it is remarkable.
+ */
+function endpointsKnownAbsent(run: RunResult): Set<string> {
+  return new Set(
+    run.structural.specifiedNotObserved
+      .filter((entry) => entry.kind === 'endpoint')
+      .map((entry) => entry.name),
+  );
+}
+
+function endpointsKnownPresent(run: RunResult): Set<string> {
+  return new Set(
+    run.structural.observedNotSpecified
+      .filter((entry) => entry.kind === 'endpoint')
+      .map((entry) => entry.id),
+  );
+}
+
+function sorted(values: Iterable<string>): string[] {
+  return [...values].sort((left, right) => left.localeCompare(right));
+}
+
+function fieldsObservedNotSpecified(run: RunResult): Map<string, Set<string>> {
+  const byEntity = new Map<string, Set<string>>();
+  for (const mismatch of run.structural.fieldMismatches) {
+    byEntity.set(mismatch.entity, new Set(mismatch.observedNotSpecified));
+  }
+  return byEntity;
+}
+
+/**
+ * Access loosening, on its own detection path because the module insists on one.
+ *
+ * It is the exact silent divergence this product exists to catch: something that was
+ * refused last week is reachable today. Letting it fall out of a generic verdict diff
+ * would bury it among every other transition, which is the opposite of a headline.
+ *
+ * The rule the module gives has two halves. This is the half a RunResult can answer: a
+ * deny rule check moving from pass to fail. A check does not record a rule's effect, so
+ * the signal is an access check failing at high severity, which M3.2 fixes as the deny
+ * class: a deny that fails means something forbidden is reachable, an allow that fails
+ * means a feature is broken, and only the first is a loosening.
+ *
+ * The other half, an endpoint's `authRequired` moving away from `true`, needs the
+ * Observation, and a RunResult carries only a reference to one. Recorded in the module's
+ * open questions rather than guessed at.
+ */
+function accessLoosened(older: RunResult, newer: RunResult): AccessLoosening[] {
+  const before = new Map(older.checks.map((check) => [check.checkId, check] as const));
+
+  return newer.checks
+    .filter((check) => check.type === 'access' && check.verdict === 'fail')
+    .filter((check) => check.severity === 'high')
+    .filter((check) => before.get(check.checkId)?.verdict === 'pass')
+    .map((check) => ({
+      endpoint: check.ruleId ?? check.requirementId ?? check.checkId,
+      detail: check.detail ?? check.title,
+      ...(check.requirementId === undefined ? {} : { requirementId: check.requirementId }),
+      ...(check.ruleId === undefined ? {} : { ruleId: check.ruleId }),
+    }));
+}
+
+function structuralDelta(older: RunResult, newer: RunResult): StructuralDelta {
+  const absentBefore = endpointsKnownAbsent(older);
+  const absentNow = endpointsKnownAbsent(newer);
+  const presentBefore = endpointsKnownPresent(older);
+  const presentNow = endpointsKnownPresent(newer);
+
+  // Appeared: the spec asked for it and it was missing, and now it is not missing; or
+  // nothing asked for it and it has turned up.
+  const added = new Set([
+    ...[...absentBefore].filter((id) => !absentNow.has(id)),
+    ...[...presentNow].filter((id) => !presentBefore.has(id)),
+  ]);
+
+  const removed = new Set([
+    ...[...absentNow].filter((id) => !absentBefore.has(id)),
+    ...[...presentBefore].filter((id) => !presentNow.has(id)),
+  ]);
+
+  const fieldsBefore = fieldsObservedNotSpecified(older);
+  const fieldsAdded: FieldAdded[] = [];
+  for (const [entity, fields] of fieldsObservedNotSpecified(newer)) {
+    const had = fieldsBefore.get(entity) ?? new Set<string>();
+    for (const field of sorted(fields)) {
+      if (!had.has(field)) fieldsAdded.push({ entity, field });
+    }
+  }
+
+  return {
+    endpointsAdded: sorted(added),
+    endpointsRemoved: sorted(removed),
+    fieldsAdded: fieldsAdded.sort(
+      (left, right) =>
+        left.entity.localeCompare(right.entity) || left.field.localeCompare(right.field),
+    ),
+    accessLoosened: accessLoosened(older, newer),
+  };
 }
 
 /**
@@ -138,5 +273,6 @@ export function diffRuns(a: RunResult, b: RunResult): RunDelta {
     comparable: true,
     specChanged: a.spec.hash !== b.spec.hash,
     requirements: { regressed, fixed, stillFailing, newlyUnverified },
+    structural: structuralDelta(a, b),
   };
 }
