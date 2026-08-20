@@ -1,6 +1,6 @@
 ﻿# M6: Run Store and Delta
 
-**Status:** not started
+**Status:** complete
 **Owns:** `packages/core/src/store/`, `packages/core/src/diff/run-run.ts`
 **Depends on:** M1, M7 (RunResult assembly)
 **Depended on by:** M8
@@ -82,8 +82,15 @@ export function diffRuns(a: RunResult, b: RunResult): RunDelta;
 
 ```
 pnpm --filter @qai/core test store delta
-pnpm --filter @qai/cli exec qai diff --last 2
+node packages/cli/bin/qai.js diff --last 2
 ```
+
+**Corrected 2026-08-20.** The second command was written as
+`pnpm --filter @qai/cli exec qai diff --last 2`, which does not resolve and never
+did: pnpm does not link a package's own bin into its own `node_modules/.bin`, so
+`exec` finds no `qai` whatever has been installed. Run the binary directly, from a
+directory that holds two recorded runs. M8's Definition of Done carries the same
+form and the same problem.
 
 **Corrected 2026-08-16.** This command previously carried a `--` before the filter
 names. pnpm forwards that `--` to the script, so vitest is invoked as
@@ -104,6 +111,14 @@ is the explicit equivalent.
 - Do not add a query layer beyond what `diff` and `list` need. This is not an analytics store.
 
 ## Open questions
+
+- **A run id carries seconds, so two checks less than a second apart collide.** The
+  store refuses the second rather than overwriting the first, which is correct, and
+  the CLI says so, so nothing is lost silently. In the workflow this exists for, check
+  something, fix it, check again, a second always passes. It is only reachable from
+  automation, and it cost one deliberate wait in the M6.8 integration test. Widening
+  the id a second time changes the shape of every id in the store and in every report,
+  and the id belongs to M8's surface, so it is recorded rather than changed here.
 
 - **Half of the access loosening rule cannot be computed, and the cause has now bitten
   twice.** The rule fires when a deny rule check moves from pass to fail, which a
