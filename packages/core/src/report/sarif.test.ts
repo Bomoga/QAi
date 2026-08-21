@@ -183,13 +183,20 @@ describe('rendering a run as SARIF', () => {
     expect(result?.locations?.[0]?.physicalLocation?.region).toBeUndefined();
   });
 
-  it('falls back to a logical location when no source is available', () => {
+  it('names the rule in a logical location when no source is available', () => {
+    // The logical location is what says which rule a finding came from, and it is still
+    // here. What changed on 2026-08-21 is that it no longer stands alone: a physical
+    // location anchored to the spec file sits beside it, because GitHub refuses to
+    // process a result without one. This test asserted that absence before, which is why
+    // the document was conformant and unusable at the same time.
     const result = (firstRun(run({ checks: [failing()] })).results ?? [])[0];
     const logical = result?.locations?.[0]?.logicalLocations?.[0];
 
-    expect(result?.locations?.[0]?.physicalLocation).toBeUndefined();
     expect(logical?.name).toBe('AR-014-01');
     expect(logical?.fullyQualifiedName).toBe('REQ-014/AR-014-01');
+    expect(result?.locations?.[0]?.physicalLocation?.artifactLocation?.uri).toBe(
+      'spec/ledger.spec.yaml',
+    );
   });
 
   it('names the endpoint on a structural result, which does carry one', () => {
@@ -328,5 +335,98 @@ describe('rendering a run as SARIF', () => {
 
   it('contains no em dash', () => {
     expect(renderSarif(run({ checks: [failing()] }))).not.toContain('—');
+  });
+});
+
+describe('every result carries a physical location', () => {
+  /**
+   * The rule GitHub enforces at processing time and no schema enforces at all.
+   *
+   * A logical location alone is conformant SARIF 2.1.0, so `sarif-schema.ts` passes it
+   * and the document is still refused with `locationFromSarifResult: expected a physical
+   * location`, once per result. That is how this was found: the upload succeeded and the
+   * analysis failed. Nothing in this repository can check what GitHub ingests, so what is
+   * checked here is the property that failure taught us.
+   */
+  function everyResultHasAPhysicalLocation(result: RunResult): void {
+    const results = firstRun(result).results ?? [];
+    expect(results.length, 'nothing to assert about').toBeGreaterThan(0);
+
+    for (const one of results) {
+      const [location] = one.locations ?? [];
+      expect(location?.physicalLocation?.artifactLocation?.uri, one.message.text).toBeDefined();
+    }
+  }
+
+  it('anchors a check with no source reference to the spec file', () => {
+    const document = firstRun(run({ checks: [failing()] }));
+    const [only] = document.results ?? [];
+
+    expect(only?.locations?.[0]?.physicalLocation?.artifactLocation?.uri).toBe(
+      'spec/ledger.spec.yaml',
+    );
+    // The logical location survives beside it, so anchoring costs nothing.
+    expect(only?.locations?.[0]?.logicalLocations?.[0]?.name).toBe('AR-014-01');
+  });
+
+  it('prefers the source reference a check already carries', () => {
+    const document = firstRun(
+      run({ checks: [failing({ locationRef: 'app/api/invoices/[id]/route.ts:12' })] }),
+    );
+    const location = (document.results ?? [])[0]?.locations?.[0]?.physicalLocation;
+
+    expect(location?.artifactLocation?.uri).toBe('app/api/invoices/[id]/route.ts');
+    expect(location?.region?.startLine).toBe(12);
+  });
+
+  it('anchors structural results too, which never have a source reference', () => {
+    everyResultHasAPhysicalLocation(
+      run({
+        structural: {
+          specifiedNotObserved: [{ kind: 'entity', name: 'AuditLog', requirementIds: ['REQ-006'] }],
+          observedNotSpecified: [
+            { kind: 'endpoint', id: 'GET /api/debug/state', severity: 'medium' },
+          ],
+          fieldMismatches: [
+            { entity: 'Invoice', specifiedNotObserved: [], observedNotSpecified: ['notes'] },
+          ],
+        },
+      } as Partial<RunResult>),
+    );
+  });
+
+  it('holds across a document carrying every kind of result at once', () => {
+    everyResultHasAPhysicalLocation(
+      run({
+        checks: [
+          failing(),
+          failing({ checkId: 'CHK-b02d55', type: 'behavioral', severity: 'medium' }),
+          failing({ checkId: 'CHK-c13e66', locationRef: 'src/app.ts:4' }),
+        ],
+        structural: {
+          specifiedNotObserved: [{ kind: 'entity', name: 'AuditLog', requirementIds: [] }],
+          observedNotSpecified: [
+            { kind: 'endpoint', id: 'GET /api/debug/state', severity: 'medium' },
+          ],
+          fieldMismatches: [],
+        },
+      } as Partial<RunResult>),
+    );
+  });
+
+  it('falls back to a logical location only when the run recorded no spec file', () => {
+    // There is nothing true to point at then, and inventing a path would be worse than
+    // the document being refused. Invariant I2: a finding that points somewhere false is
+    // the false positive this project will not ship.
+    const document = firstRun(
+      run({
+        spec: { hash: 'sha256:abc123', specVersion: '0.1', files: [] },
+        checks: [failing()],
+      } as Partial<RunResult>),
+    );
+
+    const [only] = document.results ?? [];
+    expect(only?.locations?.[0]?.physicalLocation).toBeUndefined();
+    expect(only?.locations?.[0]?.logicalLocations?.[0]?.name).toBe('AR-014-01');
   });
 });
