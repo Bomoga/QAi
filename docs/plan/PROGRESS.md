@@ -418,10 +418,11 @@ every other stage does.
   (commit 3902e82)
 - [x] S8.2 the findings ledger and the per-check false positive rate (commit 09d19dd)
 - [~] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
-  (first batch of 3 in commit 6fc7c32; the stage wants twenty to fifty)
-- [x] S8.4 run the tool over the corpus and record every finding (commit backfilled below)
+  (3 in commit 6fc7c32, 3 more in the commit backfilled below; the stage wants twenty
+  to fifty, so this is six of them)
+- [x] S8.4 run the tool over the corpus and record every finding (commit e0f18a9)
 - [~] S8.5 manually review every finding as true positive, false positive, or unclear
-  (all 13 findings of the first batch reviewed, in the same commit)
+  (all 19 findings across six applications reviewed, nothing outstanding)
 - [ ] S8.6 compute the rates, and disable any check above five percent
 - [ ] S8.7 the written summary and the aggregate
 - Exit criterion: a results table with per-application findings, a false positive rate computed by manual review of every finding, and a written summary. Any check with a false positive rate above five percent is disabled before the demo, per invariant I2.
@@ -436,10 +437,16 @@ every other stage does.
   consenting targets only. The first, applications generated for this purpose from a
   fixed prompt set, needs nobody's permission and is the stated preference. The corpus is
   built that way, and `corpus/README.md` says so where a reader will find it.
-- **First result, on three applications rather than twenty to fifty, so it is provisional
-  and the shape of it is already worth reading.** 13 findings. Access checks 0% false
-  positive over 3 judged, behavioral 0% over 4, **structural 50% over 6**, overall 23.1%.
-  Every false positive so far is in the structural diff and none is in a verdict.
+- **Result over six applications, 19 findings, every one reviewed.** Access checks 0%
+  false positive over 3 judged, behavioral 0% over 5, **structural 36.4% over 11**,
+  overall 21.1%. Still provisional: the stage wants twenty to fifty applications.
+  **Every false positive is in the structural diff and none is in a verdict**, which held
+  across both batches and is the single most useful thing the corpus has said so far.
+- **Three correct applications produced no failed check at all.** Enforcement in a
+  middleware, in a query filter, and through a membership lookup; refusals as 404, 404,
+  and 403; bearer tokens, a session cookie, and an identity header. The access and
+  behavioral checks did not fire once on any of them, which is what a 0% rate has to mean
+  before it means anything.
 - **Three distinct causes, all fixable, none of them inherent to the check.**
   1. A field marked `sensitive: true` that the application correctly never returns is
      reported as specified and not observed. The spec says the field must not appear and
@@ -452,8 +459,25 @@ every other stage does.
      cover it. `GET /api/stock` fires and `GET /api/invoices` does not, because the name
      matching relates invoices to Invoice and cannot relate stock to StockLine. The most
      damaging of the three, because medium is confident enough to be believed.
-- **What the number does not yet say.** Three applications is not twenty, one of the three
-  was written to be correct and two to be broken, and the reviewer was the same agent that
+- **Three more observations, none of them false positives, all worth acting on.**
+  1. On `p6-messages-dm-leak` the list access check came back **inconclusive** rather than
+     guessing: "ownership of the returned rows could not be established from the rule
+     condition". That is invariant I2 working exactly as written, and it is worth saying
+     out loud because an inconclusive is easy to mistake for a gap in the tool.
+  2. That inconclusive made REQ-003 unverified with reason **`check-error`**, and nothing
+     errored. Second sighting of the same defect: the ledger fixture's REQ-006 does it too.
+     The closed reason set has no member for "the check ran and could not establish the
+     fact", so `assembleRun` falls back to `check-error`. It is a contract question and it
+     is now confirmed as recurring rather than particular to one requirement.
+  3. **A real data leak was reported at `medium` and did not fail the run.** The direct
+     message leak on `p6` is a behavioral finding, `BEHAVIORAL_SEVERITY` is medium, and
+     the default threshold is high, so `qai check` exited 0 on an application that hands
+     anyone's private messages to any signed in caller. The same happened on
+     `p3-notes-shared-flag`. Nothing here is wrong on its own terms; together they mean the
+     default threshold lets a real leak through, which is a product decision worth taking
+     deliberately rather than inheriting.
+- **What the number does not yet say.** Six applications is not twenty, three of the six
+  were written to be correct and three to be broken, and the reviewer was the same agent that
   wrote both the tool and the corpus. That last one is not a footnote: the review step
   exists to be independent and this one was not. It belongs in the S8.7 summary as a
   limit on the number rather than under it.

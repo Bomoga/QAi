@@ -1,0 +1,39 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: participant
+    auth:
+      kind: bearer
+      tokenEnv: MSG_PARTICIPANT_TOKEN
+    attributes:
+      team_id: TEAM-1
+
+  - id: outsider
+    auth:
+      kind: bearer
+      tokenEnv: MSG_OUTSIDER_TOKEN
+    attributes:
+      team_id: TEAM-2
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: participant
+
+resources:
+  - name: Message
+    routes:
+      read: /api/messages/{id}
+      list: /api/messages
+    instances:
+      - id: MSG-1
+        attributes:
+          team_id: TEAM-1
+      - id: MSG-3
+        attributes:
+          team_id: DM

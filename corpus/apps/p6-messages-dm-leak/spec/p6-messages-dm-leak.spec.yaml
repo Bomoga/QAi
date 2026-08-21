@@ -1,0 +1,104 @@
+specVersion: '0.1'
+name: 'Team messages'
+
+# Written from prompt P6 in corpus/prompts.md, before reading the application.
+
+actors:
+  - id: participant
+    description: 'A signed in person on TEAM-1 who is a participant of the direct message'
+  - id: outsider
+    description: 'A signed in person on TEAM-2, party to neither'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Message
+    fields:
+      - name: id
+        type: string
+      - name: channel_id
+        type: string
+      - name: team_id
+        type: string
+      - name: body
+        type: string
+        sensitive: true
+
+requirements:
+  - id: REQ-001
+    statement: 'A person reads only channels their team owns'
+    entities: [Message]
+    fields: [Message.team_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: read
+        resource: Message
+        condition: 'Message.team_id != actor.team_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a message in a channel owned by another team'
+        when: 'actor outsider reads Message MSG-1'
+        then: 'status in 403, 404 and body omits field Message.body'
+
+  - id: REQ-002
+    statement: 'A direct message is readable by its two participants and nobody else'
+    entities: [Message]
+    fields: [Message.channel_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: outsider
+        action: read
+        resource: Message
+        condition: 'Message.team_id != actor.team_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'a direct message between two other people'
+        when: 'actor outsider reads Message MSG-3'
+        then: 'status in 403, 404 and body omits field Message.body'
+
+  - id: REQ-003
+    statement: 'Listing messages returns only what the caller may read'
+    entities: [Message]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: outsider
+        action: list
+        resource: Message
+        condition: 'Message.team_id != actor.team_id'
+        effect: deny
+
+  - id: REQ-004
+    statement: 'A caller who is not signed in reads no message'
+    entities: [Message]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: Message
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an existing message'
+        when: 'actor anonymous reads Message MSG-1'
+        then: 'status in 401, 403, 404 and body omits field Message.body'
+
+  - id: REQ-005
+    statement: 'A person can read a channel their own team owns'
+    entities: [Message]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: participant
+        action: read
+        resource: Message
+        effect: allow

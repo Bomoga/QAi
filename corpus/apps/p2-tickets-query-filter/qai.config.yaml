@@ -1,0 +1,52 @@
+# A session cookie, which is the third credential style corpus/prompts.md varies on.
+
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: requester
+    auth:
+      kind: cookie
+      name: sid
+      valueEnv: TICKETS_REQUESTER_SID
+    attributes:
+      user_id: rita
+
+  - id: otherRequester
+    auth:
+      kind: cookie
+      name: sid
+      valueEnv: TICKETS_OTHER_SID
+    attributes:
+      user_id: raj
+
+  - id: agent
+    auth:
+      kind: cookie
+      name: sid
+      valueEnv: TICKETS_AGENT_SID
+    attributes:
+      user_id: agnes
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: agent
+
+resources:
+  - name: Ticket
+    routes:
+      read: /api/tickets/{id}
+      list: /api/tickets
+      update: /api/tickets/{id}
+    instances:
+      - id: TCK-1
+        attributes:
+          requester_id: rita
+      - id: TCK-3
+        attributes:
+          requester_id: raj
