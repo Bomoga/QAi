@@ -24,6 +24,7 @@ Written for Claude Code agents. Follow these literally.
 - Runtime dependencies, deliberately few: `zod`, `commander`, `@clack/prompts`, `picocolors`, `undici`, `yaml`, `better-sqlite3`, `fast-glob`.
 - Optional peer dependency: `playwright`, imported lazily, never at module top level.
 - Do not add a dependency without an entry in the module's `## Open questions` and human approval. No ORM, no logging framework, no dependency injection container, no HTTP client wrapper.
+- **This list governs `packages/`, not `fixtures/`.** A fixture depends on whatever framework it is a fixture of, or it cannot be one: `fixtures/ledger-express` needs `express` for the source adapters to have a route table to read, and that was approved at S9.3. A fixture dependency still needs approval, and it must not require a toolchain to install, because a clean install is part of the definition of success. It never becomes a dependency of the product.
 
 ## Hard rules
 
