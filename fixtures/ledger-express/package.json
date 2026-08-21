@@ -1,0 +1,17 @@
+{
+  "name": "ledger-express",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The ledger served on Express, so a source adapter has a route table to read.",
+  "scripts": {
+    "dev": "node --experimental-strip-types src/index.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0"
+  }
+}

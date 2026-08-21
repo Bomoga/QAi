@@ -602,8 +602,8 @@ are what it exposed rather than a guess at what it might.
   669a572, which stopped it naming a branch that a merge deletes)
 - [x] S9.2 make a clean install work (commit 0d45437)
 - [ ] S9.3 the two clauses of the success criterion that cannot be met as written
-  (source root reaches the probe at c6085f5, a finding cites the handler in the commit
-  backfilled below)
+  (source root reaches the probe at c6085f5, a finding cites the handler at d9a86cb, the
+  demo target in the commit backfilled below)
 - [ ] S9.4 rehearse the sequence again, cold, and record the real output
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
   minutes, on a machine that has never seen the project.
@@ -687,6 +687,43 @@ are what it exposed rather than a guess at what it might.
   handler be cited for a GET route and failed exactly the test written for it; comparing
   the written path instead of the identity failed the positive test, since a configured
   `/api/invoices/{id}` and an observed `/api/invoices/:id` are the same route spelled twice.
+- **The demo target is `fixtures/ledger-express`, decided by the human on 2026-08-21.**
+  Three options were put up: an Express twin of the ledger, a tree of real Next.js App
+  Router handlers served by a hand-written host so nothing new is installed, or correcting
+  the criterion to match 04-CONVENTIONS.md and demonstrating no file reference at all. The
+  first was chosen, and `express` was approved as a dependency of a fixture package with
+  the product's own list left alone. 04-CONVENTIONS.md now says the approved list governs
+  `packages/` rather than `fixtures/`, since a fixture depends on whatever framework it is
+  a fixture of.
+- **The twin is a transport, not a second application.** The ledger's handlers moved to
+  `fixtures/ledger/src/handlers.ts` and both servers call them, so `app.ts` and
+  `routes.ts` hold routing and nothing else. Two copies of a seeded defect would drift,
+  and a defect that behaved differently depending on which server was running would make
+  every finding about it unreadable.
+- **The drift is guarded by a matrix rather than by intention.** `parity.test.ts` sends
+  twenty-one requests to both servers in both defect states and compares status and body.
+  It found two real divergences while being written: Express matches paths loosely, so
+  `/api/invoices/` and `/API/invoices` answered where `url.pathname === ...` refuses.
+  `strict routing` and `case sensitive routing` fix it and both cases are in the matrix.
+  Proved by breaking it: removing the two settings fails four cases, and answering a
+  missing credential with 404 instead of 401 fails two.
+- **D5 is the one thing the twin does not implement, and the switch is forced off rather
+  than ignored.** A source adapter reads text, so a route registered behind a runtime
+  condition is still declared in the file, and with the defect off the twin would report
+  an endpoint it refuses to serve. Fixing that defect means deleting a line, which an
+  environment variable cannot model. The ledger keeps D5 for the checks and the goldens
+  built on it, and three tests hold the difference in both directions.
+- **Measured against the twin, the criterion is met.** Defective: exit 1, 15 requirements
+  as 8 verified, 5 failed, 2 unverified, and three high access findings each ending
+  `Source: src/routes.ts:82`, `:89`, and `:99` with an evidence id. Repaired: exit 0, 13
+  verified, 0 failed. The delta reports five requirements moving failed to verified. The
+  counts differ from the ledger's 7/6/2 because the twin does not serve D5.
+- **The probe reports what it could not reach, which is the hybrid mode working.** Three
+  endpoints are `high` confidence because source and crawl agree, and three are `medium`
+  and carry a note saying they are declared in source and the crawl did not reach them.
+  That is true: the route index names `/api/invoices/{id}`, which answers 404, so nothing
+  links the instance routes. It is the first time in this project that a run has had two
+  sides to disagree.
 - **The behavioral planner has the same defect and is deliberately not fixed here.**
   `routeTemplateFor` and `handlerRefFor` in `checks/behavioral/plan.ts` both match on
   `responseShape.entity`, so no behavioral finding can carry a file reference either.
