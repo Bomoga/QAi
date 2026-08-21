@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-20T21:15:00Z
-Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: none, S7 is open as PR #12, rebased onto dev, waiting on review
+Updated: 2026-08-21T02:45:00Z
+Current stage: S7 complete and merged. S8 not started.
+Next task: none. S8 needs an explicit go-ahead.
 
 ## S0. Skeleton
 
@@ -274,10 +274,18 @@ Surprises worth recording:
   across three rules and levels error, warning, and note, and exits 1. The Action reads
   that document and produces 15 findings, 3 error, 7 warning, 5 note, coverage 87%, 2
   unverified, 1 model assisted. `.github/workflows/qai.yml` runs the whole sequence.
-- Exit criterion, the part that cannot: whether the findings actually render inline on the
-  pull request has to be read in a browser. The `gh` token has no Checks or Actions
-  permission, and uploading SARIF to a private repository needs code scanning enabled,
-  which is a repository setting rather than anything in this branch. Left for the human.
+- Exit criterion, the part that could not be checked from a terminal: **met 2026-08-21,
+  and it took three fixes to get there.** The repository is public now, so code scanning
+  is available; `qai.yml` was missing `actions: read`, without which the upload could not
+  read its own workflow run; and every SARIF result carried a logical location and no
+  physical one, which is conformant and which GitHub refuses to process. With all three
+  in, run 32440334467 reports `Analysis upload status is complete.` and a `QAi` code
+  scanning check appears and passes beside the job. That check exists only when an
+  analysis is accepted, which is what says the findings reached the pull request.
+- Worth recording next to it: this criterion was reported as met on its terminal half at
+  the end of S6, and the half that needed a browser sat unverified for three days while
+  the emitter could not have satisfied it. A criterion split into a part that is checked
+  and a part that is assumed is a criterion that is not checked.
 
 ### S6 summary
 
@@ -347,6 +355,10 @@ Surprises worth recording:
   endpoints appeared. `qai report RUN-20260820-210052` re-renders the earlier run and
   exits 0. Full output is in the pull request.
 - Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
+- **Merged into `dev` at `30c133f` on 2026-08-21**, on the human's instruction, as a merge
+  commit rather than a squash. Both CI workflows then ran on `dev` itself and both
+  succeeded, which is the first time `dev` has been green since M8 landed. No pull request
+  is open.
 - Pushed 2026-08-20 and opened as PR #12 into `dev`. The same push carried `a50d323` to
   the remote, which is what let `feat/m8-cli-ci` fast-forward onto its held-back tip, so
   PR #11 was complete for the first time since S6.
@@ -1872,20 +1884,10 @@ Deferred, with reasons rather than assumptions:
 
 ## Blocked
 
-- none. Both push blockers were cleared on 2026-08-20: the human added the Workflows
-  permission to the token, `feat/m6-store-delta` pushed and opened as PR #12, and
-  `feat/m8-cli-ci` fast-forwarded onto its held-back tip so `.github/workflows/qai.yml`
-  is finally on the remote and PR #11 is complete. Nothing was rewritten to get either
-  push through.
+- none. Every blocker recorded through S7 is cleared as of 2026-08-21. The token gained
+  the Workflows and Checks permissions, both stacked branches pushed and merged, the
+  repository is public so code scanning works, and the two CI defects and the SARIF
+  defect that the check logs finally revealed are all fixed and merged.
 
-- Still waiting on a human, but not blocking any work: code scanning is not enabled on
-  this private repository, so `upload-sarif` returns 403 and no finding reaches a pull
-  request whatever a run found. That is the last piece of the S6 exit criterion, and the
-  workflow that would demonstrate it is now on the remote.
-
-  Resolved 2026-08-20 by making the repository public, so code scanning is available.
-  That was not what the red checks were about, though. See below.
-
-- The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the leftover
-  ledger, and confirmed the mid-session HEAD move was their own accident rather than a
-  second session.
+- Not blocked, but not started: S8, the corpus run. `05-BUILD-ORDER.md` owns what it is.
+  The working agreement says a stage does not begin without being told to.
