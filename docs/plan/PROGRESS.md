@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-21T12:45:00Z
+Updated: 2026-08-21T13:20:00Z
 Current stage: S8, corpus run, branch fix/s8-structural-false-positives
-Next task: S8.3, more applications, then S8.5 again
+Next task: S8.3, more applications, then S8.5 again, then S8.7
 
 ## S0. Skeleton
 
@@ -418,15 +418,14 @@ every other stage does.
   (commit 3902e82)
 - [x] S8.2 the findings ledger and the per-check false positive rate (commit 09d19dd)
 - [~] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
-  (3 in commit 6fc7c32, 3 more in commit b787a67; the stage wants twenty to fifty, so
-  this is six of them)
+  (3 in commit 6fc7c32, 3 more in commit b787a67, 4 more in commit ddf4154, with the
+  criteria correction at 1d863f6; the stage wants twenty to fifty, so this is ten)
 - [x] S8.4 run the tool over the corpus and record every finding (commit e0f18a9)
 - [~] S8.5 manually review every finding as true positive, false positive, or unclear
-  (all 19 findings across six applications reviewed, then the re-run after S8.6 produced
-  15 findings and 0 new ones, so nothing is outstanding)
+  (all 21 findings across ten applications reviewed, nothing outstanding)
 - [x] S8.6 compute the rates, and disable any check above five percent (commits c00089f,
-  795e540, and the commit backfilled below). **No check was disabled, because none needed
-  to be.** The three causes were fixed and structural came back at 0.0%.
+  795e540, e235f88, ea3f7fb). **No check was disabled, because none needed to be.** The
+  three causes were fixed and structural came back at 0.0%.
 - [ ] S8.7 the written summary and the aggregate
 - Exit criterion: a results table with per-application findings, a false positive rate computed by manual review of every finding, and a written summary. Any check with a false positive rate above five percent is disabled before the demo, per invariant I2.
 - Started 2026-08-21 on the human's instruction, immediately after S7 merged. Branch
@@ -450,6 +449,35 @@ every other stage does.
   and 403; bearer tokens, a session cookie, and an identity header. The access and
   behavioral checks did not fire once on any of them, which is what a 0% rate has to mean
   before it means anything.
+- **Ten applications, 21 findings, every one reviewed, 0.0% everywhere.** Access 0.0% over
+  3 judged, behavioral 0.0% over 6, structural 0.0% over 12, overall 0.0% over 21, with
+  four earlier reviews held aside as findings the tool no longer produces. Seven of the
+  ten applications are intended correct and three are intended broken. Still provisional:
+  the stage wants twenty to fifty and this is ten.
+- **The corpus was measuring less than it looked like it was, and nothing said so.** Five
+  of the first six applications carried an acceptance criterion written `every row has
+  field X equal to actor.Y` or `body has field E.f`, and the vocabulary is
+  `every <Entity> has <field> equal to` and `body contains field <Entity>.<field>`. Those
+  criteria were never planned and never ran. Every application still checked, still
+  exited 0, and said nothing, across two batches and two reviews. Corrected at `1d863f6`,
+  and p7 immediately caught a planted defect nobody had seen: the stock listing returns
+  every warehouse, and the finding names the two foreign rows by id.
+- **The reason it hid is that the runner printed an exit code and nothing else.** It
+  prints a coverage line per application now, with the reasons a requirement went
+  unverified, which is invariant I4 applied to the harness rather than to the report. The
+  M5.15 note said the same thing about `check-ledger.ts` printing `1 not` and throwing
+  the reasons away. The same mistake, in a second place, two stages later.
+- **The two structural field findings that are right are both the observed side.**
+  `p6-messages-dm-leak` reports `Message.participants` and `p4-bookings-cookie` reports
+  `Booking.cancelled`, each a field the application returns and the spec never declares.
+  That is the half S8.6 deliberately left alone, and it is the half that has been right
+  every time.
+- **A spec limit found while writing the corpus, recorded rather than worked around.** P6
+  says sending a message needs membership of that channel. An access rule names an actor,
+  an action, and a resource, with nowhere to name which channel, so the channel scoped
+  half of that sentence cannot be written as a rule. `p6-messages-strict` states it as a
+  requirement carrying no check and takes the `no-checks-defined` coverage gap, rather
+  than narrowing it into a claim the prompt did not make.
 - **S8.6 finished with nothing disabled, and that is the honest outcome.** The three
   causes below were fixed in `packages/core/src/diff/spec-observation.ts`, the corpus was
   re-run against the rebuilt tool, and the four false positives are gone. Six
