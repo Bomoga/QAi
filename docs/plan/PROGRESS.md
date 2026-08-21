@@ -406,6 +406,34 @@ Deferred, with reasons rather than assumptions:
 
 ## Notes carried forward
 
+- **The red checks were never the SARIF 403, and inferring instead of reading cost real
+  time.** With Checks read finally granted, the logs named two unrelated failures, and
+  neither was the one that had been reasoned toward from correlation. Both are fixed on
+  PR #12, at `534f7ec` and `07cff7d`.
+- **`ci.yml` ran Typecheck before Build, and `packages/cli` resolves `@qai/core` to that
+  package's `dist` rather than to its source.** On a fresh checkout the dist does not
+  exist, so every cross-package import is TS2307 and the run dies in 24 seconds with
+  forty errors that say nothing about the code. **Every CI run has failed this way since
+  the CLI landed**, which means PR #11 was merged over a red build. Build now runs first,
+  with a comment saying why so nobody tidies the order back.
+- **The reason nobody noticed is the reason it was worth noticing.** `pnpm typecheck`
+  passes locally because a `dist` from an earlier build is lying around, so the check that
+  was supposed to catch this was passing for the wrong reason, which is the same vacuous
+  green this repository keeps finding in its tests. The M8.1 note predicted the mechanism
+  exactly, in the words "the CLI dts build reads `@qai/core` from its `dist`, not its
+  source". Reading a note is not the same as applying it.
+- **Verify a CI fix the way CI experiences it.** Deleting all three `dist` directories and
+  running the steps in order is what proved both the failure and the fix. A local pass on
+  a warm tree proves nothing about a cold one.
+- **`qai.yml` was missing `actions: read`.** `github/codeql-action/upload-sarif` reads the
+  workflow run it belongs to, and the permissions block granted only `contents` and
+  `security-events`. It failed with "Resource not accessible by integration" against the
+  workflow runs API, after having already validated the document and added fingerprints,
+  which makes the failure read like a problem with the SARIF rather than with the block.
+- **Code scanning is no longer a blocker either way: the repository is public as of
+  2026-08-20**, which makes code scanning free, so the S6 exit criterion is demonstrable
+  for the first time once these two fixes land.
+
 - S7, `diff` and `report`: both exit 0 or 2 and never 1, which is what M8's table says and
   is worth the sentence. 1 belongs to a run that completed and found something at or above
   the threshold, and neither command completes a run. A delta describes change; whether
@@ -1829,14 +1857,8 @@ Deferred, with reasons rather than assumptions:
   request whatever a run found. That is the last piece of the S6 exit criterion, and the
   workflow that would demonstrate it is now on the remote.
 
-  It is also the best explanation for the one red check on every branch carrying
-  `qai.yml`. PR #10 had no such file and read `CLEAN`; PRs #11 and #12 both carry it and
-  both read `UNSTABLE`. The workflow's last step inverts polarity deliberately, so the
-  fixture's expected findings are green, and `ci.yml` passes on a tree that is verified
-  green locally, which leaves the upload. That is an inference and not a reading: this
-  token has no Checks or Actions permission, so `gh pr checks`, the check-runs endpoint,
-  the commit status endpoint, and the workflow runs endpoint all return 403. Somebody
-  with a browser can settle it in one look.
+  Resolved 2026-08-20 by making the repository public, so code scanning is available.
+  That was not what the red checks were about, though. See below.
 
 - The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the leftover
   ledger, and confirmed the mid-session HEAD move was their own accident rather than a
