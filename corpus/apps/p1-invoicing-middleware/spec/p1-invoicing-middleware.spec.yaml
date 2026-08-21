@@ -65,7 +65,7 @@ requirements:
         mode: deterministic
         given: 'invoices belonging to two organizations'
         when: 'actor outsider lists Invoice'
-        then: 'every row has field org_id equal to actor.org_id'
+        then: 'every Invoice has org_id equal to actor.org_id'
 
   - id: REQ-003
     statement: 'Editing an invoice requires a signed in caller'
@@ -128,4 +128,4 @@ requirements:
         mode: deterministic
         given: 'an invoice belonging to organization org-1'
         when: 'actor owner reads Invoice INV-100'
-        then: 'status is 200 and body has field Invoice.amount_cents'
+        then: 'status is 200 and body contains field Invoice.amount_cents'

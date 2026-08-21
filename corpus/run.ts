@@ -1,11 +1,12 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import process from 'node:process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { RunResultSchema } from '../packages/core/src/index.ts';
 import { CORPUS_BASE_URL, CORPUS_PORT, discoverCorpusApps, type CorpusApp } from './lib/apps.ts';
-import { classifyCheckExit } from './lib/outcome.ts';
+import { classifyCheckExit, describeCoverage } from './lib/outcome.ts';
 
 /**
  * The corpus run: every application in `corpus/apps/`, checked once, everything recorded.
@@ -119,6 +120,21 @@ function run(
   });
 }
 
+/**
+ * The coverage line for a result the command just wrote.
+ *
+ * Parsed rather than cast, since a document off disk is a boundary, rule R2. A result
+ * that will not parse is said out loud rather than swallowed: the check reported success
+ * and then produced something unreadable, which is worth more than a missing line.
+ */
+function coverageOf(out: string): string {
+  try {
+    return describeCoverage(RunResultSchema.parse(JSON.parse(readFileSync(out, 'utf8'))));
+  } catch (error) {
+    return `coverage could not be read: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
 async function checkOne(app: CorpusApp, resultsDir: string): Promise<AppOutcome> {
   log(`\n${app.slug}`);
 
@@ -154,6 +170,7 @@ async function checkOne(app: CorpusApp, resultsDir: string): Promise<AppOutcome>
     }
 
     log(`  checked, exit ${outcome.exitCode}, recorded to ${app.slug}.run.json`);
+    log(`  ${coverageOf(out)}`);
     return { kind: 'checked', slug: app.slug, exitCode: outcome.exitCode };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

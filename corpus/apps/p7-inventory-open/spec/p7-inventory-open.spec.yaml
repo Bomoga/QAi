@@ -61,7 +61,7 @@ requirements:
         mode: deterministic
         given: 'stock lines in two warehouses'
         when: 'actor otherStaff lists StockLine'
-        then: 'every row has field warehouse_id equal to actor.warehouse_id'
+        then: 'every StockLine has warehouse_id equal to actor.warehouse_id'
 
   - id: REQ-003
     statement: 'Adjusting a stock level requires a signed in staff member'
