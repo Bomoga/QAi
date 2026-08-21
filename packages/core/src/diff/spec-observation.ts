@@ -7,6 +7,7 @@ import type {
   StructuralFindings,
 } from '../contracts/index.ts';
 import { looksLikeAsset } from '../probe/crawl.ts';
+import { DERIVED_PARAMETER, pathIdentity } from '../probe/identity.ts';
 
 /**
  * The structural diff: what was asked for, what is there, and where they disagree.
@@ -86,6 +87,26 @@ export function singular(word: string): string {
 /** Case-insensitive, separator-insensitive, and tolerant of singular against plural. */
 export function namesMatch(left: string, right: string): boolean {
   return singular(normalizeName(left)) === singular(normalizeName(right));
+}
+
+/**
+ * The configured mapping from an entity to the routes that serve it.
+ *
+ * A narrow structural slice of M2's `ResourceConfig`, in the same shape as `ProbeContext`
+ * taking less than a whole `TargetContext`. The diff has no business reaching a
+ * credential or a seeded instance, and a caller holding the real config satisfies this
+ * without converting anything.
+ */
+export interface ConfiguredResource {
+  /** Matched against a spec entity name, tolerant of case, separators, and plurals. */
+  readonly name: string;
+  readonly routes: {
+    readonly read?: string;
+    readonly list?: string;
+    readonly create?: string;
+    readonly update?: string;
+    readonly delete?: string;
+  };
 }
 
 export type EntityMatchVia = 'schema' | 'endpoint' | 'fields' | 'none';
@@ -200,6 +221,17 @@ export function severityForUndeclared(endpoint: ObservedEndpoint, spec: Spec): S
   return OBSERVED_NOT_SPECIFIED_SEVERITY;
 }
 
+/**
+ * A configured route template as a path identity.
+ *
+ * Templates are written `/api/stock/{id}` and the crawl derives `/api/stock/:id`, so both
+ * sides go through the same parameter erasure `identityKey` uses. One implementation,
+ * because two answers to "is this the same route" eventually disagree.
+ */
+function templateIdentity(template: string): string {
+  return pathIdentity(template.replace(/\{[^}/]+\}/gu, DERIVED_PARAMETER));
+}
+
 /** Field names observed for an entity, gathered from every endpoint that names it. */
 function observedFieldsFor(entity: string, observation: Observation): Set<string> {
   const fields = new Set<string>();
@@ -230,8 +262,29 @@ function observedFieldsFor(entity: string, observation: Observation): Set<string
  * are not the same fact, and reporting the first as the second would fill a report with
  * findings about a run that never happened. The RunResult says that separately, through
  * the `probe-incomplete` reason.
+ *
+ * `resources` is the configured mapping from an entity to its routes, and it is optional
+ * because a caller may not have one. Widening the signature rather than the contract is
+ * the same shape as `TextOptions.observation` at M7.3: the caller already holds the
+ * object, and putting it on the RunResult would be a contract change.
+ *
+ * Three rules here exist because the corpus run reported each of them wrongly:
+ *
+ * - A field the spec marks `sensitive: true` is never reported for not appearing. The
+ *   spec says it must not appear, redaction reads the same list, and an application that
+ *   withholds it is agreeing with the spec rather than disagreeing.
+ * - Presence is evidence and absence is not, unless the field list came from a schema. An
+ *   inferred entity's fields are whatever one response happened to carry, which is a
+ *   sample, so a field the crawl never requested says nothing about the application.
+ * - An endpoint a configured route maps to a specified entity is accounted for, whatever
+ *   its path is called. Name matching relates `invoices` to `Invoice` and cannot relate
+ *   `stock` to `StockLine`.
  */
-export function diffSpecObservation(spec: Spec, observation: Observation): StructuralFindings {
+export function diffSpecObservation(
+  spec: Spec,
+  observation: Observation,
+  resources: readonly ConfiguredResource[] = [],
+): StructuralFindings {
   const sawNothing = observation.endpoints.length === 0 && observation.entities.length === 0;
 
   const specifiedNotObserved = sawNothing
@@ -250,12 +303,24 @@ export function diffSpecObservation(spec: Spec, observation: Observation): Struc
       .map((entity) => entity.name),
   );
 
+  // Routes the configuration maps to an entity the spec covers. The spec names entities
+  // and rules rather than URLs, so this is the only exact statement of which endpoint
+  // serves what, and without it an endpoint whose path does not resemble its entity's
+  // name is reported as undeclared while its neighbour is not.
+  const configuredRoutes = new Set(
+    resources
+      .filter((resource) => [...accountedFor].some((entity) => namesMatch(resource.name, entity)))
+      .flatMap((resource) => Object.values(resource.routes))
+      .filter((template): template is string => template !== undefined)
+      .map(templateIdentity),
+  );
+
   const observedNotSpecified = observation.endpoints
     .filter(
       (endpoint) =>
         !nameableSegments(endpoint.path).some((segment) =>
           [...accountedFor].some((entity) => namesMatch(segment, entity)),
-        ),
+        ) && !configuredRoutes.has(pathIdentity(endpoint.path)),
     )
     .map((endpoint) => ({
       kind: 'endpoint' as const,
@@ -270,9 +335,24 @@ export function diffSpecObservation(spec: Spec, observation: Observation): Struc
     const declared = new Set(entity.fields.map((field) => normalizeName(field.name)));
     const seen = new Set([...observed].map((field) => normalizeName(field)));
 
-    const missing = entity.fields
-      .filter((field) => !seen.has(normalizeName(field.name)))
-      .map((field) => field.name);
+    // Only a schema reading is an inventory. Anything else is one response's worth of
+    // field names, and a list of what the crawl did not request is a fact about the
+    // crawl. The module says not to report an inferred entity as though it came from a
+    // schema, and this is the other half of that rule.
+    const fromSchema =
+      observation.entities.find((candidate) => namesMatch(candidate.name, entity.name))?.origin ===
+      'schema';
+
+    const missing = !fromSchema
+      ? []
+      : entity.fields
+          // A field the spec forbids in output and the application withholds is the two
+          // of them agreeing. `extra` is deliberately not filtered this way: a field that
+          // was actually seen was actually there.
+          .filter((field) => field.sensitive !== true)
+          .filter((field) => !seen.has(normalizeName(field.name)))
+          .map((field) => field.name);
+
     const extra = [...observed].filter((field) => !declared.has(normalizeName(field)));
 
     if (missing.length === 0 && extra.length === 0) return [];

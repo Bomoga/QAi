@@ -41,6 +41,17 @@ function observation(overrides: Partial<Observation> = {}): Observation {
   };
 }
 
+/** An entity read out of a schema, whose field list is an inventory rather than a sample. */
+function schemaEntity(name: string, fields: readonly string[]): Observation['entities'][number] {
+  return {
+    name,
+    origin: 'schema',
+    confidence: 'high',
+    fields: fields.map((field) => ({ name: field, origin: 'schema' as const })),
+    evidence: [],
+  };
+}
+
 const SPEC: Spec = {
   specVersion: '0.1',
   name: 'Ledger',
@@ -199,6 +210,56 @@ describe('observed and not specified', () => {
     expect(findings.observedNotSpecified).toEqual([]);
   });
 
+  // Name matching relates `invoices` to `Invoice` and cannot relate `stock` to
+  // `StockLine`. The configured routes are the authoritative mapping from an entity and
+  // an action to a URL, and reading them is what stops the tool calling a specified
+  // endpoint undeclared at medium, which is confident enough to be believed. Cause 3.
+  it('accounts for an endpoint a configured route maps to a specified entity', () => {
+    const findings = diffSpecObservation(
+      SPEC,
+      observation({ endpoints: [endpoint({ path: '/api/ledger-entries' })] }),
+      [{ name: 'Invoice', routes: { list: '/api/ledger-entries' } }],
+    );
+
+    expect(findings.observedNotSpecified).toEqual([]);
+  });
+
+  it('matches a configured template against the parameter the crawl derived', () => {
+    const findings = diffSpecObservation(
+      SPEC,
+      observation({ endpoints: [endpoint({ path: '/api/ledger-entries/:id' })] }),
+      [{ name: 'Invoice', routes: { read: '/api/ledger-entries/{id}' } }],
+    );
+
+    expect(findings.observedNotSpecified).toEqual([]);
+  });
+
+  // The endpoint nobody specified is the sharpest thing this diff reports, and it is a
+  // configured route for nothing. D5 in `fixtures/ledger` is exactly this shape.
+  it('keeps reporting an endpoint no configured route covers', () => {
+    const findings = diffSpecObservation(
+      SPEC,
+      observation({ endpoints: [endpoint({ path: '/api/debug/state' })] }),
+      [{ name: 'Invoice', routes: { list: '/api/invoices', read: '/api/invoices/{id}' } }],
+    );
+
+    expect(findings.observedNotSpecified).toEqual([
+      { kind: 'endpoint', id: 'GET /api/debug/state', severity: 'medium' },
+    ]);
+  });
+
+  it('ignores a configured route for an entity no requirement names', () => {
+    const findings = diffSpecObservation(
+      SPEC,
+      observation({ endpoints: [endpoint({ path: '/api/ghosts' })] }),
+      [{ name: 'Ghost', routes: { list: '/api/ghosts' } }],
+    );
+
+    expect(findings.observedNotSpecified).toEqual([
+      { kind: 'endpoint', id: 'GET /api/ghosts', severity: 'medium' },
+    ]);
+  });
+
   it.each(['/', '/health', '/favicon.ico', '/app.css', '/_next/static/chunk.js'])(
     'treats %s as noise rather than a finding',
     (path) => {
@@ -256,14 +317,98 @@ describe('field mismatches', () => {
     ]);
   });
 
-  it('reports a declared field no response carried', () => {
+  it('reports a declared field a schema reading does not carry', () => {
+    const findings = diffSpecObservation(
+      SPEC,
+      observation({ entities: [schemaEntity('Invoice', ['id', 'org_id'])] }),
+    );
+
+    expect(findings.fieldMismatches).toEqual([
+      { entity: 'Invoice', specifiedNotObserved: ['total_cents'], observedNotSpecified: [] },
+    ]);
+  });
+
+  // Absence is evidence only when the field list was an inventory. An entity recognized
+  // from a response carries whatever that one response happened to contain, which is a
+  // sample, and reporting what the crawl did not request as a fact about the application
+  // is the crawl's coverage dressed up as a finding. Corpus cause 2.
+  it('says nothing about a declared field an inferred reading did not happen to carry', () => {
     const findings = diffSpecObservation(
       SPEC,
       observation({ endpoints: [endpoint({ responseShape: { fields: ['id', 'org_id'] } })] }),
     );
 
+    expect(findings.fieldMismatches).toEqual([]);
+  });
+
+  it('still reports an undeclared field an inferred reading did carry', () => {
+    const findings = diffSpecObservation(
+      SPEC,
+      observation({
+        endpoints: [endpoint({ responseShape: { fields: ['id', 'internal_notes'] } })],
+      }),
+    );
+
     expect(findings.fieldMismatches).toEqual([
-      { entity: 'Invoice', specifiedNotObserved: ['total_cents'], observedNotSpecified: [] },
+      { entity: 'Invoice', specifiedNotObserved: [], observedNotSpecified: ['internal_notes'] },
+    ]);
+  });
+
+  // A field the spec forbids in output and the application withholds cannot also be a
+  // finding. Redaction reads the same list. Corpus cause 1.
+  it('does not report a field the spec forbids and no response carried', () => {
+    const spec: Spec = {
+      ...SPEC,
+      entities: [
+        {
+          name: 'Invoice',
+          fields: [
+            { name: 'id', type: 'string' },
+            { name: 'org_id', type: 'string' },
+            { name: 'notes', type: 'string', sensitive: true },
+          ],
+        },
+      ],
+    };
+
+    const findings = diffSpecObservation(
+      spec,
+      observation({ entities: [schemaEntity('Invoice', ['id', 'org_id'])] }),
+    );
+
+    expect(findings.fieldMismatches).toEqual([]);
+  });
+
+  it('excludes only the forbidden field, and keeps everything else the entry says', () => {
+    const spec: Spec = {
+      ...SPEC,
+      entities: [
+        {
+          name: 'Invoice',
+          fields: [
+            { name: 'id', type: 'string' },
+            { name: 'org_id', type: 'string' },
+            { name: 'total_cents', type: 'number' },
+            { name: 'notes', type: 'string', sensitive: true },
+          ],
+        },
+      ],
+    };
+
+    const findings = diffSpecObservation(
+      spec,
+      observation({ entities: [schemaEntity('Invoice', ['id', 'internal_notes'])] }),
+    );
+
+    // The two ordinary fields the schema does not carry are still reported, the
+    // undeclared one is still reported, and the forbidden one is not. Dropping the
+    // sensitive filter puts `notes` back in the first list.
+    expect(findings.fieldMismatches).toEqual([
+      {
+        entity: 'Invoice',
+        specifiedNotObserved: ['org_id', 'total_cents'],
+        observedNotSpecified: ['internal_notes'],
+      },
     ]);
   });
 

@@ -81,12 +81,16 @@ export function endpointId(method: string, path: string): string {
 }
 
 /**
- * The same route under any parameter name. `/api/invoices/:id` and
- * `/api/invoices/:invoiceId` are one route named twice, and a merge that compared the
- * written form would report each side as an endpoint the other did not have. A
- * catch-all keeps its own marker, since it matches a different number of segments.
+ * The path with every parameter name erased. `/api/invoices/:id` and
+ * `/api/invoices/:invoiceId` are one route written twice, and anything comparing the
+ * written form reports each side as a route the other did not have. A catch-all keeps
+ * its own marker, since it matches a different number of segments.
+ *
+ * Exported because the structural diff compares an observed path against a configured
+ * route template, which is the same question this answers, and two implementations of
+ * one comparison eventually disagree.
  */
-export function identityKey(method: string, path: string): string {
+export function pathIdentity(path: string): string {
   const segments = normalizePath(path)
     .split('/')
     .filter((segment) => segment !== '')
@@ -96,7 +100,15 @@ export function identityKey(method: string, path: string): string {
       return parameter[2] === '*' ? ':*' : ':';
     });
 
-  return `${method.toUpperCase()} ${segments.length === 0 ? '/' : `/${segments.join('/')}`}`;
+  return segments.length === 0 ? '/' : `/${segments.join('/')}`;
+}
+
+/**
+ * The same route under any parameter name, as a key a merge can compare. M4.7 matches
+ * on this, and M6 diffs stored runs by it.
+ */
+export function identityKey(method: string, path: string): string {
+  return `${method.toUpperCase()} ${pathIdentity(path)}`;
 }
 
 /** Rewrites an endpoint onto its normalized path and id, leaving everything else. */
