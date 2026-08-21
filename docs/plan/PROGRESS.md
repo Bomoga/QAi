@@ -2,7 +2,7 @@
 
 Updated: 2026-08-21T03:05:00Z
 Current stage: S8, corpus run, branch chore/s8-corpus
-Next task: S8.1
+Next task: S8.2
 
 ## S0. Skeleton
 
@@ -414,7 +414,8 @@ The stage has no module file, so the task breakdown is the six step procedure in
 06-TESTING.md turned into commits. Numbered here so commits can name a task, the way
 every other stage does.
 
-- [ ] S8.1 corpus layout, and the runner that executes the tool over every application
+- [x] S8.1 corpus layout, and the runner that executes the tool over every application
+  (commit backfilled below)
 - [ ] S8.2 the findings ledger and the per-check false positive rate
 - [ ] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
 - [ ] S8.4 run the tool over the corpus and record every finding

@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     include: [
       'test/**/*.test.ts',
+      // The corpus harness computes the false positive rate S8 exists to produce, so it
+      // is held to the same standard as the product rather than living in a script.
+      'corpus/**/*.test.ts',
       'packages/*/src/**/*.test.ts',
       'packages/*/test/**/*.test.ts',
       'fixtures/*/src/**/*.test.ts',
