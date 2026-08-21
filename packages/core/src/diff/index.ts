@@ -4,7 +4,9 @@
  * The comparison lives here rather than in the probe, because a probe that knew what it
  * was looking for would find it. Both sides are fixed by the time anything here runs.
  *
- * Present: `diffSpecObservation` and the severity rules.
- * Pending: nothing.
+ * Present: `diffSpecObservation` and the severity rules from M4, and `diffRuns` with the
+ * two ways of rendering what it returns from M6.
  */
+export * from './render.ts';
+export * from './run-run.ts';
 export * from './spec-observation.ts';

@@ -10,13 +10,12 @@ import type { Stream } from './reporter.ts';
 /**
  * Public API of @qai/cli, which is its command surface.
  *
- * Present: the program, its global flags, configuration precedence, and the reporter
- * `core` is given.
- * Pending: `init`, `validate`, `probe`, `check`, and `report`, which land at M8.3
- * through M8.6, and `diff`, which needs M6 and lands in S7.
+ * Present: the program, its global flags, configuration precedence, the reporter
+ * `core` is given, and every command in the module's table.
  */
 export {
   createProgram,
+  positiveInteger,
   CLI_VERSION,
   FORMATS,
   FAIL_ON_SEVERITIES,
@@ -60,6 +59,8 @@ export {
   runValidate,
   runCheck,
   runProbe,
+  runReport,
+  runDiff,
   DEFAULT_SPEC_GLOB,
   SPEC_PATH,
   GITIGNORE_ENTRY,

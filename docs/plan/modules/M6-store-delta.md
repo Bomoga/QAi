@@ -1,6 +1,6 @@
-# M6: Run Store and Delta
+﻿# M6: Run Store and Delta
 
-**Status:** not started
+**Status:** complete
 **Owns:** `packages/core/src/store/`, `packages/core/src/diff/run-run.ts`
 **Depends on:** M1, M7 (RunResult assembly)
 **Depended on by:** M8
@@ -82,8 +82,15 @@ export function diffRuns(a: RunResult, b: RunResult): RunDelta;
 
 ```
 pnpm --filter @qai/core test store delta
-pnpm --filter @qai/cli exec qai diff --last 2
+node packages/cli/bin/qai.js diff --last 2
 ```
+
+**Corrected 2026-08-20.** The second command was written as
+`pnpm --filter @qai/cli exec qai diff --last 2`, which does not resolve and never
+did: pnpm does not link a package's own bin into its own `node_modules/.bin`, so
+`exec` finds no `qai` whatever has been installed. Run the binary directly, from a
+directory that holds two recorded runs. M8's Definition of Done carries the same
+form and the same problem.
 
 **Corrected 2026-08-16.** This command previously carried a `--` before the filter
 names. pnpm forwards that `--` to the script, so vitest is invoked as
@@ -105,4 +112,40 @@ is the explicit equivalent.
 
 ## Open questions
 
-- None blocking.
+- **A run id carries seconds, so two checks less than a second apart collide.** The
+  store refuses the second rather than overwriting the first, which is correct, and
+  the CLI says so, so nothing is lost silently. In the workflow this exists for, check
+  something, fix it, check again, a second always passes. It is only reachable from
+  automation, and it cost one deliberate wait in the M6.8 integration test. Widening
+  the id a second time changes the shape of every id in the store and in every report,
+  and the id belongs to M8's surface, so it is recorded rather than changed here.
+
+- **Half of the access loosening rule cannot be computed, and the cause has now bitten
+  twice.** The rule fires when a deny rule check moves from pass to fail, which a
+  RunResult can answer, or when an endpoint's `authRequired` moves away from `true`,
+  which it cannot: a RunResult carries `observation.ref` and no endpoint list. The same
+  gap stopped `renderText` filling its "what was built" section at M7.3, where it was
+  worked around by passing the Observation through an option. Two modules needing the
+  same absent data is the argument for `RunResult` carrying a summary of its own
+  Observation, which is a change to `03-CONTRACTS.md` and therefore a human's call. The
+  deny rule half is implemented and the fixture exercises it.
+- **`endpointsAdded` is derived from the two structural lists rather than from an
+  endpoint list.** An endpoint that leaves `specifiedNotObserved` has appeared, and one
+  that enters `observedNotSpecified` has appeared. That is complete with respect to what a
+  RunResult knows, and it catches D5 in the fixture, but an endpoint that is both
+  specified and observed in both runs is invisible to it, correctly, and one that changes
+  shape without changing presence is invisible too.
+- **Retention cannot hold five runs of evidence while evidence ids repeat.** Evidence
+  ids come from a per-run counter in `systemDeps`, so every run writes
+  `.qai/evidence/EV-000001.json` and each run overwrites the last one's bodies. The
+  database keeps five runs of evidence rows as the policy says; the directory holds the
+  newest run's files whatever the policy says. `pruneEvidence` is correct either way,
+  because it unlinks a body only when no surviving row still names it, but the file half
+  of the window is not real until an evidence id is unique across runs. That identifier
+  belongs to M2, and 03-CONTRACTS.md already says check and evidence identifiers are
+  content hashed at runtime, which the evidence id is not. Recorded rather than fixed
+  here, since changing it changes what every stored run refers to.
+- **`accessLoosened[].endpoint` holds a rule id when nothing better exists.** A
+  `CheckResultRecord` carries no endpoint, which M7.4 already ran into: the route appears
+  only inside `detail` as prose and parsing it back out would be a guess. The entry also
+  carries `requirementId` and `ruleId` so a reader is not relying on the one field.

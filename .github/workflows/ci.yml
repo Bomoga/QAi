@@ -32,6 +32,14 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Build comes first, and the order is load bearing rather than incidental.
+      # `packages/cli` resolves `@qai/core` to that package's `dist`, not to its source,
+      # so on a fresh checkout every cross-package import is TS2307 and the typecheck
+      # fails with forty errors that say nothing about the code. Locally it passes only
+      # because a `dist` from an earlier build is lying around, which is what hid this.
+      - name: Build
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -43,6 +51,3 @@ jobs:
 
       - name: Test
         run: pnpm test
-
-      - name: Build
-        run: pnpm build

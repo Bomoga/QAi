@@ -24,10 +24,14 @@
     "capture:goldens": "node --experimental-strip-types scripts/capture-golden-runs.ts"
   },
   "dependencies": {
+    "better-sqlite3": "^13.0.3",
     "fast-glob": "^3.3.3",
     "picocolors": "^1.1.1",
     "undici": "^8.10.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
   }
 }

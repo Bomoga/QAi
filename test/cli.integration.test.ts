@@ -1,167 +1,35 @@
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
-import type { Server } from 'node:http';
-import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { copyFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createLedgerServer } from '../fixtures/ledger/src/app.ts';
-import { OUTSIDER_TOKEN, OWNER_TOKEN, seedLedger } from '../fixtures/ledger/src/data.ts';
-import type { DefectSwitches } from '../fixtures/ledger/src/defects.ts';
-import { main } from '../packages/cli/src/index.ts';
-import type { Stream } from '../packages/cli/src/reporter.ts';
+import {
+  ALL_DEFECTS_OFF,
+  ALL_DEFECTS_ON,
+  FIXTURE_SPEC,
+  runCli as run,
+  startLedger,
+  stopLedgers,
+  workspace,
+  writeConfig,
+} from './support/ledger.ts';
 
 /**
  * The end to end test the M8 Definition of Done asks for: `init`, then `validate`, then
  * `check` against the real fixture app over a real socket, in both configurations.
  *
- * It drives `main` rather than spawning the binary. Spawning would test that pnpm linked
- * a bin, which is true or false regardless of anything in this repository, and would make
- * every assertion about a subprocess's stdout rather than about the command. `main`
- * already takes its streams, its environment, and its working directory as arguments for
- * exactly this reason.
+ * The harness it runs on lives in `support/ledger.ts`, shared with the store and delta
+ * integration test, so there is one description of the fixture's configuration rather
+ * than two that drift.
  *
  * Both directions are pinned. Exit 1 with the defect switches on and 0 with them off, so
  * a command that always failed or always passed breaks one of them. That is the trap S3,
  * S4, and S5 each nearly fell into.
  */
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const FIXTURE_SPEC = join(ROOT, 'fixtures', 'ledger', 'spec', 'ledger.spec.yaml');
-
-/** A token belonging to no seeded user, which is what the impostor actor presents. */
-const UNKNOWN_TOKEN = 'ledger-unknown-token';
-
-const servers: Server[] = [];
-
 afterEach(async () => {
-  await Promise.all(
-    servers.splice(0).map(
-      (server) =>
-        new Promise<void>((done) => {
-          server.close(() => {
-            done();
-          });
-        }),
-    ),
-  );
+  await stopLedgers();
 });
-
-async function startLedger(defects: Partial<DefectSwitches>): Promise<string> {
-  const server = createLedgerServer({ data: seedLedger(), defects: defects as DefectSwitches });
-  servers.push(server);
-
-  await new Promise<void>((done) => {
-    server.listen(0, '127.0.0.1', () => {
-      done();
-    });
-  });
-
-  const address = server.address();
-  if (address === null || typeof address === 'string') throw new Error('no port was assigned');
-  return `http://127.0.0.1:${address.port}`;
-}
-
-const ALL_DEFECTS_ON: DefectSwitches = {
-  d1CrossOrgInvoiceRead: true,
-  d2UnscopedInvoiceList: true,
-  d3UnauthenticatedMutation: true,
-  d4NotesInInvoiceList: true,
-  d5UndeclaredDebugEndpoint: true,
-};
-
-const ALL_DEFECTS_OFF: DefectSwitches = {
-  d1CrossOrgInvoiceRead: false,
-  d2UnscopedInvoiceList: false,
-  d3UnauthenticatedMutation: false,
-  d4NotesInInvoiceList: false,
-  d5UndeclaredDebugEndpoint: false,
-};
-
-/** The config a user would have, with the port this test's server happened to get. */
-function writeConfig(dir: string, baseUrl: string): void {
-  writeFileSync(
-    join(dir, 'qai.config.yaml'),
-    [
-      'target:',
-      `  baseUrl: ${baseUrl}`,
-      '  disposable: true',
-      `  resetCommand: 'node -e "process.stdout.write(1)"'`,
-      'actors:',
-      '  - id: owner',
-      '    auth: { kind: bearer, tokenEnv: LEDGER_OWNER_TOKEN }',
-      '    attributes: { org_id: org-1 }',
-      '  - id: outsider',
-      '    auth: { kind: bearer, tokenEnv: LEDGER_OUTSIDER_TOKEN }',
-      '    attributes: { org_id: org-2 }',
-      '  - id: anonymous',
-      '    auth: { kind: none }',
-      '    attributes: {}',
-      '  - id: impostor',
-      '    auth: { kind: bearer, tokenEnv: LEDGER_UNKNOWN_TOKEN }',
-      '    attributes: {}',
-      'stateActor: owner',
-      'resources:',
-      '  - name: Invoice',
-      '    routes:',
-      '      read: /api/invoices/{id}',
-      '      list: /api/invoices',
-      '      update: /api/invoices/{id}',
-      '      delete: /api/invoices/{id}',
-      '    instances:',
-      '      - id: INV-1001',
-      '        attributes: { org_id: org-1 }',
-      '      - id: INV-2001',
-      '        attributes: { org_id: org-2 }',
-      '',
-    ].join('\n'),
-    'utf8',
-  );
-}
-
-const ENV = {
-  LEDGER_OWNER_TOKEN: OWNER_TOKEN,
-  LEDGER_OUTSIDER_TOKEN: OUTSIDER_TOKEN,
-  LEDGER_UNKNOWN_TOKEN: UNKNOWN_TOKEN,
-};
-
-function capture(): { stream: Stream; text: () => string } {
-  const chunks: string[] = [];
-  return {
-    stream: { write: (chunk: string) => void chunks.push(chunk) },
-    text: () => chunks.join(''),
-  };
-}
-
-async function run(
-  dir: string,
-  argv: readonly string[],
-): Promise<{ code: number; out: string; err: string }> {
-  const out = capture();
-  const err = capture();
-  const code = await main(['node', 'qai', ...argv], {
-    stdout: out.stream,
-    stderr: err.stream,
-    env: ENV,
-    cwd: dir,
-  });
-  return { code, out: out.text(), err: err.text() };
-}
-
-function workspace(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'qai-e2e-'));
-  mkdirSync(join(dir, 'spec'), { recursive: true });
-  return dir;
-}
 
 describe('init and validate, the first two commands a user runs', () => {
   it('scaffolds a project and then validates what it scaffolded', async () => {

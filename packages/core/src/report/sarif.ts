@@ -120,14 +120,41 @@ function splitLocationRef(ref: string): { uri: string; startLine?: number } {
 }
 
 /**
- * A physical location when source is available, a logical one otherwise, per the module.
+ * The spec file this run was loaded from, used as the anchor for a finding with no source.
+ *
+ * **Every result needs a physical location or GitHub will not ingest the document.** A
+ * logical location alone is conformant SARIF 2.1.0 and is rejected at processing time
+ * with `locationFromSarifResult: expected a physical location`, which is how this was
+ * found: the upload succeeded and the analysis failed, once per result. No test here can
+ * catch that, because the only authority on what GitHub ingests is GitHub.
+ *
+ * The spec file is the honest anchor. A finding is about a requirement, the requirement
+ * is written there, and a reviewer following an alert lands on the thing that was
+ * claimed rather than on a path this file invented. It is file level, since the loader
+ * records no line numbers.
+ *
+ * With several spec files this names the first, which is the run's spec rather than
+ * necessarily the file that declared this particular requirement. Recorded in the
+ * module's open questions; the requirement id is in the message and the logical location
+ * either way.
+ */
+function specAnchor(result: RunResult): string | undefined {
+  const [first] = result.spec.files;
+  return first;
+}
+
+/**
+ * A physical location, plus a logical one naming what the finding is about.
  *
  * The module says the logical location names the endpoint. A `CheckResultRecord` has no
  * endpoint field, and the route appears only inside `detail` as prose, so this names the
  * rule and requirement the check came from rather than parsing a path back out of a
  * sentence. A structural entry does carry an endpoint id and does name it.
+ *
+ * The check's own source reference wins when it has one. Otherwise the anchor stands in,
+ * and the logical location is kept beside it so nothing is lost by anchoring.
  */
-function locationsFor(check: CheckResultRecord): SarifLocationOut[] {
+function locationsFor(check: CheckResultRecord, anchor: string | undefined): SarifLocationOut[] {
   if (check.locationRef !== undefined) {
     const { uri, startLine } = splitLocationRef(check.locationRef);
     return [
@@ -147,6 +174,9 @@ function locationsFor(check: CheckResultRecord): SarifLocationOut[] {
 
   return [
     {
+      // Absent only when the run recorded no spec file at all, which leaves nothing true
+      // to point at. Logical alone is what this emitted before, and GitHub will refuse it.
+      ...(anchor === undefined ? {} : { physicalLocation: { artifactLocation: { uri: anchor } } }),
       logicalLocations: [
         {
           name,
@@ -177,6 +207,8 @@ function messageFor(check: CheckResultRecord): string {
 }
 
 function checkResults(result: RunResult): SarifResultOut[] {
+  const anchor = specAnchor(result);
+
   return result.checks
     .filter((check) => check.verdict === 'fail')
     .sort(
@@ -191,7 +223,7 @@ function checkResults(result: RunResult): SarifResultOut[] {
       kind: 'fail' as const,
       level: levelOf(check.severity),
       message: { text: messageFor(check) },
-      locations: locationsFor(check),
+      locations: locationsFor(check, anchor),
       // Content-hashed at runtime, so the same check on the same target keeps one alert
       // across runs instead of opening a new one every time CI runs.
       partialFingerprints: { qaiCheckId: check.checkId },
@@ -211,6 +243,7 @@ function structuralResult(
   text: string,
   logicalKind: string,
   fingerprint: string,
+  anchor: string | undefined,
 ): SarifResultOut {
   return {
     ruleId: 'structural',
@@ -218,7 +251,16 @@ function structuralResult(
     kind: 'fail',
     level: levelOf(severity),
     message: { text },
-    locations: [{ logicalLocations: [{ name, kind: logicalKind }] }],
+    locations: [
+      {
+        // A structural entry never has a source reference: it is about something the
+        // probe did or did not see, not about a line somebody wrote.
+        ...(anchor === undefined
+          ? {}
+          : { physicalLocation: { artifactLocation: { uri: anchor } } }),
+        logicalLocations: [{ name, kind: logicalKind }],
+      },
+    ],
     partialFingerprints: { qaiStructuralId: fingerprint },
     properties: { severity },
   };
@@ -234,6 +276,7 @@ function structuralResult(
  */
 function structuralResults(result: RunResult): SarifResultOut[] {
   const out: SarifResultOut[] = [];
+  const anchor = specAnchor(result);
 
   for (const entry of [...result.structural.specifiedNotObserved].sort(
     (left, right) => left.kind.localeCompare(right.kind) || left.name.localeCompare(right.name),
@@ -247,6 +290,7 @@ function structuralResults(result: RunResult): SarifResultOut[] {
         `The spec declares ${entry.kind} ${entry.name} and the probe did not observe it in the target.${required}`,
         entry.kind,
         `specifiedNotObserved:${entry.kind}:${entry.name}`,
+        anchor,
       ),
     );
   }
@@ -261,6 +305,7 @@ function structuralResults(result: RunResult): SarifResultOut[] {
         `The probe observed ${entry.kind} ${entry.id} in the target and no requirement in the spec refers to it.`,
         entry.kind,
         `observedNotSpecified:${entry.kind}:${entry.id}`,
+        anchor,
       ),
     );
   }
@@ -288,6 +333,7 @@ function structuralResults(result: RunResult): SarifResultOut[] {
         `Fields of ${entry.entity} disagree between the spec and the target, ${clauses.join('; ')}.`,
         'entity',
         `fieldMismatch:${entry.entity}`,
+        anchor,
       ),
     );
   }

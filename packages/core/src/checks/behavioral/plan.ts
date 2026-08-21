@@ -319,7 +319,9 @@ export function planBehavioralChecks(
           requirementId: requirement.id,
           ruleId: criterionId,
           actorId: when.actorId,
-          action: `${method} ${path}`,
+          ...(when.entity === undefined ? {} : { resource: when.entity }),
+          // The criterion's own action, not the route it resolves to today.
+          action: when.action,
         },
         mutates: when.mutates,
         severityOnFail: BEHAVIORAL_SEVERITY,

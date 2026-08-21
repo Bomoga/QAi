@@ -79,18 +79,15 @@ export interface PlanningContext {
   }[];
 }
 
-function identityFor(
-  rule: AccessRule,
-  requirementId: string,
-  method: HttpMethod,
-  path: string,
-): CheckIdentity {
+function identityFor(rule: AccessRule, requirementId: string): CheckIdentity {
   return {
     type: 'access',
     requirementId,
     ...(rule.id === undefined ? {} : { ruleId: rule.id }),
     actorId: rule.actor,
-    action: `${method} ${path}`,
+    resource: rule.resource,
+    // The rule's own action, not the route it resolves to today.
+    action: rule.action,
   };
 }
 
@@ -182,7 +179,7 @@ export function planAccessChecks(
           ?.fields.map((field) => field.name) ?? [];
 
       plans.push({
-        identity: identityFor(rule, requirement.id, route.method, route.path),
+        identity: identityFor(rule, requirement.id),
         mutates: MUTATING_ACTIONS.has(rule.action),
         /**
          * Deny rules are the higher severity class: a deny that fails means something

@@ -8,7 +8,7 @@
  * Present: the contracts and spec loading from M1; target configuration, actor
  * sessions, and evidence capture from M2; access checks from M3; the probe and the
  * structural diff from M4.
- * Pending: store from M6, and the emitters in M7 beyond run assembly.
+ * Pending: the run store beyond its schema, and the delta, both M6.
  */
 export * from './contracts/index.ts';
 export * from './spec/index.ts';
@@ -18,3 +18,4 @@ export * from './checks/index.ts';
 export * from './probe/index.ts';
 export * from './diff/index.ts';
 export * from './report/index.ts';
+export * from './store/index.ts';

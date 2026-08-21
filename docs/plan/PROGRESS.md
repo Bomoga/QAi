@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T16:00:00Z
-Current stage: S6, module M8, branch feat/m8-cli-ci
-Next task: S7, on a branch cut from dev once PR #10 and the M8 PR are merged
+Updated: 2026-08-20T21:15:00Z
+Current stage: S7, module M6, branch feat/m6-store-delta
+Next task: none, S7 is open as PR #12, rebased onto dev, waiting on review
 
 ## S0. Skeleton
 
@@ -263,10 +263,11 @@ Surprises worth recording:
   (commits fcf8d2f and 13cd02c)
 - [~] M8.6 probe done (commits f93e5f8 and 4bbab25); report is blocked on M6 run
   persistence, recorded in the M8 open questions; diff was already S7
-- [x] M8.7 error presentation for exit codes 2 and 3 (commit backfilled below)
-- [ ] M8.7 error presentation for exit codes 2 and 3
-- [ ] M8.8 the GitHub Action, with SARIF upload and outputs
-- [ ] M8.9 end to end test of init, validate, and check against fixtures/ledger
+- [x] M8.7 error presentation for exit codes 2 and 3 (commit 9176cf5)
+- [x] M8.8 the GitHub Action, with SARIF upload and outputs (commits db897ad and a50d323,
+  the workflow held back at the tip because pushing it needs a token scope)
+- [x] M8.9 end to end test of init, validate, and check against fixtures/ledger
+  (commit e75e1b8)
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
 - Exit criterion, the parts that can be verified from a terminal: verified 2026-08-18.
   `qai check` against the defective fixture writes conforming SARIF 2.1.0 with 15 results
@@ -317,9 +318,81 @@ Surprises worth recording:
   The criterion was demonstrated against the real path and both halves hold.
 
 - Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`.
+- M7 and M8 merged into `dev` on 2026-08-20, as PRs #10 and #11 in that order.
 - M7 finished 2026-08-18 and opened as PR #10, eleven commits, unmerged. `feat/m8-cli-ci` is cut from `feat/m7-report` rather than from `dev`, because M8 imports emitters that do not exist on `dev` until #10 merges. Rebase onto `dev` once it does.
 
 ## S7. Store and delta (M6)
+
+- [x] M6.1 the SQLite schema, migrations, and schema_version handling (commits bbac9f2, cb3062f)
+- [x] M6.2 saveRun and evidence file writing with referential integrity (commits 93dd4e7, 794a232, fd108fd)
+- [x] M6.3 stable checkId hashing, proved against response changes and re-runs (commit 6d17ed6)
+- [x] M6.4 diffRuns for requirement verdict transitions (commit 39ec523)
+- [x] M6.5 structural delta including access loosening detection (commit 54ae396)
+- [x] M6.6 comparability handling for differing spec hashes (commit c711cc7)
+- [x] M6.7 retention and pruning with a reported summary (commits 2c7f56f, 219ce40, 0145583)
+- [x] M6.8 integration test over the defective and fixed fixture, both directions
+  (commit 820e437)
+- [x] the diff and report commands, deferred into this stage by M8.6
+  (commits 11cec1e, 6066568, 425aa69)
+- Exit criterion: `qai diff <runA> <runB>` reports a requirement moving from failed to verified, an endpoint newly appearing, and an access rule newly loosening, on runs taken before and after a deliberate regeneration of the fixture app
+- Exit criterion: met 2026-08-20, run for real against two configurations of
+  `fixtures/ledger` on ports 3101 and 3102. Build A refuses the cross-organization read
+  and has an unscoped list, leaked notes, an unauthenticated mutation, and no debug
+  endpoint; build B is the regeneration, with the list and the notes repaired, the
+  cross-organization read now allowed, and a debug endpoint nobody specified. Both runs
+  exit 1. `qai diff --last 2` reports, in one delta: `AR-001-01` newly loosened, naming
+  the request and the response; `REQ-002` and `REQ-004` moving failed to verified;
+  `REQ-001`, `REQ-005`, and `REQ-013` moving verified to failed; `REQ-003` still failing,
+  since nobody fixed the unauthenticated mutation; and `GET /api/debug/state` under
+  endpoints appeared. `qai report RUN-20260820-210052` re-renders the earlier run and
+  exits 0. Full output is in the pull request.
+- Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
+- Pushed 2026-08-20 and opened as PR #12 into `dev`. The same push carried `a50d323` to
+  the remote, which is what let `feat/m8-cli-ci` fast-forward onto its held-back tip, so
+  PR #11 was complete for the first time since S6.
+- **The three deep stack is gone.** On the human's instruction PR #10 merged at `ce9a354`
+  and PR #11 at `37bf35e`, both as merge commits rather than squashes, so the per-task
+  history and the bisect survive. `feat/m6-store-delta` then rebased onto `dev` with no
+  conflict: 20 commits replayed, and `git diff` against the pre-rebase head is empty, so
+  the content is unchanged and only the base moved. Verified again afterwards rather than
+  assumed, since a clean rebase is not a working tree: typecheck, lint, format, and 1562
+  tests across 79 files all pass. Force-pushed with `--force-with-lease`. PR #12 is now
+  20 commits over 40 files and is the only pull request open.
+
+### S7 summary
+
+Built: run persistence and the run to run delta, both ends of it. The SQLite schema with
+forward-only migrations, `saveRun` with referential integrity across a database and a
+directory, stable check identity, requirement transitions, the structural delta with
+access loosening, comparability across differing spec hashes, retention with a reported
+summary, an integration test over the real fixture in both directions, two ways to render
+a delta, and the last two commands in M8's table. 1562 tests pass across 79 files, up from
+1406 across 68 at the start of S6.
+
+The sequence 01-PRODUCT.md calls the definition of success is now real end to end. Its
+sixth step, `qai diff` showing a requirement move between two runs, was the only one
+missing, and the criterion above is that step run against a real regeneration.
+
+Every command in M8's table now exists. `report` was deferred out of M8.6 because it needs
+a store and nothing had one; `diff` was assigned to this stage from the start.
+
+Decisions worth carrying, all recorded in full under the notes below: a check id hashes
+what a check is and never the route it hit; a duplicate run id is refused rather than
+replaced; the store writes no evidence body; a requirement present in only one run is
+named rather than reported as a transition; `comparable` is false only when two runs share
+no requirement; access loosening fires only on a deny rule check moving pass to fail; and
+retention reports what it removed, unlinking a body file only when no surviving evidence
+row still names it.
+
+Deferred, with reasons rather than assumptions:
+
+- The other half of the access loosening rule, which fires when an endpoint's
+  `authRequired` moves away from `true`. A RunResult carries `observation.ref` and no
+  endpoint list. Two modules have now needed the same absent data and it is a contract
+  change, so it is a human's call.
+- The file half of the evidence retention window. Evidence ids come from a per-run
+  counter, so every run writes the same filenames and overwrites the run before it. The
+  rows honour the window; the directory cannot until an evidence id is unique across runs.
 
 - [ ] not started
 
@@ -332,6 +405,377 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- **The third failure, fixed at `241fd8c` on the human's decision: GitHub rejected the
+  SARIF.** With the two CI
+  fixes in, the upload succeeds and then processing fails with
+  `locationFromSarifResult: expected a physical location`, once per result, fifteen times.
+  `renderSarif` gives a result a physical location only when the check carries a
+  `locationRef`, and none of the fixture's nine failed checks does, because a black box
+  probe has no source to point at. The six structural entries use logical locations too.
+  Valid SARIF, rejected by the consumer. **The S6 exit criterion has therefore never been
+  met, and was never going to be.** The fix was a decision about what a sourceless
+  finding points at rather than a rendering detail, so it went to the human, who chose
+  the spec file: a finding is about a requirement, the requirement is written there, and
+  a reviewer following an alert lands on the thing that was claimed. A run with no spec
+  file keeps a logical location alone, because inventing a path would trade a refused
+  document for a false one.
+- Worth stating plainly next to it: nothing in this repository can catch that. M7.4 checks
+  the document against a Zod transcription of the 2.1.0 schema and it passes, because it
+  is conformant. The only authority on what GitHub will ingest is GitHub. What the tests
+  pin now is the property the refusal taught us, that every result carries a physical
+  location, asserted across a document holding every kind of result at once. Proved by
+  breaking it twice: removing the check anchor failed three tests and removing the
+  structural anchor failed two.
+- The old behaviour had a test asserting it, `physicalLocation` being undefined when no
+  source was available, and that test went red on the fix. That is the system working: the
+  document was conformant and unusable at the same time, and the suite was pinning the
+  half of it that could be checked here.
+
+- **The red checks were never the SARIF 403, and inferring instead of reading cost real
+  time.** With Checks read finally granted, the logs named two unrelated failures, and
+  neither was the one that had been reasoned toward from correlation. Both are fixed on
+  PR #12, at `534f7ec` and `07cff7d`.
+- **`ci.yml` ran Typecheck before Build, and `packages/cli` resolves `@qai/core` to that
+  package's `dist` rather than to its source.** On a fresh checkout the dist does not
+  exist, so every cross-package import is TS2307 and the run dies in 24 seconds with
+  forty errors that say nothing about the code. **Every CI run has failed this way since
+  the CLI landed**, which means PR #11 was merged over a red build. Build now runs first,
+  with a comment saying why so nobody tidies the order back.
+- **The reason nobody noticed is the reason it was worth noticing.** `pnpm typecheck`
+  passes locally because a `dist` from an earlier build is lying around, so the check that
+  was supposed to catch this was passing for the wrong reason, which is the same vacuous
+  green this repository keeps finding in its tests. The M8.1 note predicted the mechanism
+  exactly, in the words "the CLI dts build reads `@qai/core` from its `dist`, not its
+  source". Reading a note is not the same as applying it.
+- **Verify a CI fix the way CI experiences it.** Deleting all three `dist` directories and
+  running the steps in order is what proved both the failure and the fix. A local pass on
+  a warm tree proves nothing about a cold one.
+- **`qai.yml` was missing `actions: read`.** `github/codeql-action/upload-sarif` reads the
+  workflow run it belongs to, and the permissions block granted only `contents` and
+  `security-events`. It failed with "Resource not accessible by integration" against the
+  workflow runs API, after having already validated the document and added fingerprints,
+  which makes the failure read like a problem with the SARIF rather than with the block.
+- **Code scanning is no longer a blocker either way: the repository is public as of
+  2026-08-20**, which makes code scanning free, so the S6 exit criterion is demonstrable
+  for the first time once these two fixes land.
+
+- S7, `diff` and `report`: both exit 0 or 2 and never 1, which is what M8's table says and
+  is worth the sentence. 1 belongs to a run that completed and found something at or above
+  the threshold, and neither command completes a run. A delta describes change; whether
+  change is bad is a judgment `check` makes and these two do not.
+- S7: a threshold flag is reported as inapplicable rather than ignored, and only when it
+  was actually typed. `--fail-on` has a default, so reading its value alone would print
+  the note on every invocation and teach the reader to skip the line. That is what
+  `Setting.source` is for, and the first use of it outside `--verbose`.
+- S7: `diff` takes the order the caller gave when both runs are named, and picks oldest
+  first when it chooses them itself. Reversing that turns every fix into a regression.
+  Proved by breaking it: swapping the pair picked by `--last` failed six tests, and
+  sorting named runs by their timestamps failed the one written for exactly that.
+- S7: too few stored runs is a refusal rather than an empty delta. An empty delta reads as
+  an application that did not change, which is the most misleading thing this could
+  report, and it is the same reason `comparable` carries a reason.
+- S7: `--last n` compares the newest run with the nth most recent. The module writes the
+  flag as `--last 2` and does not say what other values mean; this reading makes 2 the
+  common case rather than a special one, and it is in the help text.
+- S7: `check` records every run, and not behind a flag. The command table has no flag for
+  it and adding one would be a change to the surface. A store that will not open or will
+  not write warns and leaves the exit code alone, because the report is the product and it
+  exists by then.
+- S7: the Evidence records reach a CheckResult as ids only, so `check` wraps the writer
+  that `createTargetContext` already accepts rather than changing a signature owned by M3
+  or M5. The alternative was threading the records back through both runners.
+- S7 defect found and not fixed, because the fix is a surface decision: a run id carries
+  seconds, so two checks less than a second apart collide and the store refuses the
+  second. The refusal is safe and loud, the user is told, and in the real workflow of
+  check, fix, check a second always passes. It cost one deliberate wait in an integration
+  test, which is commented. Widening the id again would change every id's shape and the
+  human has already made that call once.
+- S7 correction to an earlier note: `pnpm --filter @qai/cli exec qai ...` does not resolve
+  and never did. The M8.5 note blamed a missing `pnpm install`; the real reason is that
+  pnpm does not link a package's own bin into its own `node_modules/.bin`, so `exec` finds
+  nothing whatever is installed. Confirmed by running it after a fresh install, and by
+  `qai` being absent from every `node_modules/.bin` in the workspace. Every Definition of
+  Done line written in that form, in M6 and M8 alike, has to be run as
+  `node packages/cli/bin/qai.js ...` instead. Recorded in the M6 open questions.
+- S7: the demonstration found a stale build before it found anything else. `bin/qai.js`
+  runs `dist`, so a command added to `src` does not exist to the binary until `pnpm build`
+  has run, and the first attempt reported `unknown option '--last'` against code that had
+  been passing its tests for an hour. The suite drives `main` from source and cannot see
+  this. Build before demonstrating.
+- S7 exit criterion, the shape of it: a real regeneration is not uniformly better or worse
+  than the build before it, so the demonstration turns two defects off and two on. All
+  three signals the criterion names then land in one delta, along with a requirement that
+  was failing before and is failing still.
+
+- M6.8: the two runs come out of `qai check --format json` rather than being assembled in
+  the test, and go through the store before they are compared. A delta over hand-built
+  RunResults would only prove `diffRuns` agrees with something the test invented, and the
+  round trip is what says the store returns what the command produced. Proved by breaking
+  it: making `getRun` return null failed the whole file rather than passing quietly, which
+  is what says the store is really in the path.
+- M6.8: the run ids are rewritten to fixed values before saving. The command derives an id
+  from the clock to the second, two checks a fraction apart can collide, and the store is
+  right to refuse a duplicate. A test whose success depends on how fast the machine is has
+  no business being in the suite.
+- M6.8: the assertions were written before the first run and matched it. Backward names
+  exactly `AR-001-01`, `AR-002-01`, and `AR-003-01`, which are outsider read, outsider
+  list, and anonymous update, the three deny rules D1, D2, and D3 break. `AR-003-02`,
+  anonymous delete, is refused in both runs and does not appear. The mapping came out of
+  the fixture spec rather than out of the delta, so this is a claim about the application
+  rather than a transcription of the output.
+- M6.8, the sixth vacuous test of this stage, and the only one that could not be repaired:
+  asserting that the forward delta loosens nothing does not catch dropping the deny class
+  filter, because no access check in this fixture fails at any severity but high. The
+  first break attempt failed nothing at all. The test now names the exact rule ids in both
+  directions, which catches direction inversion and a rule that never moved, and it says
+  in a comment what it still cannot prove. M6.5's unit test is what pins that an allow
+  rule failing is a tightening.
+- M6.8: a third scenario was added because the two the task names cannot exercise
+  everything. An all-on run and an all-off run never leave anything failing on both sides,
+  so `stillFailing` is empty and "already loose is not newly loosened" has nothing to be
+  wrong about. The mixed regeneration leaves D3 on in both runs, and with it two more
+  breaks go red: reporting an already broken rule as newly loosened, and folding
+  `stillFailing` into `regressed`.
+- M6.8: that mixed scenario is also the shape the S7 exit criterion asks for. A real
+  regeneration is not uniformly better or worse than the build before it, and all three
+  signals the criterion names, a requirement repaired, an endpoint appearing, and an
+  access rule loosening, only coexist in a delta where some defects went out and others
+  came in.
+- M6.8 cross-module edit, flagged: the ledger harness moved out of
+  `test/cli.integration.test.ts` into `test/support/ledger.ts` and both files use it.
+  Two copies of the fixture's configuration would drift, and the drift shows up as a test
+  failing for a reason unrelated to what it tests. `test/support/` is not matched by the
+  vitest include patterns, so nothing there is collected as a suite.
+
+- M6.7: pruning is reported through the save report rather than through a method somebody
+  has to remember to call. The module's Do Not says do not prune silently, and a report
+  nobody requests is a report nobody reads, so `saveRun` returns what retention removed
+  alongside what it stored.
+- M6.7, the rule that matters and the reason it exists: a body file is unlinked only when
+  no surviving evidence row still names it. That is not defensive coding. Evidence ids
+  come from a per-run counter in `systemDeps`, so every run writes `EV-000001.json` to the
+  same path, and two runs genuinely point at one file today. Deleting the older run's body
+  would delete the newer run's evidence, which is the artifact behind a finding somebody
+  is reading. Proved by breaking it: dropping the guard failed exactly the test written
+  for it, and both directions are tested, since a guard that never released a file would
+  be indistinguishable from one that worked until the directory filled up.
+- M6.7 consequence of that same counter, recorded in the M6 open questions: while every
+  run writes the same filenames, `.qai/evidence/` holds the newest run's bodies and not
+  five runs of them, because each run overwrites the last. The pruner is correct either
+  way and the window is real for the rows; the files cannot honour it until an evidence
+  id is unique across runs. That is M2's identifier, not this module's.
+- M6.7: the surviving reference set is read after the deletions, never before. Asking
+  first counts the rows that are about to go and keeps every file forever. Proved by
+  breaking it: computing it from the pre-deletion snapshot failed six tests.
+- M6.7: rows go in one transaction, files are unlinked after it, outside. A filesystem
+  does not roll back, and pretending otherwise would put a deletion in the report that a
+  failed transaction had undone in the database only.
+- M6.7: retention reads recency exactly as `listRuns` does, `started_at DESC` with the run
+  id as tiebreak. Two opinions about which runs are recent is how a user watches the top
+  of their list get pruned. Proved by breaking it: ordering oldest first failed twelve
+  tests.
+- M6.7: `keepRuns` of zero is refused rather than clamped, since pruning happens on write
+  and a zero window would delete the run the caller just handed over. `keepEvidence` of
+  zero is allowed, because keeping no evidence is a real choice and keeping no runs is
+  not. `keepEvidence` above `keepRuns` is bounded by `keepRuns`: evidence for a run that
+  is gone has nothing to belong to.
+- M6.7 edge left deliberate rather than special-cased: a run stamped older than everything
+  already stored is outside the window the moment it lands, so the write that saved it
+  also prunes it. The save report names it. A rule that kept the newest twenty except for
+  the one just written would be a second retention rule nobody could state in a sentence.
+- M6.7 shell trap, a new member of a familiar family: a SQL comment written into
+  `schema.ts` carried a path in backticks, and that SQL lives inside a template literal,
+  so the first backtick ended the literal and the file failed to parse with
+  `evidence is not defined`. The suite said so immediately. Backticks are hazardous in a
+  heredoc and hazardous inside a template literal, for unrelated reasons, and the fix is
+  the same both times: do not reach for them.
+
+- M6.6: a requirement present in only one run is named in `added` or `removed`, never
+  folded into a transition. The dangerous direction is removal: somebody deleting a
+  requirement is not the application breaking, and reporting it as a regression teaches a
+  reader to distrust every real regression the tool ever reports. That is the sentence
+  the module ends the rule with.
+- M6.6: a differing spec restricts the comparison, it does not abandon it. The overlap is
+  exactly where a real change shows up, and a spec gaining a requirement says nothing
+  about the requirements it already had.
+- M6.6: `comparable` is false only when the two runs share no requirement at all, and it
+  carries a reason. An empty delta with no explanation is indistinguishable from nothing
+  having changed, which is the most misleading thing this could report.
+- M6.6 deliberate non-rule: a differing base URL does not make two runs incomparable. An
+  ephemeral port and a staging host are both legitimate ways for one application to answer
+  at two addresses, and refusing there would break the delta exactly where it is most
+  wanted. Every integration test in this repository starts its fixture on a fresh port,
+  so the alternative would have been self-defeating. There is a test pinning it.
+- M6.6, the fifth weak test caught this stage: the added-requirement test asserted only
+  that `fixed` was empty, so a break that filed the addition under `newlyUnverified`
+  passed all ten tests. Both spec-change tests now assert that no transition bucket
+  contains it, through one helper. The pattern across all five is the same: asserting the
+  absence of the one wrong answer I happened to think of, rather than the absence of every
+  wrong answer.
+
+- M6.5: access loosening has its own detection path, as the module insists. Letting it
+  fall out of the generic verdict diff would bury the one transition that matters among
+  every other one, which is the opposite of a headline.
+- M6.5: a check does not record whether its rule was deny or allow, so the signal is an
+  access check failing at high severity, which M3.2 fixes as the deny class. An allow
+  rule breaking is a tightening, not a loosening: a legitimate user being refused is a
+  bug worth reporting and the opposite of something forbidden becoming reachable. Proved
+  by breaking it: dropping the severity filter made an allow failure read as a loosening.
+- M6.5: only pass to fail counts. Already loose is not newly loosened, and a check that
+  is new has no earlier verdict to loosen from. Proved by breaking it: dropping that
+  filter failed both tests written for it.
+- M6.5, the half that could not be built: the rule also fires when an endpoint's
+  `authRequired` moves away from `true`, and a RunResult carries `observation.ref` with
+  no endpoint list. That is the same absence that stopped `renderText` filling its second
+  section at M7.3. **Two modules now need a summary of the Observation on the RunResult**,
+  which is a change to 03-CONTRACTS.md and therefore a human's call. Recorded in the M6
+  open questions; the deny rule half is implemented and the fixture exercises it.
+- M6.5: `endpointsAdded` is derived from the two structural lists rather than from an
+  endpoint list. Leaving `specifiedNotObserved` means an endpoint appeared, and entering
+  `observedNotSpecified` means one appeared. Reading only the second would miss every
+  specified endpoint, which is what the second test exists to catch, and it did when the
+  first branch was removed.
+- M6.5: an entity in `specifiedNotObserved` is not an endpoint. D6 belongs in the
+  structural findings of every run and in the delta of none, and there is a test saying so.
+
+- M6.4: the four buckets are exhaustive and mutually exclusive over the nine verdict
+  pairs, and the test reads them as a three by three grid rather than as nine assertions.
+  A rule wired to the wrong bucket can hide behind whichever cases nobody wrote down;
+  it cannot hide from the grid. Proved by breaking it: narrowing regressed to only
+  verified-to-failed failed the grid and nothing else.
+- M6.4: the module's shape has `newlyUnverified` but no `newlyVerified`, which looks
+  asymmetric until you notice every entry carries `from` and `to`. A coverage gap closing
+  and a failure being repaired both land in `fixed` and stay distinguishable by their
+  `from`. No fifth bucket, and nothing lost.
+- M6.4: `verified` to `verified` and `unverified` to `unverified` land in no bucket at
+  all. A delta that listed everything would be a report. `stillFailing` is the one thing
+  reported without having moved, because a failure nobody fixed is still the answer to
+  what is wrong with this application.
+- M6.4: a transition names the checks whose verdict moved, not every check on the
+  requirement. A requirement with six checks where one broke has to point at the one, or
+  the reader diffs two runs by hand to find it.
+- M6.4: a check that ran before and does not now counts as moved, and it is the case a
+  reader is most likely hunting for. Something quietly no longer being checked leaves no
+  failing check behind to point at. Proved by breaking it: dropping that branch failed
+  exactly the test written for it.
+- M6.4: a requirement present in only one run is skipped rather than reported as a
+  transition. It appeared or vanished because the spec changed, not because the
+  application did, and M6.6 owns saying so.
+- M6.4: `diffRuns(a, b)` reads from a to b, and a test asserts that reversing the
+  arguments turns a fix into a regression. That is the one mistake a caller makes with a
+  two argument diff, and reporting a fix as a regression is the worst available way to be
+  wrong.
+
+- M6.3 found a real divergence between the plan and the code, and the plan was right. The
+  module says a check id hashes requirement id, rule or criterion id, actor id, resource,
+  and action. Both planners were passing the resolved route as the action, so the id
+  embedded a URL: a regeneration that moved an endpoint to /v2 would have changed every
+  check id that touched it, and the delta would have reported each check as gone and
+  replaced. That is precisely the noise the module calls out, in the one place it calls
+  load bearing. Identity now carries `resource` and the spec's own action.
+- M6.3: dropping the route from the identity meant `identityFor` no longer needed a
+  method or a path, and the compiler said so. Better types find more than they cost, for
+  the third time in this project.
+- M6.3: the goldens were regenerated deliberately, and the diff was checked rather than
+  accepted. All 24 check ids changed in each and nothing else did: the summary, the
+  requirement verdicts, the structural findings, and the set of checks compared field for
+  field ignoring ids are all identical. The diff looks enormous only because `assembleRun`
+  sorts checks by id, so new ids reorder the array.
+- M6.3 worth knowing: nothing in the suite caught the goldens going stale. The golden
+  tests render a stored RunResult, so they never re-hash anything, and the integration
+  test asserts counts rather than ids. A change to identity is invisible to the suite by
+  construction, which is an argument for regenerating deliberately rather than waiting to
+  be told.
+- M6.3: `checks/result.ts` joins the identity fields with a NUL, which is why git and grep
+  treat that file as binary. It is the right separator, since without one a boundary
+  moving between two adjacent fields collides, and it is now commented so the next reader
+  does not think the file is corrupt.
+- M6.3, two weak tests found by breaking the code and watching nothing go red. Removing
+  `resource` from the access planner broke no access test, because a rule id already
+  disambiguates within a single spec; there is now a planner-level test, and one that
+  pins the same id across two different routes. And the separator test used actorId and
+  ruleId, which are not adjacent in the join, so it passed with no separator at all; it
+  uses requirementId and ruleId now. Third and fourth vacuous tests caught this stage.
+- M6.3: the one literal id in the identity test is read from a real run rather than
+  computed in the test. The first version invented a hash that was simply wrong, which is
+  the honest failure mode: a recomputed expectation would have passed against anything.
+
+- Run ids now carry seconds, `RUN-20260818-180338`. At minute resolution two runs a few
+  seconds apart produced the same id, which the store refuses rather than overwriting, so
+  checking, fixing something, and checking again was unstorable. That is also precisely
+  what the S7 exit criterion does. Fixed in M8's file from the M6 branch, since the store
+  is what surfaced it and the branch stacks on M8 anyway.
+- The first test written for that fix was vacuous in the same way the M6.2 atomicity test
+  was: it recomputed the stamp inside the test instead of calling the code, so it would
+  have passed against any implementation. `runIdFrom` and `observationIdFrom` are exported
+  now and asserted for the strings they actually produce. Two vacuous tests caught in one
+  task is worth noticing as a pattern rather than as two accidents.
+- Shell trap worth adding to the list: backticks inside a heredoc passed to python through
+  the Bash tool are command-substituted before python sees them, so every backticked
+  identifier in that note came out as an empty string. The commit still landed, silently
+  missing words. Write prose with the file tools, not through a shell.
+
+- M6.2: the store writes no evidence body. M2's writer already put it under
+  `.qai/evidence/`, redacted at capture time, before the store sees a record, and rule R8
+  says redaction happens on capture. A store that re-serialized a body it never read
+  would be inventing content. What `saveRun` does instead is record the reference and
+  report which bodies are actually on disk, which is what referential integrity means
+  when half the data is in a database and half is in a directory.
+- M6.2: a body that is missing is reported, not thrown on. A run assembled without an
+  evidence writer is legitimate and so is one whose bodies were pruned; the store implying
+  a body exists when it does not is what would not be.
+- M6.2: a duplicate run id is refused and nothing is overwritten. This store exists so two
+  runs can be compared, and silently replacing one is the single thing it must not do.
+  Proved by breaking it: switching to INSERT OR REPLACE failed exactly that test.
+- M6.2, and this is the important one: **the first atomicity test was vacuous.** It passed
+  a malformed Evidence record and asserted the run did not land, but validation happens
+  before the transaction opens, so the run never landed either way and dropping the
+  transaction entirely failed nothing. The real test makes the failure happen inside the
+  transaction, with two records sharing an id colliding on the primary key after the run
+  row is already in. Caught by breaking the code and watching nothing go red, which is the
+  only way this kind of test gets found.
+- M6.2: reads validate through `RunResultSchema` on the way out, since a row off disk is a
+  boundary per rule R2, and a database written by a build with a different idea of
+  RunResult should fail loudly rather than produce a delta from an unchecked shape. Writes
+  validate too, which is cheap and names the bug at the point it happened.
+- M6.2: `listRuns` reads the summary out of the stored run rather than keeping it in its
+  own columns. Two copies of one number is how a listing starts disagreeing with the run
+  it claims to describe, and the module's Do Not rules out an analytics store anyway.
+- M6.2 defect found, in M8 rather than here: `runIdFrom` builds `RUN-YYYYMMDD-HHMM`, so
+  two runs in the same minute collide on the store's primary key. The store is right to
+  refuse them; the id is what needs widening, and the S7 exit criterion compares two runs
+  that will be seconds apart. Fixing it next.
+
+- M6.1: `better-sqlite3` is a native module and pnpm blocks build scripts by default, which
+  is the right default. `pnpm-workspace.yaml` already carried a placeholder,
+  `better-sqlite3: set this to true or false`, waiting on the decision. Set to true with
+  the reasoning beside it: the package is named in 04-CONVENTIONS.md and required by name
+  in the module, and it cannot load without its binding. It is the only runtime dependency
+  here allowed to run a build script. Worth a human's eye even so.
+- M6.1: pnpm 11 no longer reads the `pnpm` field in `package.json`. The setting lives in
+  `pnpm-workspace.yaml` now, and putting it in the old place fails silently with only a
+  warning, which is the kind of thing that looks configured and is not.
+- M6.1: `@types/better-sqlite3` is a devDependency, since the package ships no types. The
+  approved list in 04-CONVENTIONS.md governs runtime dependencies, and a types package
+  follows whatever it types rather than being a decision of its own.
+- M6.1: a database at a version newer than the build understands is refused, never opened.
+  An older qai cannot know what a later one added, and writing to it would corrupt history
+  already on disk. Proved by breaking it: removing the guard failed exactly that test.
+- M6.1: each migration runs inside a transaction with its own version bump, so a failure
+  halfway leaves the database at the last version it fully reached rather than at one it
+  only partly is. Proved by breaking it: bumping the version before the DDL and dropping
+  the transaction failed exactly that test.
+- M6.1 real bug found by a failing test rather than by review: when `migrate` threw,
+  `openDatabase` left the handle open, and on Windows that keeps a lock on the file, so a
+  clear refusal became a file nothing else could touch either. The handle is closed before
+  the error escapes now.
+- M6.1: the whole RunResult is one JSON column with a few indexed columns beside it, which
+  are exactly what `listRuns` sorts and filters on. The module's Do Not says this is not an
+  analytics store, and `diffRuns` takes two RunResults rather than querying fields.
+- M6.1 test bug worth remembering: `nothing` is a SQLite keyword, from `ON CONFLICT DO
+  NOTHING`, so `CREATE TABLE runs (nothing TEXT)` is a syntax error rather than the column
+  collision the test intended.
 
 - M8.9 drives `main` rather than spawning the binary. Spawning would test that pnpm linked
   a bin, which is true or false regardless of anything in this repository, and would make
@@ -1428,12 +1872,20 @@ Surprises worth recording:
 
 ## Blocked
 
-- **Pushing `feat/m8-cli-ci`, and with it the S6 exit criterion.** The token has no
-  `workflow` scope, so GitHub rejects the entire push because one commit adds
-  `.github/workflows/qai.yml`. The workflow is what runs `qai check` on a pull request, so
-  removing it to get the push through would discard the thing the criterion needs. A human
-  either adds the Workflows permission to the token or pushes under another credential.
+- none. Both push blockers were cleared on 2026-08-20: the human added the Workflows
+  permission to the token, `feat/m6-store-delta` pushed and opened as PR #12, and
+  `feat/m8-cli-ci` fast-forwarded onto its held-back tip so `.github/workflows/qai.yml`
+  is finally on the remote and PR #11 is complete. Nothing was rewritten to get either
+  push through.
 
-- none. The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the
-  leftover ledger, and confirmed the mid-session HEAD move was their own accident rather
-  than a second session.
+- Still waiting on a human, but not blocking any work: code scanning is not enabled on
+  this private repository, so `upload-sarif` returns 403 and no finding reaches a pull
+  request whatever a run found. That is the last piece of the S6 exit criterion, and the
+  workflow that would demonstrate it is now on the remote.
+
+  Resolved 2026-08-20 by making the repository public, so code scanning is available.
+  That was not what the red checks were about, though. See below.
+
+- The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the leftover
+  ledger, and confirmed the mid-session HEAD move was their own accident rather than a
+  second session.
