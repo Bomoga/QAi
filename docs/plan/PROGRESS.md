@@ -406,19 +406,31 @@ Deferred, with reasons rather than assumptions:
 
 ## Notes carried forward
 
-- **The third failure, and the one still open: GitHub rejects the SARIF.** With the two CI
+- **The third failure, fixed at `241fd8c` on the human's decision: GitHub rejected the
+  SARIF.** With the two CI
   fixes in, the upload succeeds and then processing fails with
   `locationFromSarifResult: expected a physical location`, once per result, fifteen times.
   `renderSarif` gives a result a physical location only when the check carries a
   `locationRef`, and none of the fixture's nine failed checks does, because a black box
   probe has no source to point at. The six structural entries use logical locations too.
   Valid SARIF, rejected by the consumer. **The S6 exit criterion has therefore never been
-  met, and was never going to be.** Recorded in the M7 open questions and left for the
-  human on 2026-08-21, because the fix is a decision about what a sourceless finding
-  points at rather than a rendering detail.
+  met, and was never going to be.** The fix was a decision about what a sourceless
+  finding points at rather than a rendering detail, so it went to the human, who chose
+  the spec file: a finding is about a requirement, the requirement is written there, and
+  a reviewer following an alert lands on the thing that was claimed. A run with no spec
+  file keeps a logical location alone, because inventing a path would trade a refused
+  document for a false one.
 - Worth stating plainly next to it: nothing in this repository can catch that. M7.4 checks
   the document against a Zod transcription of the 2.1.0 schema and it passes, because it
-  is conformant. The only authority on what GitHub will ingest is GitHub.
+  is conformant. The only authority on what GitHub will ingest is GitHub. What the tests
+  pin now is the property the refusal taught us, that every result carries a physical
+  location, asserted across a document holding every kind of result at once. Proved by
+  breaking it twice: removing the check anchor failed three tests and removing the
+  structural anchor failed two.
+- The old behaviour had a test asserting it, `physicalLocation` being undefined when no
+  source was available, and that test went red on the fix. That is the system working: the
+  document was conformant and unusable at the same time, and the suite was pinning the
+  half of it that could be checked here.
 
 - **The red checks were never the SARIF 403, and inferring instead of reading cost real
   time.** With Checks read finally granted, the logs named two unrelated failures, and

@@ -96,8 +96,7 @@ is the explicit equivalent.
 
 ## Open questions
 
-- **GitHub rejects the SARIF, and has always rejected it. Blocking the S6 exit
-  criterion.** `renderSarif` gives a result a `physicalLocation` only when the check
+- **Resolved 2026-08-21. GitHub rejected the SARIF, and had always rejected it.** `renderSarif` gives a result a `physicalLocation` only when the check
   carries a `locationRef`, and a `logicalLocations` entry otherwise, which is what the
   module asks for and is valid SARIF 2.1.0. GitHub's ingester requires a physical
   location on every result, so it uploads successfully and then fails processing with
@@ -120,9 +119,21 @@ is the explicit equivalent.
   declares the requirement, which `RunResult.spec.files` already carries: the finding is
   about a requirement and the requirement is written there, so a reviewer clicking an
   alert lands somewhere true. File level only, since the loader records no line numbers.
-  A synthetic path would be worse than the current failure, since a finding that points
-  somewhere false is the false positive invariant I2 exists to prevent. **Left for the
-  human on 2026-08-21 rather than chosen here.**
+  A synthetic path would be worse, since a finding that points somewhere false is the
+  false positive invariant I2 exists to prevent.
+
+  **The human chose the spec file, and it is implemented.** Every result now carries a
+  physical location: the check's own source reference when it has one, and the first
+  entry of `spec.files` otherwise, with the logical location kept beside it. A run that
+  recorded no spec file keeps a logical location alone and will still be refused, which
+  is correct: there is nothing true to point at.
+
+  Two limits worth stating. With several spec files this names the first, which is the
+  run's spec rather than necessarily the file that declared that requirement; the
+  requirement id is in the message and the logical location either way. And no test here
+  can prove the document is ingestible, because the only authority is GitHub. What the
+  tests pin is the property its refusal taught us, that every result has a physical
+  location, asserted across a document carrying every kind of result at once.
 
 - **M7.7 resolved 2026-08-18.** The blocker was the target, not the code: a leftover
   ledger held port 3000 and its state had already drifted from the seed. The human
