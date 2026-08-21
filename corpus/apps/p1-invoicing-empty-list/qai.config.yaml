@@ -1,0 +1,42 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: insider
+    auth:
+      kind: cookie
+      name: billing
+      valueEnv: BILLS_IDA_SESSION
+    attributes:
+      org: ORG-7
+
+  - id: outsider
+    auth:
+      kind: cookie
+      name: billing
+      valueEnv: BILLS_OMAR_SESSION
+    attributes:
+      org: ORG-8
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: insider
+
+resources:
+  - name: Bill
+    routes:
+      read: /api/bills/{id}
+      list: /api/bills
+      update: /api/bills/{id}
+    instances:
+      - id: BL-70
+        attributes:
+          org: ORG-7
+      - id: BL-71
+        attributes:
+          org: ORG-7

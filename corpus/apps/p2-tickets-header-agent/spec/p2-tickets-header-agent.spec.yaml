@@ -1,0 +1,136 @@
+specVersion: '0.1'
+name: 'Support tickets, per requester'
+
+# Written from prompt P2 in corpus/prompts.md, before the application existed. The third
+# application from that prompt.
+
+actors:
+  - id: reporter
+    description: 'Signed in, opened issue ISS-1'
+  - id: otherReporter
+    description: 'Signed in, opened issue ISS-3'
+  - id: helper
+    description: 'Signed in support agent'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Issue
+    fields:
+      - name: id
+        type: string
+      - name: reporter_id
+        type: string
+      - name: summary
+        type: string
+      - name: closed
+        type: boolean
+
+requirements:
+  - id: REQ-001
+    statement: 'A requester sees only the issues they opened'
+    entities: [Issue]
+    fields: [Issue.reporter_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: otherReporter
+        action: read
+        resource: Issue
+        condition: 'Issue.reporter_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'an issue opened by somebody else'
+        when: 'actor otherReporter reads Issue ISS-1'
+        then: 'status in 403, 404 and body omits field Issue.summary'
+
+  - id: REQ-002
+    statement: 'An issue listing shows a requester only their own issues'
+    entities: [Issue]
+    fields: [Issue.reporter_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: otherReporter
+        action: list
+        resource: Issue
+        condition: 'Issue.reporter_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'issues opened by two people'
+        when: 'actor otherReporter lists Issue'
+        then: 'every Issue has reporter_id equal to actor.user_id'
+
+  - id: REQ-003
+    statement: 'An agent sees every issue'
+    entities: [Issue]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: helper
+        action: read
+        resource: Issue
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'an issue opened by a requester'
+        when: 'actor helper reads Issue ISS-1'
+        then: 'status is 200 and body contains field Issue.summary'
+
+  - id: REQ-004
+    statement: 'Closing an issue is for agents only'
+    entities: [Issue]
+    fields: [Issue.closed]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: reporter
+        action: update
+        resource: Issue
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an issue the caller opened'
+        when: 'actor reporter updates Issue ISS-1'
+        then: 'status in 403, 404 and record Issue ISS-1 is unchanged'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in sees no issue'
+    entities: [Issue]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: read
+        resource: Issue
+        effect: deny
+      - id: AR-005-02
+        actor: anonymous
+        action: list
+        resource: Issue
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'an existing issue'
+        when: 'actor anonymous reads Issue ISS-1'
+        then: 'status is 401'
+
+  - id: REQ-006
+    statement: 'A requester reads the issue they opened'
+    entities: [Issue]
+    fields: [Issue.reporter_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: reporter
+        action: read
+        resource: Issue
+        condition: 'Issue.reporter_id == actor.user_id'
+        effect: allow

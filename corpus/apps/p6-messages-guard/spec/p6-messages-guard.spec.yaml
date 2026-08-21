@@ -1,0 +1,150 @@
+specVersion: '0.1'
+name: 'Team messages'
+
+# Written from prompt P6 in corpus/prompts.md, before the application existed. The third
+# application from that prompt.
+
+actors:
+  - id: insider
+    description: 'Signed in, team TM-A'
+  - id: outsider
+    description: 'Signed in, team TM-B'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Room
+    fields:
+      - name: id
+        type: string
+      - name: topic
+        type: string
+      - name: team_id
+        type: string
+
+  - name: Post
+    fields:
+      - name: id
+        type: string
+      - name: room_id
+        type: string
+      - name: author_id
+        type: string
+      - name: text
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'A person reads only rooms their team owns'
+    entities: [Room]
+    fields: [Room.team_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: read
+        resource: Room
+        condition: 'Room.team_id != actor.team_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a room owned by another team'
+        when: 'actor outsider reads Room RM-A'
+        then: 'status in 403, 404 and body omits field Room.topic'
+
+  - id: REQ-002
+    statement: 'A room listing shows only the caller own team rooms'
+    entities: [Room]
+    fields: [Room.team_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: outsider
+        action: list
+        resource: Room
+        condition: 'Room.team_id != actor.team_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'rooms owned by two teams'
+        when: 'actor outsider lists Room'
+        then: 'every Room has team_id equal to actor.team_id'
+
+  - id: REQ-003
+    statement: 'A post is readable only by the team that owns its room'
+    entities: [Post, Room]
+    fields: [Post.room_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: outsider
+        action: read
+        resource: Post
+        condition: 'Post.room_id == "RM-A"'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a post in another team room'
+        when: 'actor outsider reads Post PO-1'
+        then: 'status in 403, 404 and body omits field Post.text'
+
+  - id: REQ-004
+    statement: 'A caller who is not signed in reads no post'
+    entities: [Post]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: Post
+        effect: deny
+      - id: AR-004-02
+        actor: anonymous
+        action: list
+        resource: Post
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an existing post'
+        when: 'actor anonymous reads Post PO-1'
+        then: 'status is 401'
+
+  - id: REQ-005
+    statement: 'A member reads the posts of a room their team owns'
+    entities: [Post]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: insider
+        action: read
+        resource: Post
+        condition: 'Post.room_id == "RM-A"'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'a post in the caller own team room'
+        when: 'actor insider reads Post PO-1'
+        then: 'status is 200 and body contains field Post.text'
+
+  - id: REQ-006
+    statement: 'A post listing shows only posts from rooms the caller team owns'
+    entities: [Post]
+    fields: [Post.room_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: insider
+        action: list
+        resource: Post
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'posts in two team rooms'
+        when: 'actor insider lists Post'
+        then: 'every Post has room_id equal to "RM-A"'

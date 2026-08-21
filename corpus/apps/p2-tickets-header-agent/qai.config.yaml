@@ -1,0 +1,52 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: reporter
+    auth:
+      kind: header
+      name: x-user
+      valueEnv: ISSUES_FERN
+    attributes:
+      user_id: fern
+
+  - id: otherReporter
+    auth:
+      kind: header
+      name: x-user
+      valueEnv: ISSUES_GUS
+    attributes:
+      user_id: gus
+
+  - id: helper
+    auth:
+      kind: header
+      name: x-user
+      valueEnv: ISSUES_HANA
+    attributes:
+      user_id: hana
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+# The agent is the only actor who reaches every issue, which is what a state read after
+# an action needs if it is not to report a scoping rule as a state fact.
+stateActor: helper
+
+resources:
+  - name: Issue
+    routes:
+      read: /api/issues/{id}
+      list: /api/issues
+      update: /api/issues/{id}
+    instances:
+      - id: ISS-1
+        attributes:
+          reporter_id: fern
+      - id: ISS-3
+        attributes:
+          reporter_id: gus

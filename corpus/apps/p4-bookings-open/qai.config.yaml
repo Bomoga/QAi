@@ -1,0 +1,47 @@
+# Two signed in actors are configured and the application authenticates nobody. That is
+# the point: a spec can only ask about identities the target is configured to present,
+# and here the target presents the same face to all three.
+
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: booker
+    auth:
+      kind: header
+      name: x-user
+      valueEnv: OPENBOOK_BO
+    attributes:
+      user_id: bo
+
+  - id: colleague
+    auth:
+      kind: header
+      name: x-user
+      valueEnv: OPENBOOK_CASS
+    attributes:
+      user_id: cass
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: booker
+
+resources:
+  - name: Booking
+    routes:
+      read: /api/bookings/{id}
+      list: /api/bookings
+      create: /api/bookings
+      delete: /api/bookings/{id}
+    instances:
+      - id: B-1
+        attributes:
+          booked_by: bo
+      - id: B-2
+        attributes:
+          booked_by: cass

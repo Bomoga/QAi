@@ -1,0 +1,147 @@
+specVersion: '0.1'
+name: 'Personal notes'
+
+# Written from prompt P3 in corpus/prompts.md, before the application existed. The third
+# application from that prompt.
+
+actors:
+  - id: keeper
+    description: 'Signed in, owns N-1'
+  - id: stranger
+    description: 'Signed in, owns N-9'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Note
+    fields:
+      - name: id
+        type: string
+      - name: owner_id
+        type: string
+      - name: text
+        type: string
+      - name: shared
+        type: boolean
+
+requirements:
+  - id: REQ-001
+    statement: 'Nobody but the owner can read a private note'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: stranger
+        action: read
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id and Note.shared == "false"'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a private note belonging to somebody else'
+        when: 'actor stranger reads Note N-1'
+        then: 'status in 403, 404 and body omits field Note.text'
+
+  - id: REQ-002
+    statement: 'Nobody but the owner can change a note'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: stranger
+        action: update
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'a note belonging to somebody else'
+        when: 'actor stranger updates Note N-1'
+        then: 'status in 403, 404 and record Note N-1 is unchanged'
+
+  - id: REQ-003
+    statement: 'Nobody but the owner can delete a note'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: stranger
+        action: delete
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a note belonging to somebody else'
+        when: 'actor stranger deletes Note N-1'
+        then: 'status in 403, 404 and record Note N-1 is unchanged'
+
+  - id: REQ-004
+    statement: 'A caller who is not signed in reaches no note'
+    entities: [Note]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: Note
+        effect: deny
+      - id: AR-004-02
+        actor: anonymous
+        action: delete
+        resource: Note
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an existing note'
+        when: 'actor anonymous reads Note N-1'
+        then: 'status is 401'
+
+  - id: REQ-005
+    statement: 'A listing shows a caller their own notes'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: stranger
+        action: list
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'notes belonging to two people'
+        when: 'actor stranger lists Note'
+        then: 'every Note has owner_id equal to actor.user_id'
+
+  # Stated over the listing rather than over one record, deliberately. A run that
+  # exercises a delete rule against an application that permits the delete has removed
+  # that record by the time anything else looks at it, so an allow rule naming the same
+  # instance would report the consequence of the tool's own request. The listing is the
+  # honest place to say the owner reaches their own notes.
+  - id: REQ-006
+    statement: 'The owner reaches their own notes'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: keeper
+        action: list
+        resource: Note
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'notes the caller owns'
+        when: 'actor keeper lists Note'
+        then: 'status is 200 and every Note has owner_id equal to actor.user_id'

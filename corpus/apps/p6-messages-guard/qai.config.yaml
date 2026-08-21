@@ -1,0 +1,51 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: insider
+    auth:
+      kind: bearer
+      tokenEnv: ROOMS_INES_TOKEN
+    attributes:
+      team_id: TM-A
+
+  - id: outsider
+    auth:
+      kind: bearer
+      tokenEnv: ROOMS_OTTO_TOKEN
+    attributes:
+      team_id: TM-B
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: insider
+
+resources:
+  - name: Room
+    routes:
+      read: /api/rooms/{id}
+      list: /api/rooms
+    instances:
+      - id: RM-A
+        attributes:
+          team_id: TM-A
+      - id: RM-B
+        attributes:
+          team_id: TM-B
+
+  - name: Post
+    routes:
+      read: /api/posts/{id}
+      list: /api/posts
+    instances:
+      - id: PO-1
+        attributes:
+          room_id: RM-A
+      - id: PO-9
+        attributes:
+          room_id: RM-B
