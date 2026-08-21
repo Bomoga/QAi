@@ -25,8 +25,14 @@ Build a picture of what the target actually contains, then diff it against what 
 
 ```ts
 export function probe(ctx: TargetContext, opts: ProbeOptions): Promise<Observation>;
-export function diffSpecObservation(spec: Spec, obs: Observation): StructuralBlock;
+export function diffSpecObservation(
+  spec: Spec,
+  obs: Observation,
+  resources?: readonly ConfiguredResource[],
+): StructuralBlock;
 ```
+
+**Widened at S8.6, a cross-module edit recorded here.** `diffSpecObservation` takes the configured `resources[].routes` as an optional third argument. The corpus run reported `GET /api/stock` as an endpoint nothing specified, at medium, while `GET /api/invoices` passed, purely because the name matching relates `invoices` to `Invoice` and cannot relate `stock` to `StockLine`. The configured routes are the authoritative mapping from an entity and an action to a URL and this function never saw them. `ConfiguredResource` is a narrow structural slice of M2's `ResourceConfig`, a name and its route templates, in the same shape as `ProbeContext` taking less than a whole `TargetContext`; a caller holding the real config satisfies it without converting anything. An optional parameter is not a contract change, the same reading as `TextOptions.observation` at M7.3. `check.ts` passes it, and so do the golden capture and the probe demonstration script.
 
 ## Implementation notes
 
@@ -43,6 +49,12 @@ Every source-derived endpoint carries `handlerRef` in `path:line` form. That ref
 **Endpoint identity.** Normalize concrete ids into parameters so `/api/invoices/42` and `/api/invoices/43` are one endpoint `GET /api/invoices/:id`. Identity must be stable across runs, since M6 diffs on it.
 
 **Entity matching.** Match spec entities to observed models case-insensitively and tolerant of singular and plural. Record the match and its confidence. An unmatched spec entity becomes `specifiedNotObserved`, which is a finding, not an error.
+
+**Field mismatches, corrected at S8.6 by the corpus run.** Two rules govern `fieldMismatches[].specifiedNotObserved`, and every false positive the corpus produced was one of them being absent.
+
+A field the spec marks `sensitive: true` is never reported for not appearing. The spec says it must never be in a response, redaction reads the same list, and an application that withholds it is agreeing with the spec rather than disagreeing. `observedNotSpecified` is deliberately not filtered this way: a field that was actually seen was actually there.
+
+Presence is evidence and absence is not, unless the field list came from a schema. A declared field is reported missing only for an entity whose observed `origin` is `schema`. An inferred entity's fields are whatever one response happened to carry, which is a sample rather than an inventory, so a field the crawl never requested is a fact about the crawl. This is the other half of the Do Not below about not reporting an inferred entity as though it came from a schema.
 
 **Severity for structural findings.** `observedNotSpecified` endpoints default to `medium`, raised to `high` if the endpoint is unauthenticated and returns fields belonging to a spec entity, lowered to `info` for obvious static asset and health check routes. `specifiedNotObserved` defaults to `low`, because a missing feature is usually known to the developer, and `fieldMismatches` for an observed-not-specified field defaults to `medium` since undeclared fields in responses are how data leaks.
 
@@ -86,7 +98,9 @@ does not depend on how the package's `test` script is defined.
 
 - Do not let the probe write to the target, submit forms, or follow links off-origin.
 - Do not default `authRequired` to `true`. Unknown is a valid and honest value.
-- Do not report an inferred entity as though it came from a schema.
+- Do not report an inferred entity as though it came from a schema, and do not report the absence of a field in an inferred reading as a fact about the application.
+- Do not report a field the spec forbids in output as one the application failed to provide.
+- Do not silence the endpoint nobody specified while widening what counts as specified. `/api/debug/state` in `fixtures/ledger` is a configured route for nothing and has to keep firing; there is an integration assertion that passes the real configured resources and holds it.
 - Do not add framework adapters beyond Q1's list without approval; breadth here is a time sink that does not serve the demo.
 
 ## Open questions
