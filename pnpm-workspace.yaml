@@ -5,11 +5,22 @@ packages:
 # esbuild ships a platform binary its install script links into place.
 # It backs tsup and vitest, both of which are tooling only.
 #
-# better-sqlite3 is a native module and its install script is what builds or fetches the
-# binding. Without it the package cannot load at all. It is named in 04-CONVENTIONS.md as
-# an approved runtime dependency and modules/M6-store-delta.md requires it by name for
-# `.qai/runs.db`, so the dependency itself is already a decision this only follows through
-# on. It is the only runtime dependency here allowed to run a build script.
+# better-sqlite3 must NOT run its install script, and the value is `false` rather than
+# absent on purpose.
+#
+# The script is `node-gyp rebuild`, which needs a C++ toolchain. A machine that has never
+# seen this project is exactly a machine without one, so with `true` a clean install fails
+# after thirty seconds on `gyp ERR! find VS`. This repository is public, so that is what
+# anyone cloning it hits, and CI never showed it because ubuntu-latest has a toolchain.
+#
+# The build it permits produces an artifact nothing uses. better-sqlite3 13.0.3 ships
+# prebuilt binaries for darwin, linux, linuxmusl, and win32 on both architectures, and
+# neither a clean clone nor this repository has ever contained a compiled `build/`
+# directory. The package has always loaded from the prebuild.
+#
+# Deleting the line does not work: pnpm treats a build it ignored without being told to as
+# an error, `ERR_PNPM_IGNORED_BUILDS`, and rewrites this file with a placeholder. Only the
+# explicit `false` says considered, and it must not build.
 allowBuilds:
-  better-sqlite3: true
+  better-sqlite3: false
   esbuild: true

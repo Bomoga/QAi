@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-21T13:40:00Z
-Current stage: S8, corpus run, branch fix/s8-structural-false-positives
-Next task: S8 is complete. Open the pull request and stop.
+Updated: 2026-08-21T14:05:00Z
+Current stage: S9, buffer and demo, branch fix/clean-install
+Next task: S9.3, the two clauses of the success criterion that cannot be met as written
 
 ## S0. Skeleton
 
@@ -589,7 +589,49 @@ positive rate computed by manual review of every finding, and a written summary,
 
 ## S9. Buffer and demo
 
-- [ ] not started
+05-BUILD-ORDER.md gives the stage one instruction: rehearse the sequence in 01-PRODUCT.md,
+and fix only what that sequence exposes. **The rehearsal was run first**, cold, on a clone
+taken from GitHub into an empty directory with its own package store, so the tasks below
+are what it exposed rather than a guess at what it might.
+
+- [x] S9.1 correct the stage header left stale by the S8 merge (commit backfilled below)
+- [x] S9.2 make a clean install work (commit backfilled below)
+- [ ] S9.3 the two clauses of the success criterion that cannot be met as written
+- [ ] S9.4 rehearse the sequence again, cold, and record the real output
+- Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
+  minutes, on a machine that has never seen the project.
+- **The engine already meets every functional clause.** On the rehearsal it passed steps 2
+  through 6 on the first attempt: validate exit 0, check exit 1 against the defective
+  fixture with counts matching the M7.7 goldens, check exit 0 against the repaired one, and
+  a delta reporting six requirements moving failed to verified. Clone, install, build, and
+  all six steps took about twenty seconds against a five minute budget. The tool is not the
+  risk here; the packaging and the wording of the criterion are.
+- **S9.2, and the reason it was invisible.** `pnpm install --frozen-lockfile` on a clean
+  clone exited 1 after thirty seconds, because `allowBuilds` let better-sqlite3 run
+  `node-gyp rebuild` and a machine that has never seen this project has no C++ toolchain.
+  The repository is public, so that is what anyone cloning it hit. CI never showed it
+  because ubuntu-latest has a toolchain, and no local run showed it because the failure
+  needs a cold `node_modules`.
+- **The premise recorded at M6.1 was false.** "Without it the package cannot load at all"
+  is not true of 13.0.3, which ships prebuilds for every realistic target. Neither a clean
+  clone nor this repository has ever contained a compiled `build/` directory, so the build
+  the setting permitted produced an artifact nothing used. The comment in
+  `pnpm-workspace.yaml` now says so, because the next reader would otherwise put `true`
+  back.
+- **Deleting the line does not work**, which is worth knowing before somebody tries it.
+  Four forms were tested against a clean clone: `true` fails at node-gyp, removing the line
+  fails with `ERR_PNPM_IGNORED_BUILDS` and makes pnpm rewrite the file with a placeholder,
+  `ignoredBuiltDependencies` fails the same way, and only the explicit `false` installs, in
+  three seconds. The placeholder pnpm writes is where the one quoted in the M6.1 note came
+  from: the setting has three states, not two.
+- **S9.3 is a decision rather than code.** Step 1 says `npx qai init`, which has never been
+  run and cannot work: the package is private, named `@qai/cli`, and `origin/main` does not
+  exist. Step 3 asks for a finding carrying a file reference, and the defective run produces
+  nine access findings with a request and a response and zero with a file reference, because
+  the fixture is black box only. Either give the demo a target with readable source, which
+  also exercises the one path twenty corpus applications never did, or correct the criterion
+  to match 04-CONVENTIONS.md, which already says a file reference is for when source is
+  available. Do not quietly reword the criterion to match what the tool does.
 
 ## Notes carried forward
 
