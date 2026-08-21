@@ -21,6 +21,11 @@ permissions:
   # Required to upload SARIF. Without it the upload is a 403 and the findings never
   # reach the pull request, whatever the run found.
   security-events: write
+  # The upload action reads the workflow run it is part of, so without this it fails
+  # with "Resource not accessible by integration" pointing at the workflow runs API,
+  # after having already validated the document and added its fingerprints. That reads
+  # like a problem with the SARIF and is a problem with this block.
+  actions: read
 
 jobs:
   check:
