@@ -1,0 +1,132 @@
+specVersion: '0.1'
+name: 'Invoicing, per organization'
+
+# Written from prompt P1 in corpus/prompts.md, before the application existed. The third
+# application from that prompt.
+
+actors:
+  - id: insider
+    description: 'Signed in, organization ORG-7'
+  - id: outsider
+    description: 'Signed in, organization ORG-8, which has no invoices'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Bill
+    fields:
+      - name: id
+        type: string
+      - name: org
+        type: string
+      - name: payer
+        type: string
+      - name: total
+        type: number
+      - name: memo
+        type: string
+        sensitive: true
+
+requirements:
+  - id: REQ-001
+    statement: 'A user reads only bills belonging to their own organization'
+    entities: [Bill]
+    fields: [Bill.org]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: read
+        resource: Bill
+        condition: 'Bill.org != actor.org'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a bill belonging to another organization'
+        when: 'actor outsider reads Bill BL-70'
+        then: 'status in 403, 404 and body omits field Bill.total'
+
+  - id: REQ-002
+    statement: 'A listing returns nothing at all to a caller with no bills'
+    entities: [Bill]
+    fields: [Bill.org]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: outsider
+        action: list
+        resource: Bill
+        condition: 'Bill.org != actor.org'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'bills belonging to one organization only'
+        when: 'actor outsider lists Bill'
+        then: 'status is 200 and body omits field Bill.total'
+
+  - id: REQ-003
+    statement: 'Editing a bill requires being signed in'
+    entities: [Bill]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: anonymous
+        action: update
+        resource: Bill
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'an existing bill'
+        when: 'actor anonymous updates Bill BL-70'
+        then: 'status is 401 and record Bill BL-70 is unchanged'
+
+  - id: REQ-004
+    statement: 'A memo is never revealed by a listing'
+    entities: [Bill]
+    fields: [Bill.memo]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'a bill carrying a memo'
+        when: 'actor insider lists Bill'
+        then: 'body omits field Bill.memo'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in reads no bill'
+    entities: [Bill]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: read
+        resource: Bill
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'an existing bill'
+        when: 'actor anonymous reads Bill BL-70'
+        then: 'status is 401'
+
+  - id: REQ-006
+    statement: 'A user reads a bill belonging to their own organization'
+    entities: [Bill]
+    fields: [Bill.org]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: insider
+        action: read
+        resource: Bill
+        condition: 'Bill.org == actor.org'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'a bill belonging to the caller organization'
+        when: 'actor insider reads Bill BL-70'
+        then: 'status is 200 and body contains field Bill.total'

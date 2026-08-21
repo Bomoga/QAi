@@ -1,0 +1,112 @@
+specVersion: '0.1'
+name: 'Room bookings'
+
+# Written from prompt P4 in corpus/prompts.md, before the application existed.
+
+actors:
+  - id: booker
+    description: 'Signed in, made booking B-1'
+  - id: colleague
+    description: 'Signed in, made no booking'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Booking
+    fields:
+      - name: id
+        type: string
+      - name: room_id
+        type: string
+      - name: booked_by
+        type: string
+      - name: starts_at
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'A booking is cancelled only by the person who made it'
+    entities: [Booking]
+    fields: [Booking.booked_by]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: colleague
+        action: delete
+        resource: Booking
+        condition: 'Booking.booked_by != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a booking made by somebody else'
+        when: 'actor colleague deletes Booking B-2'
+        then: 'status in 401, 403, 404'
+
+  - id: REQ-002
+    statement: 'A caller who is not signed in cannot cancel a booking'
+    entities: [Booking]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: anonymous
+        action: delete
+        resource: Booking
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'an existing booking'
+        when: 'actor anonymous deletes Booking B-2'
+        then: 'status is 401'
+
+  - id: REQ-003
+    statement: 'Booking a room requires being signed in'
+    entities: [Booking]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: anonymous
+        action: create
+        resource: Booking
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a free room'
+        when: 'actor anonymous creates Booking'
+        then: 'status is 401'
+
+  - id: REQ-004
+    statement: 'Seeing which rooms are booked requires being signed in'
+    entities: [Booking]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: list
+        resource: Booking
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'bookings on the calendar'
+        when: 'actor anonymous lists Booking'
+        then: 'status is 401'
+
+  - id: REQ-005
+    statement: 'A signed in caller reads the bookings'
+    entities: [Booking]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: booker
+        action: list
+        resource: Booking
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'bookings on the calendar'
+        when: 'actor booker lists Booking'
+        then: 'status is 200'

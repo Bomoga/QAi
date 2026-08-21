@@ -1,0 +1,176 @@
+specVersion: '0.1'
+name: 'Team messages'
+
+# Written from prompt P6 in corpus/prompts.md, before the application existed. The second
+# application from that prompt; the first, p6-messages-dm-leak, serves a direct message to
+# anyone signed in.
+
+actors:
+  - id: member
+    description: 'Signed in, member of channel CH-1, participant in DM-1'
+  - id: teammate
+    description: 'Signed in, member of channel CH-1, not a participant in DM-1'
+  - id: outsider
+    description: 'Signed in, member of no channel the others can see'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Channel
+    fields:
+      - name: id
+        type: string
+      - name: name
+        type: string
+      - name: team_id
+        type: string
+
+  - name: Message
+    fields:
+      - name: id
+        type: string
+      - name: channel_id
+        type: string
+      - name: author_id
+        type: string
+      - name: body
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'A person reads only channels their team owns'
+    entities: [Channel]
+    fields: [Channel.team_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: read
+        resource: Channel
+        condition: 'Channel.team_id != actor.team_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a channel owned by another team'
+        when: 'actor outsider reads Channel CH-1'
+        then: 'status in 403, 404 and body omits field Channel.name'
+
+  - id: REQ-002
+    statement: 'A channel listing shows only the caller own team channels'
+    entities: [Channel]
+    fields: [Channel.team_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: outsider
+        action: list
+        resource: Channel
+        condition: 'Channel.team_id != actor.team_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'channels owned by two teams'
+        when: 'actor outsider lists Channel'
+        then: 'every Channel has team_id equal to actor.team_id'
+
+  - id: REQ-003
+    statement: 'A direct message is readable by its two participants and nobody else'
+    entities: [Message]
+    fields: [Message.channel_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: teammate
+        action: read
+        resource: Message
+        condition: 'Message.channel_id == "DM-1"'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a direct message between two other people'
+        when: 'actor teammate reads Message MSG-9'
+        then: 'status in 403, 404 and body omits field Message.body'
+
+  - id: REQ-004
+    statement: 'A participant reads their own direct message'
+    entities: [Message]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: member
+        action: read
+        resource: Message
+        condition: 'Message.channel_id == "DM-1"'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'a direct message the caller is part of'
+        when: 'actor member reads Message MSG-9'
+        then: 'status is 200 and body contains field Message.body'
+
+  # The prompt says sending needs membership of that channel. An access rule names an
+  # actor, an action, and a resource, and has nowhere to name which channel, so the
+  # channel scoped half of that sentence is not expressible as a rule here. What is
+  # expressible is the part that holds for every channel, which is that an unsigned
+  # caller sends nothing. The rest is stated and left without a check rather than
+  # narrowed into a claim the prompt did not make.
+  - id: REQ-005
+    statement: 'Sending a message requires being signed in'
+    entities: [Message]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: create
+        resource: Message
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'a caller presenting no credential'
+        when: 'actor anonymous creates Message'
+        then: 'status is 401'
+
+  - id: REQ-006
+    statement: 'Sending a message needs membership of the channel it is sent to'
+    entities: [Message, Channel]
+    fields: [Message.channel_id]
+    tags: [access-control]
+
+  - id: REQ-007
+    statement: 'A caller who is not signed in reads no message'
+    entities: [Message]
+    tags: [access-control]
+    accessRules:
+      - id: AR-007-01
+        actor: anonymous
+        action: read
+        resource: Message
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-007-01
+        mode: deterministic
+        given: 'an existing message'
+        when: 'actor anonymous reads Message MSG-1'
+        then: 'status is 401'
+
+  - id: REQ-008
+    statement: 'A channel member reads the messages of that channel'
+    entities: [Message]
+    tags: [access-control]
+    accessRules:
+      - id: AR-008-01
+        actor: teammate
+        action: list
+        resource: Message
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-008-01
+        mode: deterministic
+        given: 'messages in a channel the caller belongs to'
+        when: 'actor teammate lists Message'
+        then: 'status is 200'

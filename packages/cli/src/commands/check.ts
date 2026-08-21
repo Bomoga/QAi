@@ -391,7 +391,7 @@ export async function runCheck(options: CheckOptions): Promise<number> {
       ...(config.target.sourceRoot === undefined ? {} : { sourceRoot: config.target.sourceRoot }),
     },
     checks: [...accessResults, ...behavioralResults] as CheckResultRecord[],
-    structural: diffSpecObservation(loaded.spec, observation),
+    structural: diffSpecObservation(loaded.spec, observation, config.resources),
     // Three side channels through one collector, so a caller that remembered two cannot
     // silently drop the third.
     gaps: collectCoverageGaps({

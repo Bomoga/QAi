@@ -197,6 +197,32 @@ describe('keeping a review across runs', () => {
     expect(ledger.entries.find((one) => one.findingId === 'CHK-fixed')?.note).toBe('real');
   });
 
+  it('marks a kept review the run no longer produced', () => {
+    // The mark is what keeps a repaired false positive out of the rate. Without it the
+    // entry stays in the denominator forever and fixing the cause cannot move the
+    // number, which would make the measurement blind to exactly the work it asks for.
+    const { ledger } = mergeFindings(
+      ledgerOf(entry({ findingId: 'CHK-fixed', classification: 'false-positive', note: 'was' })),
+      findingsOf('invoicing', run({ checks: [check()] })),
+    );
+
+    expect(ledger.entries.find((one) => one.findingId === 'CHK-fixed')?.absent).toBe(true);
+    expect(ledger.entries.find((one) => one.findingId === 'CHK-a')?.absent).toBeUndefined();
+  });
+
+  it('unmarks a finding that came back', () => {
+    // An application regressing, or a corpus application being added, brings a finding
+    // back. It is rebuilt from the run, so the mark goes with it and the review stays.
+    const gone = ledgerOf(
+      entry({ findingId: 'CHK-a', classification: 'false-positive', note: 'was', absent: true }),
+    );
+
+    const { ledger } = mergeFindings(gone, findingsOf('invoicing', run({ checks: [check()] })));
+
+    expect(ledger.entries[0]?.absent).toBeUndefined();
+    expect(ledger.entries[0]?.classification).toBe('false-positive');
+  });
+
   it('does not confuse the same check id in two applications', () => {
     // Two applications can produce the same check id, because the hash is over what the
     // check is and both specs can say the same thing. The ledger is keyed by both.
@@ -295,6 +321,25 @@ describe('the false positive rate', () => {
       entry({ findingId: 'fp-1', classification: 'false-positive' }),
     );
     expect(falsePositiveRates(over).overall.aboveThreshold).toBe(true);
+  });
+
+  it('counts only what the latest run produced, and says how much it held aside', () => {
+    // The rate answers how often a finding the tool produces is wrong. A review of
+    // something it no longer reports belongs in the ledger and not in the denominator,
+    // and the count is printed so the narrowing is visible rather than silent.
+    const rates = falsePositiveRates(
+      ledgerOf(
+        entry({ findingId: 'a', classification: 'true-positive' }),
+        entry({ findingId: 'b', classification: 'true-positive' }),
+        entry({ findingId: 'c', classification: 'false-positive', absent: true }),
+        entry({ findingId: 'd', classification: 'false-positive', absent: true }),
+      ),
+    );
+
+    expect(rates.heldAside).toBe(2);
+    expect(rates.overall.judged).toBe(2);
+    expect(rates.overall.rate).toBe(0);
+    expect(rates.byType[0]?.rate.judged).toBe(2);
   });
 
   it('breaks the rate down by check type and by rule', () => {

@@ -1,0 +1,131 @@
+specVersion: '0.1'
+name: 'Support tickets, per requester'
+
+# Written from prompt P2 in corpus/prompts.md, before the application existed. The second
+# application from that prompt.
+
+actors:
+  - id: requester
+    description: 'Signed in, opened ticket T-100'
+  - id: otherRequester
+    description: 'Signed in, opened ticket T-300'
+  - id: agent
+    description: 'Signed in support agent'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Ticket
+    fields:
+      - name: id
+        type: string
+      - name: opened_by
+        type: string
+      - name: subject
+        type: string
+      - name: state
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'A requester sees only the tickets they opened'
+    entities: [Ticket]
+    fields: [Ticket.opened_by]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: otherRequester
+        action: read
+        resource: Ticket
+        condition: 'Ticket.opened_by != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a ticket opened by somebody else'
+        when: 'actor otherRequester reads Ticket T-100'
+        then: 'status in 403, 404 and body omits field Ticket.subject'
+
+  - id: REQ-002
+    statement: 'A ticket listing shows a requester only their own tickets'
+    entities: [Ticket]
+    fields: [Ticket.opened_by]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: otherRequester
+        action: list
+        resource: Ticket
+        condition: 'Ticket.opened_by != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'tickets opened by two people'
+        when: 'actor otherRequester lists Ticket'
+        then: 'every Ticket has opened_by equal to actor.user_id'
+
+  - id: REQ-003
+    statement: 'An agent sees every ticket'
+    entities: [Ticket]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: agent
+        action: read
+        resource: Ticket
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a ticket opened by a requester'
+        when: 'actor agent reads Ticket T-100'
+        then: 'status is 200 and body contains field Ticket.subject'
+
+  - id: REQ-004
+    statement: 'Closing a ticket is for agents only'
+    entities: [Ticket]
+    fields: [Ticket.state]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: requester
+        action: update
+        resource: Ticket
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'a ticket the caller opened'
+        when: 'actor requester updates Ticket T-100'
+        then: 'status in 403, 404 and record Ticket T-100 is unchanged'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in sees no ticket'
+    entities: [Ticket]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: read
+        resource: Ticket
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'an existing ticket'
+        when: 'actor anonymous reads Ticket T-100'
+        then: 'status is 401'
+
+  - id: REQ-006
+    statement: 'A requester reads the ticket they opened'
+    entities: [Ticket]
+    fields: [Ticket.opened_by]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: requester
+        action: read
+        resource: Ticket
+        condition: 'Ticket.opened_by == actor.user_id'
+        effect: allow

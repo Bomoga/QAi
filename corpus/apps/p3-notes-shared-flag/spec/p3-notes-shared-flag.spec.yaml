@@ -117,4 +117,4 @@ requirements:
         mode: deterministic
         given: 'a note belonging to the caller'
         when: 'actor owner reads Note NOTE-1'
-        then: 'status is 200 and body has field Note.body'
+        then: 'status is 200 and body contains field Note.body'

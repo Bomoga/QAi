@@ -109,7 +109,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const structural = diffSpecObservation(spec.spec, observation);
+  const structural = diffSpecObservation(spec.spec, observation, config.config.resources);
 
   process.stdout.write(
     `\nobserved and not specified (${structural.observedNotSpecified.length})\n`,

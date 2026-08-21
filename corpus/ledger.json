@@ -2,13 +2,32 @@
   "version": "0.1",
   "entries": [
     {
+      "app": "p1-invoicing-empty-list",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
+    },
+    {
+      "app": "p1-invoicing-header-filter",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index again, at info. Literally true and the fifth application to produce it. Worth saying once for the whole corpus rather than per application: this finding is correct, is worth almost nothing, and the noise class is what keeps it from costing anything."
+    },
+    {
       "app": "p1-invoicing-middleware",
       "findingId": "STRUCT-fieldMismatch:Invoice",
       "type": "structural",
       "severity": "low",
       "title": "fields of Invoice disagree between the spec and the target",
       "classification": "false-positive",
-      "note": "The spec marks Invoice.private_note sensitive, which means it must never appear in a response. The application correctly never returns it, and the structural diff reports that absence as a disagreement. A field the spec forbids and the app withholds cannot also be a finding."
+      "note": "The spec marks Invoice.private_note sensitive, which means it must never appear in a response. The application correctly never returns it, and the structural diff reports that absence as a disagreement. A field the spec forbids and the app withholds cannot also be a finding.",
+      "absent": true
     },
     {
       "app": "p1-invoicing-middleware",
@@ -20,6 +39,24 @@
       "note": "Literally true: a route index exists at / and no requirement mentions it. Low value, and info is the right severity for it, which is the noise class doing its job rather than a wrong answer."
     },
     {
+      "app": "p2-tickets-agent-404",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
+    },
+    {
+      "app": "p2-tickets-header-agent",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
+    },
+    {
       "app": "p2-tickets-query-filter",
       "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
       "type": "structural",
@@ -27,6 +64,15 @@
       "title": "endpoint GET / was observed and is specified nowhere",
       "classification": "true-positive",
       "note": "The route index again. True, low value, correctly rated info. Third application in a row, which is worth noticing: it is the same finding every time and it will appear once per application in the corpus."
+    },
+    {
+      "app": "p3-notes-delete-open",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
     },
     {
       "app": "p3-notes-shared-flag",
@@ -47,7 +93,8 @@
       "severity": "low",
       "title": "fields of Note disagree between the spec and the target",
       "classification": "false-positive",
-      "note": "Note.owner_id and Note.body are both returned by GET /api/notes/{id}. The probe only reached the listing, which returns id and shared, so the fields it never saw are reported as specified and not observed. That is the crawl's coverage being reported as a fact about the application."
+      "note": "Note.owner_id and Note.body are both returned by GET /api/notes/{id}. The probe only reached the listing, which returns id and shared, so the fields it never saw are reported as specified and not observed. That is the crawl's coverage being reported as a fact about the application.",
+      "absent": true
     },
     {
       "app": "p3-notes-shared-flag",
@@ -59,13 +106,131 @@
       "note": "Same as the invoicing one: true, low value, correctly rated info."
     },
     {
+      "app": "p3-notes-strict",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
+    },
+    {
+      "app": "p4-bookings-cookie",
+      "findingId": "STRUCT-fieldMismatch:Booking",
+      "type": "structural",
+      "severity": "low",
+      "title": "fields of Booking disagree between the spec and the target",
+      "classification": "true-positive",
+      "note": "Booking.cancelled is returned and the spec declares no such field. The spec was written from the prompt, which says a booking can be cancelled and never says a record carries the fact, and the application chose to mark rather than remove. Genuinely undeclared, and the second structural field finding in the corpus that is right. Both of them are the observed side, which is the side S8.6 deliberately left alone."
+    },
+    {
+      "app": "p4-bookings-cookie",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct and correctly rated info."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-01b0e17b1afc",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-003-01",
+      "detail": "POST /api/bookings as actor anonymous returned status 201. The criterion requires: status is 401.",
+      "requirementId": "REQ-003",
+      "ruleId": "AC-003-01",
+      "classification": "true-positive",
+      "note": "AC-003-01. An unsigned caller created a booking and got 201 where the criterion requires 401. The behavioral half of the same defect the high severity access finding reports, from the status rather than from the fields."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-56d221da8e66",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-004-01",
+      "detail": "GET /api/bookings as actor anonymous returned status 200. The criterion requires: status is 401.",
+      "requirementId": "REQ-004",
+      "ruleId": "AC-004-01",
+      "classification": "true-positive",
+      "note": "AC-004-01. An unsigned caller listed the bookings and got 200 where the criterion requires 401. Worth noting beside it: the matching access rule came back inconclusive, correctly, because ownership of the returned rows could not be established from the rule condition. The criterion is what turned that into a finding, which is the argument for having both families."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-c2e7442c68b1",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-002-01",
+      "detail": "DELETE /api/bookings/B-2 as actor anonymous returned status 200. The criterion requires: status is 401.",
+      "requirementId": "REQ-002",
+      "ruleId": "AC-002-01",
+      "classification": "true-positive",
+      "note": "AC-002-01. An unsigned caller cancelled a booking and got 200 where the criterion requires 401. True against an application that authenticates nobody."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-db24924ab080",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-001-01",
+      "detail": "DELETE /api/bookings/B-2 as actor colleague returned status 200. The criterion requires: status in 401, 403, 404.",
+      "requirementId": "REQ-001",
+      "ruleId": "AC-001-01",
+      "classification": "true-positive",
+      "note": "AC-001-01. \"DELETE /api/bookings/B-2 as actor colleague returned status 200. The criterion requires: status in 401, 403, 404.\" A colleague cancelled somebody else's booking and the application allowed it. True, and it is the criterion rather than the access rule that caught it, because the access rule saw a 200 with no recognizable fields and declined."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-e63156522b70",
+      "type": "access",
+      "severity": "high",
+      "title": "Booking readable by actor anonymous, which the spec denies",
+      "detail": "POST /api/bookings as actor anonymous returned 201 with Booking fields booked_by, id, room_id, starts_at Request: POST /api/bookings. Evidence: EV-000008. Suggestion: in the POST /api/bookings handler, check the caller identity before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
+      "requirementId": "REQ-003",
+      "ruleId": "AR-003-01",
+      "classification": "true-positive",
+      "note": "The only high severity access finding in the corpus, and it is right. \"POST /api/bookings as actor anonymous returned 201 with Booking fields booked_by, id, room_id, starts_at.\" The application has no authentication at all, so an unsigned caller creates a booking. The finding names the actor, the request, the status, and the fields that came back, which is the shape 04-CONVENTIONS.md asks for."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
+    },
+    {
+      "app": "p5-files-listed-contents",
+      "findingId": "CHK-5093d63c5077",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-002-01",
+      "detail": "GET /api/documents as actor member returned Document.contents in the body. The criterion requires: body omits field Document.contents.",
+      "requirementId": "REQ-002",
+      "ruleId": "AC-002-01",
+      "classification": "true-positive",
+      "note": "The planted defect, caught exactly. One documentView was written for the download route and the directory route calls it too, so every file in the project is handed over in full to anyone who lists it. \"GET /api/documents as actor member returned Document.contents in the body.\" Nothing about the access rules is wrong and the finding does not claim otherwise: it is a field level claim about a listing, which is the only level this defect exists at."
+    },
+    {
+      "app": "p5-files-listed-contents",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
+    },
+    {
       "app": "p5-files-membership",
       "findingId": "STRUCT-fieldMismatch:File",
       "type": "structural",
       "severity": "low",
       "title": "fields of File disagree between the spec and the target",
       "classification": "false-positive",
-      "note": "File.contents is marked sensitive and is returned only by the detail route, which the crawl did not reach. Both of the causes already recorded at once: a field the spec forbids in a listing, and a field the probe never saw. Second application with a sensitive field and second false positive, so this is a class rather than an accident."
+      "note": "File.contents is marked sensitive and is returned only by the detail route, which the crawl did not reach. Both of the causes already recorded at once: a field the spec forbids in a listing, and a field the probe never saw. Second application with a sensitive field and second false positive, so this is a class rather than an accident.",
+      "absent": true
     },
     {
       "app": "p5-files-membership",
@@ -107,6 +272,33 @@
       "note": "The route index."
     },
     {
+      "app": "p6-messages-guard",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
+    },
+    {
+      "app": "p6-messages-strict",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct and correctly rated info."
+    },
+    {
+      "app": "p7-inventory-manager-only",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
+    },
+    {
       "app": "p7-inventory-open",
       "findingId": "CHK-32799d4e52aa",
       "type": "access",
@@ -117,6 +309,18 @@
       "ruleId": "AR-002-01",
       "classification": "true-positive",
       "note": "The unscoped listing, named row by row: 2 of 3 rows belong to another warehouse."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "CHK-43ac0cdb11f2",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-002-01",
+      "detail": "GET /api/stock as actor otherStaff returned 2 of 3 StockLine row(s) without warehouse_id equal to actor.warehouse_id, which is \"WH-SOUTH\": SKU-1, SKU-2. The criterion requires: every StockLine has warehouse_id equal to actor.warehouse_id.",
+      "requirementId": "REQ-002",
+      "ruleId": "AC-002-01",
+      "classification": "true-positive",
+      "note": "The planted defect, caught, and it had never been caught before. The listing returns every warehouse and the finding names the two foreign rows by id: \"2 of 3 StockLine row(s) without warehouse_id equal to actor.warehouse_id, which is WH-SOUTH: SKU-1, SKU-2\". This criterion had been silently unplannable since the application was written, because it said \"every row has field\" and the vocabulary is \"every <Entity> has <field>\". Fixing the wording is what made the check run at all."
     },
     {
       "app": "p7-inventory-open",
@@ -194,7 +398,38 @@
       "severity": "medium",
       "title": "endpoint GET /api/stock was observed and is specified nowhere",
       "classification": "false-positive",
-      "note": "REQ-002 is about listing StockLine and the config maps list to GET /api/stock, so the endpoint is specified and the tool says it is not. It fires here and not on GET /api/invoices because the entity name matching relates invoices to Invoice and cannot relate stock to StockLine. Medium severity, which makes it the most damaging of the three: it is the kind of confident wrong answer that teaches a reader to stop reading the category."
+      "note": "REQ-002 is about listing StockLine and the config maps list to GET /api/stock, so the endpoint is specified and the tool says it is not. It fires here and not on GET /api/invoices because the entity name matching relates invoices to Invoice and cannot relate stock to StockLine. Medium severity, which makes it the most damaging of the three: it is the kind of confident wrong answer that teaches a reader to stop reading the category.",
+      "absent": true
+    },
+    {
+      "app": "p8-enrolment-course-leak",
+      "findingId": "CHK-de6e8586275c",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-003-01",
+      "detail": "GET /api/courses/CRS-10 as actor otherLearner returned Enrolment.grade in the body. The criterion requires: status is 200 and body omits field Enrolment.grade.",
+      "requirementId": "REQ-003",
+      "ruleId": "AC-003-01",
+      "classification": "true-positive",
+      "note": "The planted defect, caught, and caught on a route that serves a different entity. Every enrolment access rule passes, correctly, because the enrolment routes are right. The grades leave through the course detail view, which embeds the roster. \"GET /api/courses/CRS-10 as actor otherLearner returned Enrolment.grade in the body.\" That is the shape of leak that survives a review of the access rules, and the tool found it."
+    },
+    {
+      "app": "p8-enrolment-course-leak",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
+    },
+    {
+      "app": "p8-enrolment-middleware",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct and correctly rated info."
     }
   ]
 }

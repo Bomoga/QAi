@@ -1,0 +1,50 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: learner
+    auth:
+      kind: bearer
+      tokenEnv: COURSE_INES_TOKEN
+    attributes:
+      student_id: ines
+
+  - id: otherLearner
+    auth:
+      kind: bearer
+      tokenEnv: COURSE_JONAS_TOKEN
+    attributes:
+      student_id: jonas
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: learner
+
+resources:
+  - name: Course
+    routes:
+      read: /api/courses/{id}
+      list: /api/courses
+    instances:
+      - id: CRS-10
+        attributes:
+          teacher_id: tabitha
+
+  - name: Enrolment
+    routes:
+      read: /api/enrolments/{id}
+      list: /api/enrolments
+    instances:
+      - id: ENR-10
+        attributes:
+          student_id: ines
+          course_id: CRS-10
+      - id: ENR-30
+        attributes:
+          student_id: jonas
+          course_id: CRS-10

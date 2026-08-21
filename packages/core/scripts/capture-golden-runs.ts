@@ -181,7 +181,7 @@ async function main(): Promise<void> {
     },
     observationRef: `OBS-golden-${requested}`,
     checks: checks as CheckResultRecord[],
-    structural: diffSpecObservation(spec.spec, observation),
+    structural: diffSpecObservation(spec.spec, observation, config.config.resources),
     // All three side channels through one collector, so a caller that remembered two
     // cannot drop the third, which is what M5.16 exists to prevent.
     gaps: collectCoverageGaps({

@@ -12,7 +12,9 @@ import {
   createHttpClient,
   diffSpecObservation,
   fixedDeps,
+  isConfigFailure,
   isLoadFailure,
+  loadConfig,
   loadSpec,
   probe,
   rulesFor,
@@ -223,6 +225,32 @@ describe('D5, the undeclared debug endpoint', () => {
     );
     expect(findings.observedNotSpecified.map((entry) => entry.id)).not.toContain(
       'GET /api/debug/state',
+    );
+  });
+
+  // The corpus fix that reads configured routes exists so an endpoint whose path does
+  // not resemble its entity's name stops being called undeclared. The endpoint nobody
+  // specified is a configured route for nothing, so it has to survive the fix, and this
+  // is asserted against the repository's own config rather than a literal, since a
+  // hand-built resource list would only prove the rule agrees with something the test
+  // invented.
+  it('still fires when the caller passes the configured routes, as check does', async () => {
+    const config = loadConfig('qai.config.yaml', ROOT);
+    if (isConfigFailure(config)) throw new Error(config.error.message);
+
+    const { observation } = await probeLedger(DEFECTS_ON);
+    const findings = diffSpecObservation(spec, observation, config.config.resources);
+
+    expect(findings.observedNotSpecified).toContainEqual({
+      kind: 'endpoint',
+      id: 'GET /api/debug/state',
+      severity: 'medium',
+    });
+
+    // And the endpoint the config does map is still accounted for, which it was before
+    // the fix as well, by its path naming the entity.
+    expect(findings.observedNotSpecified.map((entry) => entry.id)).not.toContain(
+      'GET /api/invoices',
     );
   });
 

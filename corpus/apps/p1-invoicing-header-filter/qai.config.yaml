@@ -1,0 +1,45 @@
+# The caller is an identity header a gateway would set, which is the third credential
+# style corpus/prompts.md varies on.
+
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: member
+    auth:
+      kind: header
+      name: x-account
+      valueEnv: INVOICING_MEMBER_ACCOUNT
+    attributes:
+      org: ACME
+
+  - id: rival
+    auth:
+      kind: header
+      name: x-account
+      valueEnv: INVOICING_RIVAL_ACCOUNT
+    attributes:
+      org: BYTE
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: member
+
+resources:
+  - name: Invoice
+    routes:
+      read: /api/invoices/{id}
+      list: /api/invoices
+      update: /api/invoices/{id}
+    instances:
+      - id: INV-A1
+        attributes:
+          org: ACME
+      - id: INV-B7
+        attributes:
+          org: BYTE

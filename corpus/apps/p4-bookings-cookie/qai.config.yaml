@@ -1,0 +1,69 @@
+# A session cookie, and a fourth actor in the same office as the booker, which is what
+# the office visibility requirement needs to be checkable at all.
+
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: booker
+    auth:
+      kind: cookie
+      name: sid
+      valueEnv: BOOKINGS_BEA_SID
+    attributes:
+      user_id: bea
+      office_id: OFF-1
+
+  - id: colleague
+    auth:
+      kind: cookie
+      name: sid
+      valueEnv: BOOKINGS_CAL_SID
+    attributes:
+      user_id: cal
+      office_id: OFF-1
+
+  - id: outsider
+    auth:
+      kind: cookie
+      name: sid
+      valueEnv: BOOKINGS_OSCAR_SID
+    attributes:
+      user_id: oscar
+      office_id: OFF-2
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+# The booker can read BKG-1, which is the record the cancellation criteria compare.
+stateActor: booker
+
+resources:
+  - name: Room
+    routes:
+      read: /api/rooms/{id}
+      list: /api/rooms
+    instances:
+      - id: ROOM-1
+        attributes:
+          office_id: OFF-1
+
+  - name: Booking
+    routes:
+      read: /api/bookings/{id}
+      list: /api/bookings
+      create: /api/bookings
+      delete: /api/bookings/{id}
+    instances:
+      - id: BKG-1
+        attributes:
+          office_id: OFF-1
+          booked_by: bea
+      - id: BKG-3
+        attributes:
+          office_id: OFF-2
+          booked_by: oscar

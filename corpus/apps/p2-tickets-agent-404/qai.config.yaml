@@ -1,0 +1,49 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: requester
+    auth:
+      kind: bearer
+      tokenEnv: TICKETS404_RAE_TOKEN
+    attributes:
+      user_id: rae
+
+  - id: otherRequester
+    auth:
+      kind: bearer
+      tokenEnv: TICKETS404_RAVI_TOKEN
+    attributes:
+      user_id: ravi
+
+  - id: agent
+    auth:
+      kind: bearer
+      tokenEnv: TICKETS404_ADA_TOKEN
+    attributes:
+      user_id: ada
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+# The agent is the only actor who can read every ticket, which is what a state read
+# after an action needs if it is not to report a scoping rule as a state fact.
+stateActor: agent
+
+resources:
+  - name: Ticket
+    routes:
+      read: /api/tickets/{id}
+      list: /api/tickets
+      update: /api/tickets/{id}
+    instances:
+      - id: T-100
+        attributes:
+          opened_by: rae
+      - id: T-300
+        attributes:
+          opened_by: ravi

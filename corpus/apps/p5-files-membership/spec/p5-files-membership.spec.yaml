@@ -63,7 +63,7 @@ requirements:
         mode: deterministic
         given: 'files in two projects'
         when: 'actor nonMember lists File'
-        then: 'every row has field project_id equal to actor.project_id'
+        then: 'every File has project_id equal to actor.project_id'
 
   - id: REQ-003
     statement: 'A directory listing never includes the contents of a file'
@@ -109,4 +109,4 @@ requirements:
         mode: deterministic
         given: 'a file in the caller project'
         when: 'actor member reads File FILE-1'
-        then: 'status is 200 and body has field File.name'
+        then: 'status is 200 and body contains field File.name'

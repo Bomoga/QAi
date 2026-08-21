@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-21T03:05:00Z
-Current stage: S8, corpus run, branch chore/s8-corpus
-Next task: S8.3, more applications, then S8.5 again
+Updated: 2026-08-21T13:40:00Z
+Current stage: S8, corpus run, branch fix/s8-structural-false-positives
+Next task: S8 is complete. Open the pull request and stop.
 
 ## S0. Skeleton
 
@@ -417,14 +417,18 @@ every other stage does.
 - [x] S8.1 corpus layout, and the runner that executes the tool over every application
   (commit 3902e82)
 - [x] S8.2 the findings ledger and the per-check false positive rate (commit 09d19dd)
-- [~] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
-  (3 in commit 6fc7c32, 3 more in the commit backfilled below; the stage wants twenty
-  to fifty, so this is six of them)
+- [x] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
+  (3 in 6fc7c32, 3 in b787a67, 4 in ddf4154, 5 in e2eebce, 5 in 08218f2, with the criteria
+  correction at 1d863f6). **Twenty applications**, which is the lower bound 06-TESTING.md
+  names. Thirteen intended correct, seven intended broken.
 - [x] S8.4 run the tool over the corpus and record every finding (commit e0f18a9)
-- [~] S8.5 manually review every finding as true positive, false positive, or unclear
-  (all 19 findings across six applications reviewed, nothing outstanding)
-- [ ] S8.6 compute the rates, and disable any check above five percent
-- [ ] S8.7 the written summary and the aggregate
+- [x] S8.5 manually review every finding as true positive, false positive, or unclear
+  (all 38 findings across twenty applications reviewed, nothing outstanding; 0ac7798,
+  afe5afb, and the commit backfilled below)
+- [x] S8.6 compute the rates, and disable any check above five percent (commits c00089f,
+  795e540, e235f88, ea3f7fb). **No check was disabled, because none needed to be.** The
+  three causes were fixed and structural came back at 0.0%.
+- [x] S8.7 the written summary and the aggregate, in `corpus/RESULTS.md`
 - Exit criterion: a results table with per-application findings, a false positive rate computed by manual review of every finding, and a written summary. Any check with a false positive rate above five percent is disabled before the demo, per invariant I2.
 - Started 2026-08-21 on the human's instruction, immediately after S7 merged. Branch
   `chore/s8-corpus`, cut from `dev` at `8df47a1`. `chore/` rather than `feat/` because
@@ -437,17 +441,102 @@ every other stage does.
   consenting targets only. The first, applications generated for this purpose from a
   fixed prompt set, needs nobody's permission and is the stated preference. The corpus is
   built that way, and `corpus/README.md` says so where a reader will find it.
-- **Result over six applications, 19 findings, every one reviewed.** Access checks 0%
-  false positive over 3 judged, behavioral 0% over 5, **structural 36.4% over 11**,
-  overall 21.1%. Still provisional: the stage wants twenty to fifty applications.
-  **Every false positive is in the structural diff and none is in a verdict**, which held
-  across both batches and is the single most useful thing the corpus has said so far.
-- **Three correct applications produced no failed check at all.** Enforcement in a
-  middleware, in a query filter, and through a membership lookup; refusals as 404, 404,
-  and 403; bearer tokens, a session cookie, and an identity header. The access and
-  behavioral checks did not fire once on any of them, which is what a 0% rate has to mean
-  before it means anything.
-- **Three distinct causes, all fixable, none of them inherent to the check.**
+
+### S8 summary
+
+**Twenty applications, 38 findings, every one reviewed by hand, 0.0% false positive rate
+in every check family.** Access 0.0% over 4 judged, behavioral 0.0% over 12, structural
+0.0% over 22. Nothing unreviewed, nothing unclear, and no check disabled, because none was
+above the five percent invariant I2 sets. `corpus/RESULTS.md` is the written result: the
+rate, the per application table, the aggregate, and the limits on the number.
+
+**No correct application produced a single failed check.** Thirteen of them, across four
+credential kinds, four enforcement styles, and four refusal shapes, and neither the access
+family nor the behavioral family fired once on any of them. The fourteen findings against
+correct applications are all structural and all benign: one route index per application at
+info, plus one undeclared field. That is what a 0.0% rate has to mean before it means
+anything.
+
+**The aggregate 06-TESTING.md asks to publish: five of twenty applications had at least
+one access rule specified and not enforced.** The tool reported two of the five through a
+failed access check, two more through a failed behavioral criterion with every access check
+passing, and **missed one entirely**. It did not claim the missed one was fine: REQ-003 on
+`p3-notes-delete-open` came back unverified rather than verified, which is invariant I4
+being the difference between a miss and a lie.
+
+**The corpus found three recall problems and no precision problems**, which is the most
+useful thing it produced and is written up in full in `corpus/RESULTS.md`:
+
+1. A successful destructive request returning no resource fields is inconclusive rather
+   than a failure. Right for a read, and it costs a finding on a delete. Three sightings.
+2. A destructive check changes the application under the checks that follow it. On
+   `p4-bookings-open` an anonymous delete **passed** with a 404 because an earlier check
+   had already removed the record. The disposability gate worked; what is missing is a
+   reset between checks, and a corpus holding state in memory cannot supply one.
+3. Candidate selection picked a seeded instance the application does refuse while the
+   violation was on a different instance, twice. The behavioral criterion caught both.
+
+**Three limits on the number, stated as part of it rather than under it.** The corpus was
+generated by the same model that wrote the checker, so both sides share its habits. The
+review was performed by that same agent, and step four of the procedure exists to be
+independent, which makes this the largest single limit. Twenty is the lower bound rather
+than a large sample, and one contested classification would move the rate by 2.6 points.
+
+**Stage exit criterion met.** A results table with per application findings, a false
+positive rate computed by manual review of every finding, and a written summary, all in
+`corpus/RESULTS.md`, with the ledger behind it in `corpus/ledger.json`.
+
+### Along the way
+
+- **Ten applications, 21 findings, every one reviewed, 0.0% everywhere.** Access 0.0% over
+  3 judged, behavioral 0.0% over 6, structural 0.0% over 12, overall 0.0% over 21, with
+  four earlier reviews held aside as findings the tool no longer produces. Seven of the
+  ten applications are intended correct and three are intended broken. Still provisional:
+  the stage wants twenty to fifty and this is ten.
+- **The corpus was measuring less than it looked like it was, and nothing said so.** Five
+  of the first six applications carried an acceptance criterion written `every row has
+  field X equal to actor.Y` or `body has field E.f`, and the vocabulary is
+  `every <Entity> has <field> equal to` and `body contains field <Entity>.<field>`. Those
+  criteria were never planned and never ran. Every application still checked, still
+  exited 0, and said nothing, across two batches and two reviews. Corrected at `1d863f6`,
+  and p7 immediately caught a planted defect nobody had seen: the stock listing returns
+  every warehouse, and the finding names the two foreign rows by id.
+- **The reason it hid is that the runner printed an exit code and nothing else.** It
+  prints a coverage line per application now, with the reasons a requirement went
+  unverified, which is invariant I4 applied to the harness rather than to the report. The
+  M5.15 note said the same thing about `check-ledger.ts` printing `1 not` and throwing
+  the reasons away. The same mistake, in a second place, two stages later.
+- **The two structural field findings that are right are both the observed side.**
+  `p6-messages-dm-leak` reports `Message.participants` and `p4-bookings-cookie` reports
+  `Booking.cancelled`, each a field the application returns and the spec never declares.
+  That is the half S8.6 deliberately left alone, and it is the half that has been right
+  every time.
+- **A spec limit found while writing the corpus, recorded rather than worked around.** P6
+  says sending a message needs membership of that channel. An access rule names an actor,
+  an action, and a resource, with nowhere to name which channel, so the channel scoped
+  half of that sentence cannot be written as a rule. `p6-messages-strict` states it as a
+  requirement carrying no check and takes the `no-checks-defined` coverage gap, rather
+  than narrowing it into a claim the prompt did not make.
+- **S8.6 finished with nothing disabled, and that is the honest outcome.** The three
+  causes below were fixed in `packages/core/src/diff/spec-observation.ts`, the corpus was
+  re-run against the rebuilt tool, and the four false positives are gone. Six
+  applications, **15 findings, every one reviewed, and 0 new findings arrived**, which is
+  what says the fix removed exactly what it should and introduced nothing. Access 0.0%
+  over 3 judged, behavioral 0.0% over 5, **structural 0.0% over 7**, overall 0.0% over 15.
+  No check was disabled because none needed to be, and no mechanism to disable one was
+  invented, since there is no flag for it and adding one would change M8's command table.
+- **The rate had to be taught to notice a repair before it could report one.** A review
+  the ledger holds for a finding the latest run no longer produces was still counted, so
+  fixing the cause of a false positive removed the finding and left the entry in the
+  denominator. The number could not have moved. Such an entry is now marked `absent`,
+  kept in the ledger, and excluded from the rate, with the count printed beside it so a
+  narrowed denominator is visible. Four reviews are held aside that way.
+- **The one structural field finding that was right survived.** `p6`'s
+  `Message.participants` is returned and the spec declares no such field, which is an
+  observed field rather than an absent one, and the fix deliberately leaves the observed
+  side alone. A fix that had silenced it would have been the wrong fix passing the test.
+- **Three distinct causes, all fixable, none of them inherent to the check.** All three
+  are now fixed at `c00089f`.
   1. A field marked `sensitive: true` that the application correctly never returns is
      reported as specified and not observed. The spec says the field must not appear and
      the tool treats its absence as a disagreement.
@@ -459,6 +548,16 @@ every other stage does.
      cover it. `GET /api/stock` fires and `GET /api/invoices` does not, because the name
      matching relates invoices to Invoice and cannot relate stock to StockLine. The most
      damaging of the three, because medium is confident enough to be believed.
+- **Result over six applications, 19 findings, every one reviewed.** Access checks 0%
+  false positive over 3 judged, behavioral 0% over 5, **structural 36.4% over 11**,
+  overall 21.1%. Still provisional: the stage wants twenty to fifty applications.
+  **Every false positive is in the structural diff and none is in a verdict**, which held
+  across both batches and is the single most useful thing the corpus has said so far.
+- **Three correct applications produced no failed check at all.** Enforcement in a
+  middleware, in a query filter, and through a membership lookup; refusals as 404, 404,
+  and 403; bearer tokens, a session cookie, and an identity header. The access and
+  behavioral checks did not fire once on any of them, which is what a 0% rate has to mean
+  before it means anything.
 - **Three more observations, none of them false positives, all worth acting on.**
   1. On `p6-messages-dm-leak` the list access check came back **inconclusive** rather than
      guessing: "ownership of the returned rows could not be established from the rule
@@ -493,6 +592,80 @@ every other stage does.
 - [ ] not started
 
 ## Notes carried forward
+
+- **S8: the corpus found three recall problems in the tool and no precision problems.**
+  They are written up in `corpus/RESULTS.md` and are the most valuable thing the stage
+  produced. A successful destructive request returning no resource fields is inconclusive
+  rather than a failure, which is right for a read and costs a finding on a delete. A
+  destructive check changes the application under the checks that follow it, and on one
+  application that turned an unenforced rule into a **pass**, because the record the later
+  check asked about had already been deleted by the earlier one. Candidate selection picked
+  a seeded instance the application does refuse while the violation sat on a different
+  instance, twice. None of these moves the false positive rate and all three are worth a
+  human's decision.
+- **S8: the strongest evidence the corpus produced is negative.** Thirteen applications
+  that do what their specs say produced no failed check at all, across four credential
+  kinds, four enforcement styles, and four refusal shapes. A 0.0% false positive rate over
+  a corpus that never exercised a correct application would mean nothing; this one did,
+  thirteen times.
+- **S8: writing the corpus found two limits in the spec language, both recorded rather than
+  worked around.** An access rule names an actor, an action, and a resource, with nowhere
+  to name which channel, so P6's "sending needs membership of that channel" is not
+  expressible and `p6-messages-strict` takes the coverage gap instead. And a spec for a
+  destructive defect has to state its remaining requirements over something the earlier
+  check did not consume, which is why `p3-notes-delete-open` states its allow rule over the
+  listing rather than over a record.
+- **S8.6: the step said to disable any check above five percent and the right answer was
+  to fix it.** Structural sat at 36.4%. Disabling the family would have removed D5, the
+  endpoint nobody specified, and D6, the entity nobody built, which are two of the
+  product's sharpest findings, in exchange for a better number. Every one of the four
+  false positives had a specific cause and all three causes lived in one file. Recorded
+  here because the temptation is structural: the metric is easier to move than the code.
+- **S8.6 cause 1, a field the spec forbids reported for not appearing.** `sensitive: true`
+  means the field must never be in a response, redaction reads that same list, and the
+  diff was treating the application's compliance as a disagreement. It fired on both
+  applications that have such a field. Only `specifiedNotObserved` is filtered; a
+  sensitive field that was observed is a different fact and is left alone.
+- **S8.6 cause 2, absence of evidence reported as evidence of absence.** A declared field
+  is reported missing only when the observed field list came from a schema. An inferred
+  entity's fields are whatever one response happened to carry, so a field the crawl never
+  requested says nothing about the application. M4's Do Not already said not to report an
+  inferred entity as though it came from a schema; this is the other half of that rule.
+  The M5.8-pre1 note predicted this exact failure and it still took the corpus to find it.
+- **S8.6 cause 3, and it was the damaging one.** `observedNotSpecified` decided an
+  endpoint was undeclared when no path segment named a spec entity, so `GET /api/stock`
+  fired and `GET /api/invoices` did not, purely because name matching relates `invoices`
+  to `Invoice` and cannot relate `stock` to `StockLine`. Reported at **medium**, which is
+  confident enough to be believed. `diffSpecObservation` now takes the configured
+  resources as an optional third argument, the same shape as `TextOptions.observation` at
+  M7.3 rather than a contract change, and an endpoint a configured route maps to a
+  specified entity is accounted for. The resource has to name an entity some requirement
+  references, which is the same definition of specified the segment rule already used.
+- **S8.6: the trap in cause 3 was proved rather than assumed.** `/api/debug/state` is a
+  configured route for nothing, and there is now an integration assertion that runs the
+  fixture with the defects on, passes the repository's own `qai.config.yaml` resources
+  the way `check` does, and confirms D5 still fires at medium while the invoice list
+  stays accounted for. Two more breaks pin the guards: dropping the requirement filter
+  lets a configured route for an unspecified entity account for an endpoint, and matching
+  on the presence of any configured route at all silences D5.
+- **S8.6: the goldens moved, once, and the diff was read.** The fixed golden lost its one
+  field mismatch, `Invoice.notes`, which is the sensitive field the repaired ledger
+  withholds and is cause 1 exactly. Captured against a freshly started ledger, one
+  configuration at a time, per the M7.7 rule about state drift. The defective golden came
+  back byte identical, which is the confirmation that the configured routes changed
+  nothing for a target whose paths already name their entity.
+- **S8.6: `identityKey` was split so parameter erasure has one implementation.**
+  `pathIdentity` is the path half and `identityKey` is it plus a method. The diff compares
+  a configured `/api/stock/{id}` against a crawled `/api/stock/:id`, which is the same
+  question the merge asks, and two answers to it would eventually disagree.
+- **S8.6, the measurement defect found on the way: a rate that could not notice a
+  repair.** `mergeFindings` keeps a review whose finding has gone, correctly, and
+  `falsePositiveRates` was counting those kept reviews. Fixing the cause of a false
+  positive would therefore have left the rate exactly where it was. Entries the latest run
+  did not produce are marked and excluded now, and the count held aside is printed, since
+  a rate that quietly narrows its own denominator is the most flattering thing that file
+  could do. Worth generalizing: any measurement that never drops an observation cannot
+  measure an improvement.
 
 - **The third failure, fixed at `241fd8c` on the human's decision: GitHub rejected the
   SARIF.** With the two CI

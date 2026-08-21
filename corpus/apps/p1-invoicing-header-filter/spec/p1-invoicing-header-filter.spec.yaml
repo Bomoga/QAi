@@ -1,0 +1,145 @@
+specVersion: '0.1'
+name: 'Invoicing, per organization'
+
+# Written from prompt P1 in corpus/prompts.md, before the application existed. The second
+# application from that prompt, and the spec is written from the prompt again rather than
+# copied from the first, so the two do not inherit one author's reading.
+
+actors:
+  - id: member
+    description: 'Signed in, organization ACME'
+  - id: rival
+    description: 'Signed in, organization BYTE'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Invoice
+    fields:
+      - name: id
+        type: string
+      - name: org
+        type: string
+      - name: customer
+        type: string
+      - name: amount_cents
+        type: number
+      - name: private_note
+        type: string
+        sensitive: true
+
+requirements:
+  - id: REQ-001
+    statement: 'A user reads only invoices belonging to their own organization'
+    entities: [Invoice]
+    fields: [Invoice.org]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: rival
+        action: read
+        resource: Invoice
+        condition: 'Invoice.org != actor.org'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'an invoice belonging to another organization'
+        when: 'actor rival reads Invoice INV-A1'
+        then: 'status in 403, 404 and body omits field Invoice.amount_cents'
+
+  - id: REQ-002
+    statement: 'A listing returns only the caller organization invoices'
+    entities: [Invoice]
+    fields: [Invoice.org]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: rival
+        action: list
+        resource: Invoice
+        condition: 'Invoice.org != actor.org'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'invoices in two organizations'
+        when: 'actor rival lists Invoice'
+        then: 'every Invoice has org equal to actor.org'
+
+  - id: REQ-003
+    statement: 'Editing an invoice requires being signed in'
+    entities: [Invoice]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: anonymous
+        action: update
+        resource: Invoice
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'an existing invoice'
+        when: 'actor anonymous updates Invoice INV-A1'
+        then: 'status is 401 and record Invoice INV-A1 is unchanged'
+
+  - id: REQ-004
+    statement: 'A private note is never revealed by a listing'
+    entities: [Invoice]
+    fields: [Invoice.private_note]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an invoice carrying a private note'
+        when: 'actor member lists Invoice'
+        then: 'body omits field Invoice.private_note'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in reads no invoice'
+    entities: [Invoice]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: read
+        resource: Invoice
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'an existing invoice'
+        when: 'actor anonymous reads Invoice INV-A1'
+        then: 'status is 401'
+
+  - id: REQ-006
+    statement: 'A user reads an invoice belonging to their own organization'
+    entities: [Invoice]
+    fields: [Invoice.org]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: member
+        action: read
+        resource: Invoice
+        condition: 'Invoice.org == actor.org'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'an invoice belonging to the caller organization'
+        when: 'actor member reads Invoice INV-A1'
+        then: 'status is 200 and body contains field Invoice.amount_cents'
+
+  - id: REQ-007
+    statement: 'A signed in user can edit an invoice in their own organization'
+    entities: [Invoice]
+    tags: [access-control]
+    accessRules:
+      - id: AR-007-01
+        actor: member
+        action: update
+        resource: Invoice
+        condition: 'Invoice.org == actor.org'
+        effect: allow

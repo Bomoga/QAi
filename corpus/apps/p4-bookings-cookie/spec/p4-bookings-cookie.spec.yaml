@@ -1,0 +1,186 @@
+specVersion: '0.1'
+name: 'Room bookings'
+
+# Written from prompt P4 in corpus/prompts.md, before the application existed.
+
+actors:
+  - id: booker
+    description: 'Signed in, office OFF-1, made booking BKG-1'
+  - id: colleague
+    description: 'Signed in, office OFF-1, made no booking'
+  - id: outsider
+    description: 'Signed in, office OFF-2'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Room
+    fields:
+      - name: id
+        type: string
+      - name: name
+        type: string
+      - name: office_id
+        type: string
+      - name: free
+        type: boolean
+
+  - name: Booking
+    fields:
+      - name: id
+        type: string
+      - name: room_id
+        type: string
+      - name: office_id
+        type: string
+      - name: booked_by
+        type: string
+      - name: starts_at
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'Anyone signed in can see which rooms are free'
+    entities: [Room]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: colleague
+        action: list
+        resource: Room
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'rooms in the caller office'
+        when: 'actor colleague lists Room'
+        then: 'status is 200'
+
+  - id: REQ-002
+    statement: 'A caller who is not signed in cannot see rooms'
+    entities: [Room]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: anonymous
+        action: list
+        resource: Room
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'a caller presenting no session'
+        when: 'actor anonymous lists Room'
+        then: 'status is 401'
+
+  - id: REQ-003
+    statement: 'A booking is cancelled only by the person who made it'
+    entities: [Booking]
+    fields: [Booking.booked_by]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: colleague
+        action: delete
+        resource: Booking
+        condition: 'Booking.booked_by != actor.user_id'
+        effect: deny
+      # The other half of the same sentence: only the person who made it, and that
+      # person can. A rule stating one half would leave a cancellation that refuses
+      # everybody looking correct.
+      - id: AR-003-02
+        actor: booker
+        action: delete
+        resource: Booking
+        condition: 'Booking.booked_by == actor.user_id'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a booking made by somebody else'
+        when: 'actor colleague deletes Booking BKG-1'
+        then: 'status in 403, 404 and record Booking BKG-1 is unchanged'
+
+  - id: REQ-004
+    statement: 'A caller who is not signed in cannot cancel a booking'
+    entities: [Booking]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: delete
+        resource: Booking
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an existing booking'
+        when: 'actor anonymous deletes Booking BKG-1'
+        then: 'status is 401 and record Booking BKG-1 is unchanged'
+
+  - id: REQ-005
+    statement: 'Booking a room requires being signed in'
+    entities: [Booking]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: create
+        resource: Booking
+        effect: deny
+
+  - id: REQ-006
+    statement: 'Who booked what is visible to everyone in the same office'
+    entities: [Booking]
+    fields: [Booking.office_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: colleague
+        action: list
+        resource: Booking
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'a booking made by a colleague in the same office'
+        when: 'actor colleague lists Booking'
+        then: 'status is 200'
+
+  - id: REQ-007
+    statement: 'A booking in another office is not visible'
+    entities: [Booking]
+    fields: [Booking.office_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-007-01
+        actor: outsider
+        action: list
+        resource: Booking
+        condition: 'Booking.office_id != actor.office_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-007-01
+        mode: deterministic
+        given: 'bookings in two offices'
+        when: 'actor outsider lists Booking'
+        then: 'every Booking has office_id equal to actor.office_id'
+
+  - id: REQ-008
+    statement: 'A booking in another office cannot be read directly'
+    entities: [Booking]
+    fields: [Booking.office_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-008-01
+        actor: outsider
+        action: read
+        resource: Booking
+        condition: 'Booking.office_id != actor.office_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-008-01
+        mode: deterministic
+        given: 'a booking in another office'
+        when: 'actor outsider reads Booking BKG-1'
+        then: 'status in 403, 404 and body omits field Booking.booked_by'

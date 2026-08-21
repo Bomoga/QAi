@@ -1,3 +1,5 @@
+import type { RunResult } from '../../packages/core/src/index.ts';
+
 /**
  * What an exit code from `qai check` means to a corpus run.
  *
@@ -35,4 +37,24 @@ export function classifyCheckExit(code: number, stderr = ''): CheckOutcome {
     kind: 'check-failed',
     reason: detail.length > 0 ? `qai check exited ${code}: ${detail}` : `qai check exited ${code}`,
   };
+}
+
+/**
+ * What one run actually covered, in a line, printed beside its exit code.
+ *
+ * An application whose acceptance criteria the vocabulary cannot read still checks,
+ * still exits 0, and still writes a result. Nothing the runner printed said so, and five
+ * of the first six corpus applications carried a criterion that never ran because of it,
+ * across two batches and two reviews. The findings were reviewed and the coverage behind
+ * them was not, which made the corpus look larger than it was.
+ *
+ * So coverage is printed for every application, with the reasons, since invariant I4
+ * says a requirement nobody could check is a first class result rather than an absence.
+ */
+export function describeCoverage(result: RunResult): string {
+  const { total, verified, failed, unverified } = result.summary.requirements;
+  const reasons = [...new Set(result.unverifiedReasons.map((one) => one.reason))].sort();
+  const why = reasons.length === 0 ? '' : `, unverified for ${reasons.join(', ')}`;
+
+  return `${verified} verified, ${failed} failed, ${unverified} unverified of ${total} requirement(s)${why}`;
 }

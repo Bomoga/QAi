@@ -62,7 +62,7 @@ requirements:
         mode: deterministic
         given: 'tickets opened by two requesters'
         when: 'actor otherRequester lists Ticket'
-        then: 'every row has field requester_id equal to actor.user_id'
+        then: 'every Ticket has requester_id equal to actor.user_id'
 
   - id: REQ-003
     statement: 'An agent sees every ticket'
@@ -79,7 +79,7 @@ requirements:
         mode: deterministic
         given: 'a ticket opened by a requester'
         when: 'actor agent reads Ticket TCK-1'
-        then: 'status is 200 and body has field Ticket.subject'
+        then: 'status is 200 and body contains field Ticket.subject'
 
   - id: REQ-004
     statement: 'A caller who is not signed in sees no ticket'

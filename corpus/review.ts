@@ -99,15 +99,24 @@ export function reviewCorpus(): number {
   }
 
   const rates = falsePositiveRates(ledger);
-  const waiting = ledger.entries.filter((entry) => entry.classification === 'unreviewed');
+  const waiting = ledger.entries.filter(
+    (entry) => entry.classification === 'unreviewed' && entry.absent !== true,
+  );
 
-  log('\nFalse positive rate');
+  log('\nFalse positive rate, over the findings this run produced');
+  if (rates.heldAside > 0) {
+    log(`  ${rates.heldAside} reviewed finding(s) held aside, kept in the ledger and not counted`);
+  }
   log(describeRate('overall', rates.overall));
   for (const one of rates.byType) log(describeRate(`type ${one.type}`, one.rate));
   for (const one of rates.byRule) log(describeRate(`rule ${one.ruleId}`, one.rate));
 
   if (rates.overThreshold.length > 0) {
-    log(`\nAbove five percent, and disabled before the demo per invariant I2:`);
+    // Named, not acted on. Invariant I2 says a check that fires wrongly this often does
+    // not ship, and the answer is to fix the cause or to say that it cannot be fixed.
+    // There is no flag that disables a check, and adding one would be a change to the
+    // command surface rather than a repair.
+    log(`\nAbove five percent, which invariant I2 says has to be fixed or reported:`);
     for (const name of rates.overThreshold) log(`  ${name}`);
   }
 
