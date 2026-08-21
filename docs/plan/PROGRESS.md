@@ -2,7 +2,7 @@
 
 Updated: 2026-08-20T21:15:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: none, S7 is open as PR #12 and waiting on review
+Next task: none, S7 is open as PR #12, rebased onto dev, waiting on review
 
 ## S0. Skeleton
 
@@ -318,6 +318,7 @@ Surprises worth recording:
   The criterion was demonstrated against the real path and both halves hold.
 
 - Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`.
+- M7 and M8 merged into `dev` on 2026-08-20, as PRs #10 and #11 in that order.
 - M7 finished 2026-08-18 and opened as PR #10, eleven commits, unmerged. `feat/m8-cli-ci` is cut from `feat/m7-report` rather than from `dev`, because M8 imports emitters that do not exist on `dev` until #10 merges. Rebase onto `dev` once it does.
 
 ## S7. Store and delta (M6)
@@ -346,13 +347,17 @@ Surprises worth recording:
   endpoints appeared. `qai report RUN-20260820-210052` re-renders the earlier run and
   exits 0. Full output is in the pull request.
 - Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
-- Pushed 2026-08-20 and opened as PR #12 into `dev`, 48 commits, unmerged. The same push
-  carried `a50d323` to the remote, which is what let `feat/m8-cli-ci` fast-forward onto
-  its held-back tip, so PR #11 is complete for the first time since S6.
-- Not rebased onto `dev` at the stage boundary, deliberately. PRs #10 and #11 were still
-  open on 2026-08-20, so `assembleRun` and the whole command surface are still absent
-  from `dev` and a rebase would produce a branch that does not build. The stack collapses
-  when those two merge, and that is the moment to do it.
+- Pushed 2026-08-20 and opened as PR #12 into `dev`. The same push carried `a50d323` to
+  the remote, which is what let `feat/m8-cli-ci` fast-forward onto its held-back tip, so
+  PR #11 was complete for the first time since S6.
+- **The three deep stack is gone.** On the human's instruction PR #10 merged at `ce9a354`
+  and PR #11 at `37bf35e`, both as merge commits rather than squashes, so the per-task
+  history and the bisect survive. `feat/m6-store-delta` then rebased onto `dev` with no
+  conflict: 20 commits replayed, and `git diff` against the pre-rebase head is empty, so
+  the content is unchanged and only the base moved. Verified again afterwards rather than
+  assumed, since a clean rebase is not a working tree: typecheck, lint, format, and 1562
+  tests across 79 files all pass. Force-pushed with `--force-with-lease`. PR #12 is now
+  20 commits over 40 files and is the only pull request open.
 
 ### S7 summary
 
@@ -1823,6 +1828,15 @@ Deferred, with reasons rather than assumptions:
   this private repository, so `upload-sarif` returns 403 and no finding reaches a pull
   request whatever a run found. That is the last piece of the S6 exit criterion, and the
   workflow that would demonstrate it is now on the remote.
+
+  It is also the best explanation for the one red check on every branch carrying
+  `qai.yml`. PR #10 had no such file and read `CLEAN`; PRs #11 and #12 both carry it and
+  both read `UNSTABLE`. The workflow's last step inverts polarity deliberately, so the
+  fixture's expected findings are green, and `ci.yml` passes on a tree that is verified
+  green locally, which leaves the upload. That is an inference and not a reading: this
+  token has no Checks or Actions permission, so `gh pr checks`, the check-runs endpoint,
+  the commit status endpoint, and the workflow runs endpoint all return 403. Somebody
+  with a browser can settle it in one look.
 
 - The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the leftover
   ledger, and confirmed the mid-session HEAD move was their own accident rather than a
