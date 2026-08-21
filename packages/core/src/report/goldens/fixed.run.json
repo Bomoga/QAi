@@ -1,0 +1,586 @@
+{
+  "checks": [
+    {
+      "checkId": "CHK-05063657a028",
+      "detail": "PATCH /api/invoices/INV-1001 as actor owner returned no route for listing AuditLog, so its records were not counted, so AC-006-01 could not be decided.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000029"
+      ],
+      "requirementId": "REQ-006",
+      "ruleId": "AC-006-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-006-01",
+      "type": "behavioral",
+      "verdict": "inconclusive"
+    },
+    {
+      "checkId": "CHK-07c43a837bcf",
+      "detail": "GET /health as actor anonymous returned status 200, body.status was \"ok\".",
+      "deterministic": true,
+      "evidence": [
+        "EV-000025"
+      ],
+      "requirementId": "REQ-015",
+      "ruleId": "AC-015-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-015-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-14bdef3bffd2",
+      "detail": "AC-005-02 was not assessed: Playwright is not installed, so no page could be opened. Install the optional dependency to enable fuzzy criteria: pnpm add -D playwright && pnpm exec playwright install chromium",
+      "deterministic": false,
+      "evidence": [],
+      "requirementId": "REQ-005",
+      "ruleId": "AC-005-02",
+      "severity": "info",
+      "title": "Acceptance criterion AC-005-02",
+      "type": "behavioral",
+      "verdict": "inconclusive"
+    },
+    {
+      "checkId": "CHK-14f45d45bc1c",
+      "detail": "GET /api/invoices/INV-1001 as actor owner returned 200",
+      "deterministic": true,
+      "evidence": [
+        "EV-000007"
+      ],
+      "requirementId": "REQ-008",
+      "ruleId": "AR-008-01",
+      "severity": "info",
+      "title": "Invoice reachable by actor owner, as the spec allows",
+      "type": "access",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-17e173651a63",
+      "detail": "PATCH /api/invoices/INV-1001 as actor outsider returned status 404, Invoice INV-1001 unchanged across the action.",
+      "deterministic": true,
+      "evidence": [
+        "EV-00002b",
+        "EV-00002a",
+        "EV-00002c"
+      ],
+      "requirementId": "REQ-009",
+      "ruleId": "AC-009-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-009-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-1cf5a4269968",
+      "detail": "GET /api/invoices/INV-1001 as actor outsider returned status 404, no Invoice.id in the body, no Invoice.org_id in the body, no Invoice.total_cents in the body, no Invoice.notes in the body.",
+      "deterministic": true,
+      "evidence": [
+        "EV-00000d"
+      ],
+      "requirementId": "REQ-001",
+      "ruleId": "AC-001-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-001-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-1e0806c8ac34",
+      "detail": "PATCH /api/invoices/INV-1001 as actor outsider returned 404 with no Invoice fields in the body",
+      "deterministic": true,
+      "evidence": [
+        "EV-00000c"
+      ],
+      "requirementId": "REQ-009",
+      "ruleId": "AR-009-01",
+      "severity": "info",
+      "title": "Invoice refused to actor outsider",
+      "type": "access",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-302a2dd95e9a",
+      "detail": "GET /api/debug/state as actor anonymous returned status 404.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000010"
+      ],
+      "requirementId": "REQ-005",
+      "ruleId": "AC-005-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-005-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-3155462937c1",
+      "detail": "DELETE /api/invoices/INV-1001 as actor anonymous returned 404 with no Invoice fields in the body",
+      "deterministic": true,
+      "evidence": [
+        "EV-00000b"
+      ],
+      "requirementId": "REQ-003",
+      "ruleId": "AR-003-02",
+      "severity": "info",
+      "title": "Invoice refused to actor anonymous",
+      "type": "access",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-3f746791b49a",
+      "detail": "GET /api/invoices/INV-1001 as actor owner returned no User.token in the body.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000024"
+      ],
+      "requirementId": "REQ-014",
+      "ruleId": "AC-014-02",
+      "severity": "info",
+      "title": "Acceptance criterion AC-014-02",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-415d04d3dc1c",
+      "detail": "PATCH /api/invoices/INV-1001 as actor anonymous returned 401 with no Invoice fields in the body",
+      "deterministic": true,
+      "evidence": [
+        "EV-00000a"
+      ],
+      "requirementId": "REQ-003",
+      "ruleId": "AR-003-01",
+      "severity": "info",
+      "title": "Invoice refused to actor anonymous",
+      "type": "access",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-4c99bb2ee03f",
+      "detail": "GET /api/invoices/INV-1001 as actor owner returned status 200, Invoice.id in the body.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000011"
+      ],
+      "requirementId": "REQ-008",
+      "ruleId": "AC-008-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-008-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-5399cdc19d64",
+      "detail": "PATCH /api/invoices/INV-1001 as actor anonymous returned status 401, Invoice INV-1001 unchanged across the action.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000027",
+        "EV-000026",
+        "EV-000028"
+      ],
+      "requirementId": "REQ-003",
+      "ruleId": "AC-003-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-003-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-5b49e7971acf",
+      "detail": "GET /api/invoices as actor outsider returned 1 Invoice row(s), every one with org_id equal to actor.org_id, which is \"org-2\".",
+      "deterministic": true,
+      "evidence": [
+        "EV-00000e"
+      ],
+      "requirementId": "REQ-002",
+      "ruleId": "AC-002-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-002-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-5f87619a4f93",
+      "detail": "GET /api/invoices/INV-1001 as actor anonymous returned status 401.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000012"
+      ],
+      "requirementId": "REQ-010",
+      "ruleId": "AC-010-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-010-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-6308626b3c2d",
+      "detail": "GET /api/invoices as actor outsider returned 200 with 1 row(s), none of which the rule denies",
+      "deterministic": true,
+      "evidence": [
+        "EV-000006"
+      ],
+      "requirementId": "REQ-002",
+      "ruleId": "AR-002-01",
+      "severity": "info",
+      "title": "Invoice list is scoped to actor outsider",
+      "type": "access",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-6da4801c4e6a",
+      "detail": "GET /api/invoices as actor owner returned no User.token in 12 reading(s) across 3 observed endpoint(s) as anonymous, impostor, outsider, owner.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000017",
+        "EV-000018",
+        "EV-000019",
+        "EV-00001a",
+        "EV-00001b",
+        "EV-00001c",
+        "EV-00001d",
+        "EV-00001e",
+        "EV-00001f",
+        "EV-000020",
+        "EV-000021",
+        "EV-000022",
+        "EV-000023"
+      ],
+      "requirementId": "REQ-014",
+      "ruleId": "AC-014-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-014-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-7491611536d6",
+      "detail": "GET /api/invoices/INV-1001 as actor outsider returned status 404, the same as GET /api/invoices/INV-9999.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000015",
+        "EV-000016"
+      ],
+      "requirementId": "REQ-013",
+      "ruleId": "AC-013-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-013-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-95318a856987",
+      "detail": "GET /api/invoices as actor owner returned no Invoice.notes in the body.",
+      "deterministic": true,
+      "evidence": [
+        "EV-00000f"
+      ],
+      "requirementId": "REQ-004",
+      "ruleId": "AC-004-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-004-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-a8b1bf141fdb",
+      "detail": "GET /api/invoices/INV-9999 as actor owner returned status 404.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000014"
+      ],
+      "requirementId": "REQ-012",
+      "ruleId": "AC-012-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-012-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-a98b5e61081e",
+      "detail": "GET /api/invoices/INV-1001 as actor anonymous returned 401 with no Invoice fields in the body",
+      "deterministic": true,
+      "evidence": [
+        "EV-000008"
+      ],
+      "requirementId": "REQ-010",
+      "ruleId": "AR-010-01",
+      "severity": "info",
+      "title": "Invoice refused to actor anonymous",
+      "type": "access",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-c11c6e418c61",
+      "detail": "GET /api/invoices/INV-1001 as actor impostor returned status 401.",
+      "deterministic": true,
+      "evidence": [
+        "EV-000013"
+      ],
+      "requirementId": "REQ-011",
+      "ruleId": "AC-011-01",
+      "severity": "info",
+      "title": "Acceptance criterion AC-011-01",
+      "type": "behavioral",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-d136069d5554",
+      "detail": "GET /api/invoices/INV-1001 as actor outsider returned 404 with no Invoice fields in the body",
+      "deterministic": true,
+      "evidence": [
+        "EV-000005"
+      ],
+      "requirementId": "REQ-001",
+      "ruleId": "AR-001-01",
+      "severity": "info",
+      "title": "Invoice refused to actor outsider",
+      "type": "access",
+      "verdict": "pass"
+    },
+    {
+      "checkId": "CHK-d5bd7d673829",
+      "detail": "GET /api/invoices/INV-1001 as actor impostor returned 401 with no Invoice fields in the body",
+      "deterministic": true,
+      "evidence": [
+        "EV-000009"
+      ],
+      "requirementId": "REQ-011",
+      "ruleId": "AR-011-01",
+      "severity": "info",
+      "title": "Invoice refused to actor impostor",
+      "type": "access",
+      "verdict": "pass"
+    }
+  ],
+  "finishedAt": "2026-01-01T00:00:30.000Z",
+  "observation": {
+    "ref": "OBS-golden-fixed"
+  },
+  "requirements": [
+    {
+      "checkIds": [
+        "CHK-1cf5a4269968",
+        "CHK-d136069d5554"
+      ],
+      "reason": "2 of 2 check(s) passed",
+      "requirementId": "REQ-001",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-5b49e7971acf",
+        "CHK-6308626b3c2d"
+      ],
+      "reason": "2 of 2 check(s) passed",
+      "requirementId": "REQ-002",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-3155462937c1",
+        "CHK-415d04d3dc1c",
+        "CHK-5399cdc19d64"
+      ],
+      "reason": "3 of 3 check(s) passed",
+      "requirementId": "REQ-003",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-95318a856987"
+      ],
+      "reason": "1 of 1 check(s) passed",
+      "requirementId": "REQ-004",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-14bdef3bffd2",
+        "CHK-302a2dd95e9a"
+      ],
+      "reason": "1 of 2 check(s) passed",
+      "requirementId": "REQ-005",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-05063657a028"
+      ],
+      "reason": "1 check(s) ran and none reached a verdict",
+      "requirementId": "REQ-006",
+      "verdict": "unverified"
+    },
+    {
+      "checkIds": [],
+      "reason": "no checks were defined for this requirement",
+      "requirementId": "REQ-007",
+      "verdict": "unverified"
+    },
+    {
+      "checkIds": [
+        "CHK-14f45d45bc1c",
+        "CHK-4c99bb2ee03f"
+      ],
+      "reason": "2 of 2 check(s) passed",
+      "requirementId": "REQ-008",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-17e173651a63",
+        "CHK-1e0806c8ac34"
+      ],
+      "reason": "2 of 2 check(s) passed",
+      "requirementId": "REQ-009",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-5f87619a4f93",
+        "CHK-a98b5e61081e"
+      ],
+      "reason": "2 of 2 check(s) passed",
+      "requirementId": "REQ-010",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-c11c6e418c61",
+        "CHK-d5bd7d673829"
+      ],
+      "reason": "2 of 2 check(s) passed",
+      "requirementId": "REQ-011",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-a8b1bf141fdb"
+      ],
+      "reason": "1 of 1 check(s) passed",
+      "requirementId": "REQ-012",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-7491611536d6"
+      ],
+      "reason": "1 of 1 check(s) passed",
+      "requirementId": "REQ-013",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-3f746791b49a",
+        "CHK-6da4801c4e6a"
+      ],
+      "reason": "2 of 2 check(s) passed",
+      "requirementId": "REQ-014",
+      "verdict": "verified"
+    },
+    {
+      "checkIds": [
+        "CHK-07c43a837bcf"
+      ],
+      "reason": "1 of 1 check(s) passed",
+      "requirementId": "REQ-015",
+      "verdict": "verified"
+    }
+  ],
+  "resultVersion": "0.1",
+  "runId": "RUN-golden-fixed",
+  "spec": {
+    "files": [
+      "fixtures/ledger/spec/ledger.spec.yaml"
+    ],
+    "hash": "sha256:fdc27c974cf91bef03f1a300ef18ca6ad8851abe52da48833ae93e91826a7d53",
+    "specVersion": "0.1"
+  },
+  "startedAt": "2026-01-01T00:00:00.000Z",
+  "structural": {
+    "fieldMismatches": [
+      {
+        "entity": "Invoice",
+        "observedNotSpecified": [],
+        "specifiedNotObserved": [
+          "notes"
+        ]
+      }
+    ],
+    "observedNotSpecified": [
+      {
+        "id": "GET /",
+        "kind": "endpoint",
+        "severity": "info"
+      },
+      {
+        "id": "GET /health",
+        "kind": "endpoint",
+        "severity": "info"
+      }
+    ],
+    "specifiedNotObserved": [
+      {
+        "kind": "entity",
+        "name": "Organization",
+        "requirementIds": [
+          "REQ-001",
+          "REQ-007"
+        ]
+      },
+      {
+        "kind": "entity",
+        "name": "User",
+        "requirementIds": [
+          "REQ-011",
+          "REQ-014"
+        ]
+      },
+      {
+        "kind": "entity",
+        "name": "AuditLog",
+        "requirementIds": [
+          "REQ-006"
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "checks": {
+      "fail": 0,
+      "inconclusive": 2,
+      "pass": 22,
+      "total": 24
+    },
+    "coverage": 0.8666666666666667,
+    "findingsBySeverity": {
+      "high": 0,
+      "info": 0,
+      "low": 0,
+      "medium": 0
+    },
+    "modelAssistedCheckCount": 1,
+    "requirements": {
+      "failed": 0,
+      "total": 15,
+      "unverified": 2,
+      "verified": 13
+    }
+  },
+  "target": {
+    "baseUrl": "http://127.0.0.1:3000",
+    "sourceRoot": "fixtures/ledger"
+  },
+  "toolVersion": "0.1.0",
+  "unverifiedReasons": [
+    {
+      "detail": "1 check(s) ran and none reached a verdict",
+      "reason": "check-error",
+      "requirementId": "REQ-006"
+    },
+    {
+      "detail": "no checks were defined for this requirement",
+      "reason": "no-checks-defined",
+      "requirementId": "REQ-007"
+    }
+  ]
+}

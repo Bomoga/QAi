@@ -20,10 +20,12 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "generate:schema": "node --experimental-strip-types scripts/generate-schema.ts",
-    "validate:fixture": "node --experimental-strip-types scripts/validate-fixture-spec.ts"
+    "validate:fixture": "node --experimental-strip-types scripts/validate-fixture-spec.ts",
+    "capture:goldens": "node --experimental-strip-types scripts/capture-golden-runs.ts"
   },
   "dependencies": {
     "fast-glob": "^3.3.3",
+    "picocolors": "^1.1.1",
     "undici": "^8.10.0",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"

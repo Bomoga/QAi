@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T05:00:00Z
-Current stage: S5 merged, and the follow-up merged with it. Nothing in progress
-Next task: S6, modules M7 and M8, when a human says to start it
+Updated: 2026-08-18T10:10:00Z
+Current stage: S6, module M7, branch feat/m7-report
+Next task: M8.1, on a new branch
 
 ## S0. Skeleton
 
@@ -245,7 +245,16 @@ Surprises worth recording:
 
 ## S6. Report and CI (M7, M8)
 
-- [ ] not started
+- [x] M7.1 assembleRun, the verdict rollup, and the closed reason set (commit 3683191)
+- [x] M7.2 renderJson with sorted, stable output (commit c55759a)
+- [x] M7.3 renderText in the section order the module gives (commit 2c7a182)
+- [x] M7.4 renderSarif, validated against the 2.1.0 schema (commit f406813)
+- [x] M7.5 renderJunit, inconclusive mapping to skipped (commit b0784a4)
+- [x] M7.6 computeExitCode with --fail-on and --fail-on-unverified (commit 66c9cc2)
+- [x] M7.7 golden RunResult files for both fixture configurations (capture command 14bb703,
+  goldens and render tests backfilled below)
+- Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
+- Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`. M8 gets its own branch per the one module per branch rule.
 
 ## S7. Store and delta (M6)
 
@@ -260,6 +269,256 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M7.7 done. Both goldens captured against a freshly started `fixtures/ledger`, one per
+  configuration. Defective: 15 requirements, 7 verified, 6 failed, 2 unverified, 24
+  checks, 13 pass, 9 fail, 2 inconclusive, 4 endpoints observed. Fixed: the same 15 and
+  24, 13 verified, 0 failed, 2 unverified, 22 pass, 3 endpoints observed. Coverage is 87%
+  either way, which is the point: fixing a defect is not coverage.
+- M7.7, the property that matters, proved rather than assumed: each golden was captured
+  twice from a freshly restarted ledger and the two files are byte identical. A capture
+  against a target that has already been run is not, because the run writes. `INV-1001`
+  goes from 125000 to 125003 in the defective configuration and to 125001 in the fixed
+  one, since one authenticated write still lands with D3 off. Restart between captures.
+- M7.7: that drift is exactly what made the pre-existing server unusable. It reported
+  125003, meaning one full run had already hit it, and a golden encoding that state would
+  not have reproduced from a fresh start.
+- M7.7: `packages/core/src/report/goldens/` is in `.prettierignore`. `renderJson` is the
+  format, the round trip test asserts the file byte for byte, and prettier collapses a
+  short array onto one line, so letting it rewrite them fails a test against a change
+  nobody made. This is the M1.7 `schema/` trap arriving a second time, and it was
+  predicted before it fired.
+- M7.7 proved by breaking it: changing the JSON indent to four failed both round trip
+  tests and nothing else; rendering an inconclusive check as a JUnit failure failed both
+  invariant I4 tests. Both goldens carry inconclusive checks, so neither direction of
+  that test can pass vacuously.
+- M7.7 observation for M5, not M7 to fix: every behavioral finding is titled
+  "Acceptance criterion AC-001-01" while every access finding states what happened. Read
+  side by side in a rendered report the difference is stark, and the title is the line a
+  reviewer sees first in a code scanning list.
+- M7.7 observation, and it is the M3.8 contract question arriving as predicted: an access
+  `detail` already ends with "Request: ... Evidence: ... Suggestion: ...", so the text
+  report prints an evidence reference the detail just gave. M3.8 recorded that a
+  suggested fix lives inside `detail` because `CheckResult` has no field for one, and
+  said a report wanting to render them separately should raise the contract question.
+  This is a report wanting exactly that. Sniffing the string from the emitter would be
+  worse than the duplication.
+- M7.7 observation: REQ-006 comes back `check-error`, which reads as though something
+  threw. Nothing did. AC-006-01 is inconclusive because D6 is the entity the spec
+  declares and the application never built, so there is nowhere to count records. The
+  closed set in 03-CONTRACTS.md has no member for that, and `assembleRun` falls back to
+  `check-error` whenever checks ran and none reached a verdict. Either the set needs a
+  member or the fallback needs a better default; both are contract questions.
+
+- M7.7 partial, and the reason it stopped is worth reading before anyone retries it. The
+  capture command exists, `pnpm --filter @qai/core capture:goldens <defective|fixed>`, and
+  it typechecks, lints, and formats. What it needs is a target in a known configuration,
+  and the machine has a `fixtures/ledger` on port 3000 that this session did not start,
+  running since 00:13 today, which is before this session began.
+- M7.7: that server cannot be used as it stands, and this is a fact rather than caution.
+  `INV-1001` reports `total_cents` 125003 where the seed in `fixtures/ledger/src/data.ts`
+  is 125000. M5.11 made an accepted write actually write, applying a fixed increment, so
+  three mutating checks have already landed on this process. A golden captured against it
+  would encode drifted state and would not reproduce from a fresh start, which is the one
+  property a golden has to have.
+- M7.7: the running server is otherwise in the defective configuration, established by
+  reading it rather than assuming. D1 on, a cross-organization read of `INV-1001` as
+  `outsider` returns 200. D2 and D4 on, the list as `outsider` returns the org-1 invoice
+  and carries `notes`. D5 on, `/api/debug/state` answers 200. D3 was deliberately not
+  probed, since probing it writes.
+- M7.7: capturing both goldens needs the ledger restarted twice, once per configuration,
+  which means stopping a process this session did not start. That is the human's call, so
+  the loop stopped here rather than killing it.
+- Worth flagging separately, and unrelated to the plan: HEAD moved from `feat/m7-report`
+  to `dev` partway through this session, between the M7.6 commit and the start of M7.7.
+  Nothing in this session ran a checkout. The reflog records it as
+  `checkout: moving from feat/m7-report to dev`, and the branch and all six commits were
+  intact, so nothing was lost. If a second session or tool is operating in this working
+  tree, that needs settling before more commits land, since committing to `dev` is
+  forbidden and a concurrent checkout could land one there.
+- M7.7: the capture pins `toolVersion`, `runId`, and both instants rather than reading
+  them, and uses `fixedDeps` for the clock and the identifier source. Without that every
+  capture differs in its timestamps and evidence ids and the file tests the calendar.
+- M7.7: nothing in the suite calls the capture command. 06-TESTING.md says to regenerate
+  goldens only with an explicit command whose diff a human reads, and a golden that
+  changed is a question rather than a chore.
+
+- M7.6: only 0 and 1 are computed here. 03-CONTRACTS.md gives 2 to an invalid spec or a
+  configuration error and 3 to an unreachable target or a fatal runtime error, and both
+  describe a run that did not happen or did not finish. A function handed a finished
+  RunResult is by construction in neither case, and a test sweeps the whole option space
+  asserting no other value is ever produced.
+- M7.6: nothing in the file exits, per rule R5. It returns a number and M8 applies it,
+  which is what keeps the rule structural rather than a convention somebody remembers.
+- M7.6: the threshold table is asserted as a four by four grid rather than as four
+  lookups. A comparator inverted in one direction can agree with itself across a handful
+  of single assertions; it cannot agree with the whole grid. Proved by breaking it:
+  flipping the comparison failed two tests including the grid.
+- M7.6: the unverified opt in reads `summary.requirements.unverified`, not the
+  inconclusive check tally. A requirement with one inconclusive check and one that passed
+  is verified and is not a coverage gap, so counting checks would fail a run that has no
+  gaps at all. A test states exactly that case.
+- M7.6: gaps are off by default and that is a product decision rather than a default
+  nobody chose. A requirement nobody could check is not a requirement that failed, and
+  turning gaps red by default makes the honest verdict the one people switch off.
+- M7.6: `--fail-on info` cannot turn a clean run red, because `findingsBySeverity` counts
+  failures only and a passing check carrying `info` was never a finding. That is the
+  M7.1 tally decision paying for itself in a second place.
+
+- M7.5: inconclusive maps to `skipped`, and the reason is worth stating rather than
+  remembering. A dashboard counts red and green and has no third column, so a check that
+  reached no verdict has to land in the one that means nobody knows. Reporting it as a
+  failure would also train the reader to ignore failures, which costs more than the gap
+  it hid. Proved by breaking it: disabling the branch failed three tests and nothing else.
+- M7.5: a requirement with no checks still gets a suite, holding one skipped case named
+  with its reason from `unverifiedReasons`. Emitting nothing drops the requirement out of
+  the dashboard, and a reader comparing two runs sees a requirement disappear rather than
+  a gap appear. Proved by breaking it: dropping the empty suite failed exactly one test.
+- M7.5: the test found a real gap rather than confirming the code. A model assisted check
+  that came back inconclusive was losing its label, because the failure path said
+  "Model assisted" and the skipped path only carried `detail`. A skipped case is exactly
+  where a reader asks why nobody knows, so it says so now.
+- M7.5: counts are computed from the cases that were emitted, not copied from `summary`.
+  Two sources for one number is how a report starts contradicting itself, and the root
+  totals are summed from the suites for the same reason.
+- M7.5: a check with no requirement id goes into an `unassigned` suite rather than being
+  dropped. A dropped check is a lost finding, and a structural result is the obvious case.
+- M7.5: the case name carries the check id as well as the rule id, because two actors
+  against one access rule are two checks sharing a rule id, per M3.1. A dashboard
+  tracking a case across runs needs the name to identify one check.
+- M7.5: `time` is on the root only, computed from the recorded instants rather than a
+  clock, per rule R6. Per-case timing is not recorded anywhere and writing zero for it
+  would claim a measurement nobody took.
+- M7.5: `errors` is written as zero rather than left off. Rule R4 turns a thrown check
+  into an inconclusive result, so nothing reaching this emitter is an error in the JUnit
+  sense, and an absent attribute reads as unknown where zero reads as a fact.
+- M7.5: XML escaping covers the five entities and strips the control bytes XML 1.0 cannot
+  represent. A raw byte in a captured detail would produce a document no parser reads,
+  which loses the whole report rather than one character of one message.
+- M7.5, the Windows escape trap for the third time this session: writing a regex over
+  control characters through a shell heredoc put literal control bytes into the source
+  file, and writing `split('
+')` the same way produced a real newline inside a string
+  literal and broke the parse. Both times the fix was to build the escape from `chr(92)`
+  or to use the file tools. This is now the single most expensive recurring mistake in
+  this repository.
+
+- M7.4, the honest state of "validates against the published schema": it validates
+  against `report/sarif-schema.ts`, a Zod transcription of the SARIF 2.1.0 required
+  property lists, closed enumerations, and property types, not against the published
+  JSON Schema. Running the real document needs a JSON Schema validator, none is approved,
+  and rule R9 forbids a test fetching one. The transcription is not decorative: changing
+  `version` to `2.1` failed eighteen tests. Recorded in the M7 Open questions with three
+  ways out, since adding a dependency is a human's call.
+- M7.4: SARIF results are failed checks plus the structural disagreements. The module
+  asks for one rule per check type and the contract has a `structural` type, so the rule
+  needs something to carry, and 01-PRODUCT.md calls those entries structural findings.
+  Without them D6, the entity the spec declares and the application never built, never
+  reaches the GitHub UI, which is the one surface a CI user reads. `observedNotSpecified`
+  brings its own severity; the other two take the constants M4.8 exported for exactly
+  this caller, which is that note's open item closed.
+- M7.4 deviation: the module says a location with no source names the endpoint.
+  `CheckResultRecord` has no endpoint field and the route lives inside `detail` as prose,
+  so a check names its rule and requirement instead. Parsing a path back out of a
+  sentence would be a guess in the one place a reader is told where to look. A structural
+  endpoint entry does carry an id and does name it.
+- M7.4: `partialFingerprints` carries the content-hashed check id. Without it GitHub
+  opens a new alert every run instead of tracking one, which turns a stable finding into
+  a stream of duplicates and is the failure that makes hand-rolled SARIF worth testing.
+- M7.4: `executionSuccessful` is true even when the run found things. Whether findings
+  exist is what `level` says, and conflating the two reports a working tool as broken.
+- M7.4: only a trailing colon and digits is read as a line number out of `locationRef`.
+  A Windows path carries a colon too, and slicing on the first one would point a reader
+  at a file whose name lost its drive letter.
+- M7.4: keys are written in order rather than sorted, unlike `renderJson`. `version` and
+  `$schema` leading the document is what every reader and every tool expects, arrays are
+  sorted before they are written, and no golden file depends on the alphabet here.
+- M7.4: the message is one part per line, title first, because a code scanning list shows
+  the leading line and the alert page shows the rest. Joined with a space, which is how
+  it was first written and how it read when printed, the title runs into the request
+  summary and neither is a sentence. Read by running it, not inferred from a green suite.
+- M7.4 repeat of a known Windows trap: a Python heredoc writing a JavaScript escape
+  turned `split('
+')` into a literal newline inside a string and the whole test file
+  failed to parse. Build the backslash from `chr(92)` or use the file tools. The notes
+  said this at M5 and it still cost a cycle.
+
+- M7.3 deviation, needs review: `TextOptions` carries an optional `Observation`. Section 2
+  of the report is entity and endpoint counts by origin and confidence, and RunResult
+  carries `observation.ref` and nothing else, so those counts are not derivable from the
+  argument the module's Public API hands this function. Putting them on RunResult is a
+  contract change and therefore a stop; taking the object the caller already holds is
+  not, and the emitter stays a pure function either way. If the intent was that RunResult
+  summarizes its own Observation, that is the contract question to raise, and the other
+  three emitters would want it too.
+- M7.3: with no Observation the section names the reference rather than reporting counts
+  of zero. Zero entities is a claim about the application; this is an absence of data
+  about it, and the two read identically once a number is printed. A run that recorded no
+  probe at all says so in a different sentence again.
+- M7.3: color is a parameter, never a detection. `createColors(enabled)` is used rather
+  than picocolors' default export, which sniffs the process: with the default, output
+  would depend on how the suite was launched, and rule R6 keeps core out of the
+  environment. Whether the destination is a TTY is M8's fact to establish and pass in. A
+  test asserts the colored render, stripped of escapes, is byte identical to the plain
+  one, so color stays decoration over one document rather than a second document.
+- M7.3: `picocolors` was added to `@qai/core`. It is named by the module and is on the
+  approved runtime list in 04-CONVENTIONS.md, so it is not a dependency stop.
+- M7.3: findings are failures only, sorted by severity then requirement id then check id.
+  A passing check carries `info`, so listing passes here would report a clean run as
+  having findings, the same mistake `tallyFindings` refuses to make in the summary.
+- M7.3: coverage is labeled coverage and the line says what it counts, "of requirements
+  with at least one check that reached a verdict". The label alone is what stops a reader
+  taking the number for a grade, and it is cheaper to say than to correct later.
+- M7.3 proved by breaking it, three ways, each failing exactly its own tests and nothing
+  else: relabeling coverage as a pass rate failed the two coverage tests; emptying the
+  unverified list failed the two invariant I4 tests; dropping the severity term from the
+  finding comparator failed the one ordering test.
+- M7.3 test bug, the third of this family after M3.6 and M7.2: a sweep of the whole
+  document for forbidden finding terms failed on `cve`, which is inside `specVersion` in
+  the run header. The assertion is scoped to the findings section now and reuses the
+  exported `FORBIDDEN_FINDING_TERMS` rather than a second copy of the list, so the two
+  cannot drift. A test that greps a serialized document has to say which part of it.
+- M7.3: the M7 Definition of Done's second command,
+  `pnpm --filter @qai/cli exec qai check --format sarif`, cannot run. The command surface
+  is M8 and lands later in this stage. Stated rather than skipped quietly; the same shape
+  as every stage since S1.
+
+- M7.2: keys are sorted at every level, arrays are never reordered. `JSON.stringify` emits
+  keys in insertion order, so two structurally identical results can differ byte for byte
+  and a golden file would be testing construction order rather than content. Array order is
+  the opposite case and carries meaning: `assembleRun` puts requirements in spec order so a
+  reader comparing two runs looks down the same list, and sorting them here would destroy
+  that. Proved by breaking it: dropping the `.sort()` failed exactly the different-order
+  test and nothing else.
+- M7.2: this deliberately does not reuse `stableStringify` from `spec/hash.ts`. That one
+  feeds a digest, so it is compact and writes `null` where a key has no value. Both are
+  wrong for a report, which wants indentation a reader can diff and needs an absent
+  optional field to stay absent, since the strict schema rejects `null` where it expects
+  an optional string. Two serializers with different requirements rather than two answers
+  to one question, which is the opposite of the M5.2 case where reuse was right.
+- M7.2 test bug worth remembering, the same family as the M3.6 one: the array-order test
+  searched the whole document for a requirement id, and found it first inside `checks`,
+  which sorts before `requirements`. It failed for a reason unrelated to what it was
+  testing. The assertion is scoped to the requirements block now. A test that searches a
+  serialized document has to say which part of it.
+
+- M7.1: the rollup is one exported function, `rollUpRequirement`, because the module says
+  it is the rule most likely to be reimplemented subtly differently somewhere else. It is
+  tested over the whole combination table, and the clause that matters is that all
+  inconclusive is unverified rather than verified. Proved by breaking it: forcing that
+  branch to fall through failed exactly the two tests written for it.
+- M7.1: coverage is requirements with at least one non-inconclusive check over total
+  requirements, and a failing check still counts as coverage, since the requirement was
+  established. A run with no requirements is 0 rather than a division that would report
+  perfect coverage of nothing.
+- M7.1: `findingsBySeverity` counts failures only. A passing check carries `info`, and
+  counting it would report a clean run as having findings.
+- M7.1: unverified reasons prefer a recorded coverage gap over the generic fallback, since
+  a gap names something the reader can act on. That is what `collectCoverageGaps` from
+  M5.16 feeds, so the three side channels reach the RunResult through one path.
+- M7.1: requirements are listed in spec order rather than in the order checks finished, so
+  a reader comparing two runs looks down the same list both times. Everything else is
+  sorted before it is returned, which is what M7.2's golden files will depend on.
 
 - M5.16: gaps arrived from three places, `planAccessChecks`, `planBehavioralChecks` and
   `runBehavioralChecks`, and a caller that remembered two dropped the third silently.
@@ -826,4 +1085,6 @@ Surprises worth recording:
 
 ## Blocked
 
-- none
+- none. The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the
+  leftover ledger, and confirmed the mid-session HEAD move was their own accident rather
+  than a second session.

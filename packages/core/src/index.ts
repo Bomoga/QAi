@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Public API of @qai/core.
  *
  * Everything a surface is allowed to touch is re-exported from here as its owning
@@ -8,7 +8,7 @@
  * Present: the contracts and spec loading from M1; target configuration, actor
  * sessions, and evidence capture from M2; access checks from M3; the probe and the
  * structural diff from M4.
- * Pending: behavioral checks from M5, store from M6, emitters from M7.
+ * Pending: store from M6, and the emitters in M7 beyond run assembly.
  */
 export * from './contracts/index.ts';
 export * from './spec/index.ts';
@@ -17,3 +17,4 @@ export * from './evidence/index.ts';
 export * from './checks/index.ts';
 export * from './probe/index.ts';
 export * from './diff/index.ts';
+export * from './report/index.ts';
