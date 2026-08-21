@@ -1,8 +1,12 @@
 ﻿# Progress
 
-Updated: 2026-08-21T14:05:00Z
-Current stage: S9, buffer and demo, branch fix/clean-install
+Updated: 2026-08-21T14:20:00Z
+Current stage: S9, buffer and demo. Nothing in flight, dev is current.
 Next task: S9.3, the two clauses of the success criterion that cannot be met as written
+
+This header names a branch only while one is in flight. Naming the working branch
+unconditionally went stale on every merge, twice in one afternoon, because the branch is
+deleted and the header is not.
 
 ## S0. Skeleton
 
@@ -594,8 +598,9 @@ and fix only what that sequence exposes. **The rehearsal was run first**, cold, 
 taken from GitHub into an empty directory with its own package store, so the tasks below
 are what it exposed rather than a guess at what it might.
 
-- [x] S9.1 correct the stage header left stale by the S8 merge (commit backfilled below)
-- [x] S9.2 make a clean install work (commit backfilled below)
+- [x] S9.1 correct the stage header left stale by the S8 merge (commits 2bc4fe6 and the
+  one backfilled below, which stopped it naming a branch that a merge deletes)
+- [x] S9.2 make a clean install work (commit 0d45437)
 - [ ] S9.3 the two clauses of the success criterion that cannot be met as written
 - [ ] S9.4 rehearse the sequence again, cold, and record the real output
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
