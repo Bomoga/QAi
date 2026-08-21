@@ -2,7 +2,7 @@
 
 Updated: 2026-08-21T23:30:00Z
 Current stage: S9, buffer and demo. Branch `fix/source-file-references` is in flight.
-Next task: S9.4, rehearse the sequence again, cold, and record the real output
+Next task: none. S9.4 is done and the stage summary is next.
 
 This header names a branch only while one is in flight. Naming the working branch
 unconditionally went stale on every merge, twice in one afternoon, because the branch is
@@ -603,9 +603,10 @@ are what it exposed rather than a guess at what it might.
 - [x] S9.2 make a clean install work (commit 0d45437)
 - [x] S9.3 the two clauses of the success criterion that cannot be met as written
   (source root reaches the probe at c6085f5, a finding cites the handler at d9a86cb, the
-  dependency scope at 38e9294, the demo target at a22c4c5, and the criterion itself in the
-  commit backfilled below)
-- [ ] S9.4 rehearse the sequence again, cold, and record the real output
+  dependency scope at 38e9294, the demo target at a22c4c5, and the criterion itself at
+  bc4f28c)
+- [x] S9.4 rehearse the sequence again, cold, and record the real output (commit
+  backfilled below)
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
   minutes, on a machine that has never seen the project.
 - **The engine already meets every functional clause.** On the rehearsal it passed steps 2
@@ -745,6 +746,94 @@ are what it exposed rather than a guess at what it might.
   available, so this is a real gap, and the S9 instruction is to fix only what the demo
   sequence exposes. The sequence names an access finding. Recorded here rather than fixed,
   and it wants the same join.
+
+### S9.4, the cold rehearsal
+
+Clone from GitHub into an empty directory with its own pnpm store, install, build, and run
+the six steps from a project directory holding a spec and a config. Nothing on this machine
+could make it pass: `--store-dir` points at a store created by this run.
+
+| Step | Result | Seconds |
+| --- | --- | --- |
+| clone `fix/source-file-references` | ok | 2 |
+| `pnpm install --frozen-lockfile` | **exit 0**, express included, no toolchain | 9 |
+| `pnpm build` | exit 0 | 13 |
+| 1. `qai init` | exit 0, wrote the config, a starter spec, and the gitignore entry | 1 |
+| 2. `qai validate` | exit 0, 15 requirements, 8 access rules, 16 criteria, 1 warning | 2 |
+| 3. `qai check`, defective | **exit 1**, 15 requirements as 8 verified, 5 failed, 2 unverified; high 3, medium 5 | 2 |
+| 4 and 5. fix, `qai check` again | **exit 0**, 13 verified, 0 failed | 2 |
+| 6. `qai diff` | exit 0, five requirements moving failed to verified | 1 |
+| **Total** | | **about 32 seconds** |
+
+**Step 3 met the clause that could not be met before.** Three access findings, each naming
+the actor, the request, the response, the evidence, and the file:
+
+```
+Findings
+  [HIGH] REQ-001 AR-001-01 (access, CHK-95b4ecf038a8)
+    Invoice readable by actor outsider, which the spec denies
+    GET /api/invoices/INV-1001 as actor outsider returned 200 with Invoice fields id,
+    notes, org_id, total_cents Source: src/routes.ts:89. Evidence: EV-000005. Suggestion:
+    in the GET /api/invoices/{id} handler, check the rule condition
+    Invoice.org_id != actor.org_id before returning the record, and respond 404 rather
+    than 403 so the response does not confirm that the record exists.
+    Source: src/routes.ts:89
+    Evidence: EV-000005
+```
+
+**The observation had two sides for the first time.**
+
+```
+What was built
+  Probe mode: hybrid
+  6 endpoints
+    by origin: source 6, blackbox 0
+    by confidence: high 3, medium 3, low 0
+  info: GET /api/invoices/:id is declared in source, and the crawl did not reach it.
+        It may be unlinked, or outside the crawl budget.
+```
+
+Three endpoints are high because source and crawl agree and three are medium with the
+disagreement named, which is M4.7's confidence table doing what it was written for. The
+note is true rather than a hedge: the route index names `/api/invoices/{id}`, which answers
+404, so nothing links the instance routes for a crawl to follow.
+
+**Step 6, verbatim:**
+
+```
+Delta RUN-20260821-232711 to RUN-20260821-232740
+
+  Access loosened (0)
+    nothing that was refused before is reachable now
+
+  Regressed (0)
+  Fixed (5)
+    REQ-001  failed -> verified  CHK-95b4ecf038a8, CHK-a4713a310544
+    REQ-002  failed -> verified  CHK-1a75f0146a58, CHK-9fc7eb33e3b1
+    REQ-003  failed -> verified  CHK-a5623a1259e2, CHK-c7e96357fdb0
+    REQ-004  failed -> verified  CHK-b88b2154ac37
+    REQ-013  failed -> verified  CHK-4f28a7fa107c
+  Still failing (0)
+```
+
+- **The install is 9 seconds with express in it, against 3 before and 30 failing before
+  that.** S9.2's fix holds with a new dependency added: express is pure JavaScript with no
+  install script, so nothing asks for a toolchain. This is the measurement the dependency
+  approval was conditional on.
+- **`qai init` had never been run inside the demo before.** The earlier rehearsal started
+  at step 2 with a project directory somebody had already prepared, because step 1 said
+  `npx qai`. It writes the config, the starter spec, and the gitignore entry, and the
+  demo then does what the criterion describes: replaces the starter spec with the
+  hand-written one and points the config at the application.
+- **Deleting the starter spec is part of the flow and worth knowing.** The default glob is
+  `spec/*.spec.yaml`, so leaving `spec/app.spec.yaml` beside the real spec merges two
+  specs and both declare REQ-001, which the loader correctly refuses as a conflicting
+  redefinition. A user editing the starter in place never sees this; a user adding a
+  second file does.
+- **The counts differ from the ledger's 7/6/2 and the difference is entirely D5.** The
+  twin does not serve the debug endpoint, so the requirement that fails on the ledger for
+  that reason is verified here. Nothing else moved: the same five requirements are repaired
+  by the same checks.
 
 ## Notes carried forward
 
@@ -2276,6 +2365,23 @@ are what it exposed rather than a guess at what it might.
 - The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
 
 ## Known issues, not blocking
+
+- **An access finding's detail runs its observation into its reference with no full stop.**
+  `denyFailureDetail` joins the parts with a space and the observation does not end in one,
+  so a reader gets "returned 200 with Invoice fields id, notes, org_id, total_cents Source:
+  src/routes.ts:89." Pre-existing and true of the `Request:` form every corpus finding
+  already had; S9.3 only made it visible, since the `Source:` branch had never run. Not
+  fixed at S9, because the demo sequence does not expose it and the joiner appears in both
+  M7.7 goldens.
+- **The text report prints the reference twice**, once inside `detail` and once as its own
+  line. This is the M7.7 observation about `Request:` and `Evidence:`, arriving again with
+  `Source:`. It is the M3.8 contract question: a suggested fix and a reference live inside
+  `detail` because `CheckResult` has no field for either, and an emitter that wants to
+  render them separately has to raise that.
+- **`06-TESTING.md` does not know about `fixtures/ledger-express`.** It owns the fixture
+  app requirements and now describes one of two. Left alone at S9.3 rather than edited,
+  because the task's reading budget was M4's module file and this is a second plan document.
+  Worth an editing pass by whoever next opens it.
 
 - Resolved at M5.7: `--no-playwright` was removed from the M5 Definition of Done rather than replaced. It was never a vitest option, and an environment variable would have put core in the environment against rule R6. The launcher is injected by the caller and absent by default.
 
