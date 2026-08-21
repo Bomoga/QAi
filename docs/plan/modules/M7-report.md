@@ -96,6 +96,34 @@ is the explicit equivalent.
 
 ## Open questions
 
+- **GitHub rejects the SARIF, and has always rejected it. Blocking the S6 exit
+  criterion.** `renderSarif` gives a result a `physicalLocation` only when the check
+  carries a `locationRef`, and a `logicalLocations` entry otherwise, which is what the
+  module asks for and is valid SARIF 2.1.0. GitHub's ingester requires a physical
+  location on every result, so it uploads successfully and then fails processing with
+  `locationFromSarifResult: expected a physical location`, once per result. Against the
+  fixture that is all fifteen: none of the nine failed checks carries a `locationRef`,
+  because a black box probe has no source to point at, and the six structural entries use
+  logical locations too. Nothing renders inline on a pull request, which is the whole
+  point of emitting SARIF.
+
+  Observed on 2026-08-21 on the run for PR #12, after the two CI fixes on that branch let
+  the upload get far enough to be rejected on its merits.
+
+  **This is the M7.4 open question arriving as a real failure.** Conformance is checked
+  against a Zod transcription of the 2.1.0 schema, and the document passes it. Schema
+  validity is not sufficient for this consumer, and no test in this repository can catch
+  that, because the only authority is GitHub's own ingester.
+
+  The fix needs a decision about what a sourceless finding points at, which is a product
+  question rather than a rendering one. The obvious candidate is the spec file that
+  declares the requirement, which `RunResult.spec.files` already carries: the finding is
+  about a requirement and the requirement is written there, so a reviewer clicking an
+  alert lands somewhere true. File level only, since the loader records no line numbers.
+  A synthetic path would be worse than the current failure, since a finding that points
+  somewhere false is the false positive invariant I2 exists to prevent. **Left for the
+  human on 2026-08-21 rather than chosen here.**
+
 - **M7.7 resolved 2026-08-18.** The blocker was the target, not the code: a leftover
   ledger held port 3000 and its state had already drifted from the seed. The human
   authorized stopping it. Both goldens are captured, and each was captured twice from a

@@ -406,6 +406,20 @@ Deferred, with reasons rather than assumptions:
 
 ## Notes carried forward
 
+- **The third failure, and the one still open: GitHub rejects the SARIF.** With the two CI
+  fixes in, the upload succeeds and then processing fails with
+  `locationFromSarifResult: expected a physical location`, once per result, fifteen times.
+  `renderSarif` gives a result a physical location only when the check carries a
+  `locationRef`, and none of the fixture's nine failed checks does, because a black box
+  probe has no source to point at. The six structural entries use logical locations too.
+  Valid SARIF, rejected by the consumer. **The S6 exit criterion has therefore never been
+  met, and was never going to be.** Recorded in the M7 open questions and left for the
+  human on 2026-08-21, because the fix is a decision about what a sourceless finding
+  points at rather than a rendering detail.
+- Worth stating plainly next to it: nothing in this repository can catch that. M7.4 checks
+  the document against a Zod transcription of the 2.1.0 schema and it passes, because it
+  is conformant. The only authority on what GitHub will ingest is GitHub.
+
 - **The red checks were never the SARIF 403, and inferring instead of reading cost real
   time.** With Checks read finally granted, the logs named two unrelated failures, and
   neither was the one that had been reasoned toward from correlation. Both are fixed on
