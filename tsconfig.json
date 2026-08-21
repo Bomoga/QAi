@@ -8,5 +8,5 @@
     "declarationMap": false,
     "sourceMap": false
   },
-  "include": ["test/**/*.ts", "vitest.config.ts", "eslint.config.js"]
+  "include": ["test/**/*.ts", "corpus/**/*.ts", "vitest.config.ts", "eslint.config.js"]
 }

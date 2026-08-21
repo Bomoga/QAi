@@ -1,0 +1,143 @@
+{
+  "version": "0.1",
+  "entries": [
+    {
+      "app": "p1-invoicing-middleware",
+      "findingId": "STRUCT-fieldMismatch:Invoice",
+      "type": "structural",
+      "severity": "low",
+      "title": "fields of Invoice disagree between the spec and the target",
+      "classification": "false-positive",
+      "note": "The spec marks Invoice.private_note sensitive, which means it must never appear in a response. The application correctly never returns it, and the structural diff reports that absence as a disagreement. A field the spec forbids and the app withholds cannot also be a finding."
+    },
+    {
+      "app": "p1-invoicing-middleware",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "Literally true: a route index exists at / and no requirement mentions it. Low value, and info is the right severity for it, which is the noise class doing its job rather than a wrong answer."
+    },
+    {
+      "app": "p3-notes-shared-flag",
+      "findingId": "CHK-bf665f85235d",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-004-01",
+      "detail": "GET /api/notes/NOTE-2 as actor anonymous returned status 200, Note.body in the body. The criterion requires: status in 401, 403 and body omits field Note.body.",
+      "requirementId": "REQ-004",
+      "ruleId": "AC-004-01",
+      "classification": "true-positive",
+      "note": "The planted defect, caught exactly. The shared branch returns the note before the caller is resolved, so an unauthenticated caller reads NOTE-2. The finding names the request, the actor, the status, and what the criterion required."
+    },
+    {
+      "app": "p3-notes-shared-flag",
+      "findingId": "STRUCT-fieldMismatch:Note",
+      "type": "structural",
+      "severity": "low",
+      "title": "fields of Note disagree between the spec and the target",
+      "classification": "false-positive",
+      "note": "Note.owner_id and Note.body are both returned by GET /api/notes/{id}. The probe only reached the listing, which returns id and shared, so the fields it never saw are reported as specified and not observed. That is the crawl's coverage being reported as a fact about the application."
+    },
+    {
+      "app": "p3-notes-shared-flag",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "Same as the invoicing one: true, low value, correctly rated info."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "CHK-32799d4e52aa",
+      "type": "access",
+      "severity": "high",
+      "title": "StockLine list returned rows belonging to another owner",
+      "detail": "GET /api/stock as actor otherStaff returned 200 with 3 row(s), 2 of which the rule denies: SKU-1, SKU-2 Request: GET /api/stock. Evidence: EV-000005. Suggestion: scope the GET /api/stock handler so it returns only rows matching the rule condition StockLine.warehouse_id != actor.warehouse_id, filtering in the query rather than after fetching.",
+      "requirementId": "REQ-002",
+      "ruleId": "AR-002-01",
+      "classification": "true-positive",
+      "note": "The unscoped listing, named row by row: 2 of 3 rows belong to another warehouse."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "CHK-45b4e9ebbd6f",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-003-01",
+      "detail": "PATCH /api/stock/SKU-1 as actor anonymous returned status 200, StockLine SKU-1 changed across the action: quantity. The criterion requires: status in 401, 403 and record StockLine SKU-1 is unchanged.",
+      "requirementId": "REQ-003",
+      "ruleId": "AC-003-01",
+      "classification": "true-positive",
+      "note": "The write path has no credential check. The finding also proves the state moved, which is what separates an accepted write from a refused one."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "CHK-51e63af40dce",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-004-01",
+      "detail": "GET /api/stock/SKU-1 as actor staff returned StockLine.cost_price_cents in the body. The criterion requires: body omits field StockLine.cost_price_cents.",
+      "requirementId": "REQ-004",
+      "ruleId": "AC-004-01",
+      "classification": "true-positive",
+      "note": "The cost price is returned to a non-manager, exactly as the prompt forbids."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "CHK-7276702fd5d2",
+      "type": "access",
+      "severity": "high",
+      "title": "StockLine readable by actor anonymous, which the spec denies",
+      "detail": "PATCH /api/stock/SKU-1 as actor anonymous returned 200 with StockLine fields cost_price_cents, id, quantity, warehouse_id Request: PATCH /api/stock/SKU-1. Evidence: EV-000008. Suggestion: in the PATCH /api/stock/{id} handler, check the caller identity before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
+      "requirementId": "REQ-003",
+      "ruleId": "AR-003-01",
+      "classification": "true-positive",
+      "note": "The anonymous write, reported from the access side as well as the behavioral one. The title says readable for a PATCH, which is loose wording rather than a wrong finding; recorded as a wording issue, not a false positive."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "CHK-ba1b72e1c3aa",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-001-01",
+      "detail": "GET /api/stock/SKU-1 as actor otherStaff returned status 200, StockLine.quantity in the body. The criterion requires: status in 403, 404 and body omits field StockLine.quantity.",
+      "requirementId": "REQ-001",
+      "ruleId": "AC-001-01",
+      "classification": "true-positive",
+      "note": "The cross warehouse read, from the behavioral side."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "CHK-ba4717784ccf",
+      "type": "access",
+      "severity": "high",
+      "title": "StockLine readable by actor otherStaff, which the spec denies",
+      "detail": "GET /api/stock/SKU-1 as actor otherStaff returned 200 with StockLine fields cost_price_cents, id, quantity, warehouse_id Request: GET /api/stock/SKU-1. Evidence: EV-000004. Suggestion: in the GET /api/stock/{id} handler, check the rule condition StockLine.warehouse_id != actor.warehouse_id before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
+      "requirementId": "REQ-001",
+      "ruleId": "AR-001-01",
+      "classification": "true-positive",
+      "note": "The cross warehouse read, from the access side, naming the fields returned."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "Same as the other two."
+    },
+    {
+      "app": "p7-inventory-open",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /api/stock",
+      "type": "structural",
+      "severity": "medium",
+      "title": "endpoint GET /api/stock was observed and is specified nowhere",
+      "classification": "false-positive",
+      "note": "REQ-002 is about listing StockLine and the config maps list to GET /api/stock, so the endpoint is specified and the tool says it is not. It fires here and not on GET /api/invoices because the entity name matching relates invoices to Invoice and cannot relate stock to StockLine. Medium severity, which makes it the most damaging of the three: it is the kind of confident wrong answer that teaches a reader to stop reading the category."
+    }
+  ]
+}

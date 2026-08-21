@@ -1,0 +1,49 @@
+# The caller is identified by a header rather than a bearer token, which is one of
+# the credential styles corpus/prompts.md varies on purpose.
+
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: owner
+    auth:
+      kind: header
+      name: x-user-id
+      valueEnv: NOTES_OWNER_ID
+    attributes:
+      user_id: dana
+
+  - id: other
+    auth:
+      kind: header
+      name: x-user-id
+      valueEnv: NOTES_OTHER_ID
+    attributes:
+      user_id: erin
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: owner
+
+resources:
+  - name: Note
+    routes:
+      read: /api/notes/{id}
+      list: /api/notes
+      update: /api/notes/{id}
+      delete: /api/notes/{id}
+    instances:
+      - id: NOTE-1
+        attributes:
+          owner_id: dana
+      - id: NOTE-2
+        attributes:
+          owner_id: dana
+      - id: NOTE-3
+        attributes:
+          owner_id: erin

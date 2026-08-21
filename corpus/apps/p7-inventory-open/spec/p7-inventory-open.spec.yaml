@@ -1,0 +1,115 @@
+specVersion: '0.1'
+name: 'Inventory, per warehouse'
+
+# Written from prompt P7 in corpus/prompts.md, before reading the application.
+
+actors:
+  - id: staff
+    description: 'Signed in staff of warehouse WH-NORTH'
+  - id: otherStaff
+    description: 'Signed in staff of a different warehouse, WH-SOUTH'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: StockLine
+    fields:
+      - name: id
+        type: string
+      - name: warehouse_id
+        type: string
+      - name: quantity
+        type: number
+      - name: cost_price_cents
+        type: number
+        sensitive: true
+
+requirements:
+  - id: REQ-001
+    statement: 'A staff member sees the stock of their own warehouse only'
+    entities: [StockLine]
+    fields: [StockLine.warehouse_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: otherStaff
+        action: read
+        resource: StockLine
+        condition: 'StockLine.warehouse_id != actor.warehouse_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a stock line in another warehouse'
+        when: 'actor otherStaff reads StockLine SKU-1'
+        then: 'status in 403, 404 and body omits field StockLine.quantity'
+
+  - id: REQ-002
+    statement: 'Listing stock returns only the caller warehouse'
+    entities: [StockLine]
+    fields: [StockLine.warehouse_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: otherStaff
+        action: list
+        resource: StockLine
+        condition: 'StockLine.warehouse_id != actor.warehouse_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'stock lines in two warehouses'
+        when: 'actor otherStaff lists StockLine'
+        then: 'every row has field warehouse_id equal to actor.warehouse_id'
+
+  - id: REQ-003
+    statement: 'Adjusting a stock level requires a signed in staff member'
+    entities: [StockLine]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: anonymous
+        action: update
+        resource: StockLine
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'an existing stock line'
+        when: 'actor anonymous updates StockLine SKU-1'
+        then: 'status in 401, 403 and record StockLine SKU-1 is unchanged'
+
+  - id: REQ-004
+    statement: 'A cost price is never returned to a caller who is not a manager'
+    entities: [StockLine]
+    fields: [StockLine.cost_price_cents]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'a stock line carrying a cost price'
+        when: 'actor staff reads StockLine SKU-1'
+        then: 'body omits field StockLine.cost_price_cents'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in cannot read stock'
+    entities: [StockLine]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: read
+        resource: StockLine
+        effect: deny
+
+  - id: REQ-006
+    statement: 'A staff member can read stock in their own warehouse'
+    entities: [StockLine]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: staff
+        action: read
+        resource: StockLine
+        effect: allow

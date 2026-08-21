@@ -1,0 +1,131 @@
+specVersion: '0.1'
+name: 'Invoicing, per organization'
+
+# Written from prompt P1 in corpus/prompts.md, before reading the application.
+# A spec written from the code would agree with whatever was built and every run
+# would come back clean, which measures nothing.
+
+actors:
+  - id: owner
+    description: 'A signed in user belonging to organization org-1'
+  - id: outsider
+    description: 'A signed in user belonging to organization org-2'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+  - id: impostor
+    description: 'A caller presenting a token belonging to no user'
+
+entities:
+  - name: Invoice
+    fields:
+      - name: id
+        type: string
+      - name: org_id
+        type: string
+      - name: amount_cents
+        type: number
+      - name: private_note
+        type: string
+        sensitive: true
+
+requirements:
+  - id: REQ-001
+    statement: 'A user can read only invoices belonging to their own organization'
+    entities: [Invoice]
+    fields: [Invoice.org_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: read
+        resource: Invoice
+        condition: 'Invoice.org_id != actor.org_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'an invoice belonging to organization org-1'
+        when: 'actor outsider reads Invoice INV-100'
+        then: 'status in 403, 404 and body omits field Invoice.amount_cents'
+
+  - id: REQ-002
+    statement: 'Listing invoices returns only invoices of the caller organization'
+    entities: [Invoice]
+    fields: [Invoice.org_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: outsider
+        action: list
+        resource: Invoice
+        condition: 'Invoice.org_id != actor.org_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'invoices belonging to two organizations'
+        when: 'actor outsider lists Invoice'
+        then: 'every row has field org_id equal to actor.org_id'
+
+  - id: REQ-003
+    statement: 'Editing an invoice requires a signed in caller'
+    entities: [Invoice]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: anonymous
+        action: update
+        resource: Invoice
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        given: 'an existing invoice'
+        mode: deterministic
+        when: 'actor anonymous updates Invoice INV-100'
+        then: 'status is 401 and record Invoice INV-100 is unchanged'
+
+  - id: REQ-004
+    statement: 'A private note is never returned by a listing'
+    entities: [Invoice]
+    fields: [Invoice.private_note]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'invoices carrying private notes'
+        when: 'actor owner lists Invoice'
+        then: 'body omits field Invoice.private_note'
+
+  - id: REQ-005
+    statement: 'A caller presenting an unrecognized token is refused'
+    entities: [Invoice]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: impostor
+        action: read
+        resource: Invoice
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'a token belonging to no user'
+        when: 'actor impostor reads Invoice INV-100'
+        then: 'status in 401, 403, 404'
+
+  - id: REQ-006
+    statement: 'A user can read invoices belonging to their own organization'
+    entities: [Invoice]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: owner
+        action: read
+        resource: Invoice
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'an invoice belonging to organization org-1'
+        when: 'actor owner reads Invoice INV-100'
+        then: 'status is 200 and body has field Invoice.amount_cents'
