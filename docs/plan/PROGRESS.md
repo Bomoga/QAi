@@ -1,8 +1,9 @@
 ﻿# Progress
 
-Updated: 2026-08-21T23:30:00Z
-Current stage: S9, buffer and demo. Branch `fix/source-file-references` is in flight.
-Next task: none. S9.4 is done and the stage summary is next.
+Updated: 2026-08-21T23:40:00Z
+Current stage: S9, buffer and demo, complete. Branch `fix/source-file-references` is in
+flight, awaiting review.
+Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
 unconditionally went stale on every merge, twice in one afternoon, because the branch is
@@ -605,8 +606,7 @@ are what it exposed rather than a guess at what it might.
   (source root reaches the probe at c6085f5, a finding cites the handler at d9a86cb, the
   dependency scope at 38e9294, the demo target at a22c4c5, and the criterion itself at
   bc4f28c)
-- [x] S9.4 rehearse the sequence again, cold, and record the real output (commit
-  backfilled below)
+- [x] S9.4 rehearse the sequence again, cold, and record the real output (commit fb09c06)
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
   minutes, on a machine that has never seen the project.
 - **The engine already meets every functional clause.** On the rehearsal it passed steps 2
@@ -834,6 +834,59 @@ Delta RUN-20260821-232711 to RUN-20260821-232740
   twin does not serve the debug endpoint, so the requirement that fails on the ledger for
   that reason is verified here. Nothing else moved: the same five requirements are repaired
   by the same checks.
+
+### S9 summary
+
+**The stage exit criterion is met, cold, and the output is above rather than asserted.**
+The sequence in 01-PRODUCT.md runs unassisted from a clone taken into an empty directory
+with its own package store: about thirty two seconds end to end against a five minute
+budget, with every step's real exit code recorded.
+
+**S9's instruction was to fix only what the rehearsal exposed, and it exposed four
+things.** Two were packaging and wording, already landed as PRs #17 and #18 before this
+session. Two were defects nobody knew about, and both were found by trying to satisfy a
+clause rather than by reading code:
+
+1. **The CLI never gave the probe the configured source root.** `check` and `probe` built
+   the probe context from the base URL alone, so every run of the binary since M8 has been
+   black box whatever the config said, while the capability report printed the source root
+   beside it.
+2. **An access plan could not reach a handler reference even when the probe had one.**
+   `resolveRoute` matched an observed endpoint on `responseShape.entity`, and nothing in
+   the probe writes that field. Zero of eight plans carried a `locationRef` against an
+   observation whose every invoice endpoint had a `handlerRef`.
+
+**Together those two are why no SARIF result has ever had a physical location.** The S6
+note recorded the symptom and read it as a fact about the fixture; it was a fact about the
+planner, and the fixture was hiding it. Every one of the twelve tests that mention
+`locationRef` supplies the value by hand, so the chain was true at every link and dead from
+end to end for five stages.
+
+**The demo now has a target with source, and it is one application rather than two.**
+`fixtures/ledger-express` serves the ledger's API on Express so an adapter has a route
+table to read. The handlers moved to `fixtures/ledger/src/handlers.ts` and both servers
+call them, and a twenty-one request parity matrix across both defect states is what holds
+them together. `express` is the first third-party runtime dependency here, approved for
+fixtures only, and the cold install is 9 seconds with it.
+
+**What the criterion says changed in one place and did not change in another.** Step 1's
+`npx qai` has never been runnable and now says what the demo types, with the published form
+recorded as the thing that returns when there is a package to name. Step 3's file reference
+was left exactly as written: weakening it to "when source is available" was the available
+shortcut and it was rejected, because the convention says that about black box targets
+rather than about the tool's discretion.
+
+**What this stage did not do.** The behavioral planner has the identical `responseShape`
+defect and no behavioral finding can carry a file reference; the sequence names an access
+finding, so it is recorded rather than fixed. The three decisions in
+`13 - three decisions waiting on a human.md` are untouched, as are the three recall
+problems in `corpus/RESULTS.md`. `06-TESTING.md` still describes one fixture.
+
+**Verification at the stage boundary**, from a cold `dist`, in the order `ci.yml` runs
+them: `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, all
+exit 0. **83 test files, 1670 tests**, up from 82 and 1615.
+
+S9 is the last stage in 05-BUILD-ORDER.md.
 
 ## Notes carried forward
 
