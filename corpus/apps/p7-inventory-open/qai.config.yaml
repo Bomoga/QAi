@@ -1,0 +1,40 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: staff
+    auth:
+      kind: bearer
+      tokenEnv: STOCK_NORTH_TOKEN
+    attributes:
+      warehouse_id: WH-NORTH
+
+  - id: otherStaff
+    auth:
+      kind: bearer
+      tokenEnv: STOCK_SOUTH_TOKEN
+    attributes:
+      warehouse_id: WH-SOUTH
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: staff
+
+resources:
+  - name: StockLine
+    routes:
+      read: /api/stock/{id}
+      list: /api/stock
+      update: /api/stock/{id}
+    instances:
+      - id: SKU-1
+        attributes:
+          warehouse_id: WH-NORTH
+      - id: SKU-3
+        attributes:
+          warehouse_id: WH-SOUTH

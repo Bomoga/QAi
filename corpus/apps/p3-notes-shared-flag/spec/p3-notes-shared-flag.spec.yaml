@@ -1,0 +1,120 @@
+specVersion: '0.1'
+name: 'Personal notes'
+
+# Written from prompt P3 in corpus/prompts.md, before reading the application.
+
+actors:
+  - id: owner
+    description: 'The signed in user who owns the notes under test'
+  - id: other
+    description: 'A different signed in user'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Note
+    fields:
+      - name: id
+        type: string
+      - name: owner_id
+        type: string
+      - name: shared
+        type: boolean
+      - name: body
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'A note belongs to one person and nobody else can read it'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: other
+        action: read
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a private note belonging to somebody else'
+        when: 'actor other reads Note NOTE-1'
+        then: 'status in 403, 404 and body omits field Note.body'
+
+  - id: REQ-002
+    statement: 'Nobody else can change a note that is not theirs'
+    entities: [Note]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: other
+        action: update
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'a note belonging to somebody else'
+        when: 'actor other updates Note NOTE-1'
+        then: 'status in 403, 404 and record Note NOTE-1 is unchanged'
+
+  - id: REQ-003
+    statement: 'Nobody else can delete a note that is not theirs'
+    entities: [Note]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: other
+        action: delete
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+
+  - id: REQ-004
+    statement: 'A shared note is readable by anyone signed in, and only by someone signed in'
+    entities: [Note]
+    fields: [Note.shared]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: Note
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'a note marked shared'
+        when: 'actor anonymous reads Note NOTE-2'
+        then: 'status in 401, 403 and body omits field Note.body'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in cannot list notes'
+    entities: [Note]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: list
+        resource: Note
+        effect: deny
+
+  - id: REQ-006
+    statement: 'A person can read their own note'
+    entities: [Note]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: owner
+        action: read
+        resource: Note
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'a note belonging to the caller'
+        when: 'actor owner reads Note NOTE-1'
+        then: 'status is 200 and body has field Note.body'

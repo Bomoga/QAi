@@ -2,7 +2,7 @@
 
 Updated: 2026-08-21T03:05:00Z
 Current stage: S8, corpus run, branch chore/s8-corpus
-Next task: S8.3
+Next task: S8.3, continuing, then S8.4
 
 ## S0. Skeleton
 
@@ -416,9 +416,9 @@ every other stage does.
 
 - [x] S8.1 corpus layout, and the runner that executes the tool over every application
   (commit 3902e82)
-- [x] S8.2 the findings ledger and the per-check false positive rate
-  (commit backfilled below)
-- [ ] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
+- [x] S8.2 the findings ledger and the per-check false positive rate (commit 09d19dd)
+- [~] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
+  (first batch of 3 in commit backfilled below; the stage wants twenty to fifty)
 - [ ] S8.4 run the tool over the corpus and record every finding
 - [ ] S8.5 manually review every finding as true positive, false positive, or unclear
 - [ ] S8.6 compute the rates, and disable any check above five percent
