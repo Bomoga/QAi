@@ -1,0 +1,116 @@
+name: qai
+
+# The S6 exit criterion, run as a workflow: a pull request shows findings inline in the
+# GitHub UI, sourced from SARIF, with the run's summary in the check output.
+#
+# The target is `fixtures/ledger`, the application this repository keeps deliberately
+# broken. The defect switches default to on, so the run is expected to find things and to
+# exit 1. That is the point: a green run here would mean the tool stopped working.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+concurrency:
+  group: qai-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # Required to upload SARIF. Without it the upload is a 403 and the findings never
+  # reach the pull request, whatever the run found.
+  security-events: write
+
+jobs:
+  check:
+    name: check the fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Start the fixture
+        # The switches default to on, so this is the defective configuration. A restart
+        # is the reset, and this process is started fresh for this run only.
+        run: |
+          PORT=3000 node --experimental-strip-types fixtures/ledger/src/index.ts &
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3000/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/health
+
+      - name: Run qai check
+        id: check
+        # The exit code is captured rather than allowed to end the step. A run that found
+        # something still has a report worth uploading, and failing here would skip the
+        # upload and leave the findings invisible on the pull request.
+        env:
+          LEDGER_OWNER_TOKEN: ledger-owner-token
+          LEDGER_OUTSIDER_TOKEN: ledger-outsider-token
+          # Deliberately matches no seeded user. It is fixture data rather than a secret,
+          # which is why it is written here and every real credential is not.
+          LEDGER_UNKNOWN_TOKEN: ledger-nobody-token
+        run: |
+          set +e
+          node packages/cli/bin/qai.js check fixtures/ledger/spec/ledger.spec.yaml \
+            --format sarif --out qai-results.sarif
+          echo "exit-code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+          test -f qai-results.sarif
+
+      - name: Read the report
+        id: outputs
+        run: node packages/action/dist/index.js qai-results.sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: qai-results.sarif
+          category: qai
+
+      - name: Write the summary
+        # The run's summary in the check output, which is the second half of the exit
+        # criterion. Coverage is labeled coverage here as everywhere else.
+        run: |
+          {
+            echo "## QAi"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Findings | ${{ steps.outputs.outputs.findings-total }} |"
+            echo "| Error | ${{ steps.outputs.outputs.findings-error }} |"
+            echo "| Warning | ${{ steps.outputs.outputs.findings-warning }} |"
+            echo "| Note | ${{ steps.outputs.outputs.findings-note }} |"
+            echo "| Coverage | ${{ steps.outputs.outputs.coverage-percent }}% of requirements with at least one check that reached a verdict |"
+            echo "| Unverified | ${{ steps.outputs.outputs.requirements-unverified }} requirement(s) |"
+            echo "| Model assisted | ${{ steps.outputs.outputs.model-assisted-checks }} check(s) |"
+            echo ""
+            echo "\`qai check\` exited ${{ steps.check.outputs.exit-code }}."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Confirm the fixture is still broken
+        # The fixture is deliberately defective, so exit 1 is the expected result and a 0
+        # would mean the tool stopped finding what is there. This job fails on anything
+        # else, which is the opposite polarity to a normal check and is the only honest
+        # way to run a tool against an application built to be wrong.
+        run: |
+          code="${{ steps.check.outputs.exit-code }}"
+          if [ "${code}" != "1" ]; then
+            echo "::error::expected exit 1 against the defective fixture, got ${code}"
+            exit 1
+          fi
+          echo "qai check exited 1 against the defective fixture, as expected."

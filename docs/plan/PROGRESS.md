@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-18T10:10:00Z
-Current stage: S6, module M7, branch feat/m7-report
-Next task: M8.1, on a new branch
+Updated: 2026-08-18T16:00:00Z
+Current stage: S6, module M8, branch feat/m8-cli-ci
+Next task: S7, on a branch cut from dev once PR #10 and the M8 PR are merged
 
 ## S0. Skeleton
 
@@ -252,9 +252,72 @@ Surprises worth recording:
 - [x] M7.5 renderJunit, inconclusive mapping to skipped (commit b0784a4)
 - [x] M7.6 computeExitCode with --fail-on and --fail-on-unverified (commit 66c9cc2)
 - [x] M7.7 golden RunResult files for both fixture configurations (capture command 14bb703,
-  goldens and render tests backfilled below)
+  goldens and render tests 9b06153, module marked complete 6e0c3d0)
+- [x] M8.1 scaffold packages/cli with Commander, the qai binary, and the reporter
+  (commits a411409 and 352be6e)
+- [x] M8.2 configuration precedence and --verbose resolved config output
+  (commits ad295c4 and 4345562)
+- [x] M8.3 init with scaffolding and the .gitignore entry (commit 4dd2495)
+- [x] M8.4 validate (commits 44aa7c7 and 55bc6f5)
+- [x] M8.5 check, the startup capability report, and exit code application
+  (commits fcf8d2f and 13cd02c)
+- [~] M8.6 probe done (commits f93e5f8 and 4bbab25); report is blocked on M6 run
+  persistence, recorded in the M8 open questions; diff was already S7
+- [x] M8.7 error presentation for exit codes 2 and 3 (commit backfilled below)
+- [ ] M8.7 error presentation for exit codes 2 and 3
+- [ ] M8.8 the GitHub Action, with SARIF upload and outputs
+- [ ] M8.9 end to end test of init, validate, and check against fixtures/ledger
 - Exit criterion: a pull request on the fixture repository shows findings inline in the GitHub UI, sourced from SARIF, with the run's summary in the check output
-- Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`. M8 gets its own branch per the one module per branch rule.
+- Exit criterion, the parts that can be verified from a terminal: verified 2026-08-18.
+  `qai check` against the defective fixture writes conforming SARIF 2.1.0 with 15 results
+  across three rules and levels error, warning, and note, and exits 1. The Action reads
+  that document and produces 15 findings, 3 error, 7 warning, 5 note, coverage 87%, 2
+  unverified, 1 model assisted. `.github/workflows/qai.yml` runs the whole sequence.
+- Exit criterion, the part that cannot: whether the findings actually render inline on the
+  pull request has to be read in a browser. The `gh` token has no Checks or Actions
+  permission, and uploading SARIF to a private repository needs code scanning enabled,
+  which is a repository setting rather than anything in this branch. Left for the human.
+
+### S6 summary
+
+Built: run assembly and the verdict rollup, four emitters, the exit code recommendation,
+two golden run results captured from the real fixture, the whole `qai` command surface
+except `report`, error presentation in one voice, a composite GitHub Action, an end to end
+test, and the repository's first README. 1406 tests pass across 68 files, up from 1173
+across 50 at the start of the stage.
+
+The sequence 01-PRODUCT.md calls the definition of success is now real for its first five
+steps: `qai init` scaffolds, a hand written spec validates, `qai check` exits non-zero with
+access findings carrying a file reference and a request and response pair, the defect is
+fixed, and `qai check` exits zero. Only the sixth, `qai diff` showing a requirement move
+between runs, is missing, and that is S7.
+
+Deferred, with reasons recorded rather than assumed:
+
+- `qai report <runId>` re-renders a stored run and nothing stores one. Run persistence is
+  M6, in S7. The module header says M6 is required only by `diff`, which is not true of
+  `report` either, and that is a plan error rather than a coding decision.
+- SARIF conformance is checked against a transcription of the 2.1.0 schema rather than
+  against the published document, because no JSON Schema validator is approved and rule R9
+  forbids a test fetching one.
+
+Four cross-module edits into completed modules, each flagged in the owning module file:
+`Reporter` into M7's directory, `defaults` into M2's config schema, `files` onto M1's
+`LoadedSpec`, and two path fixes in M1's loader that only surfaced when a real command was
+handed a real Windows path.
+
+Surprises worth recording:
+
+- Every stage since S1 has carried a Definition of Done line that could not run because
+  the CLI did not exist. They all run now.
+- Running the binary found three things the suite could not: `qai --help` ended in a stack
+  trace, a column of eighteen characters ran a setting name into its value, and the text
+  report's second section was blank because nobody had passed it an Observation.
+- The M8 Definition of Done names `fixtures/ledger/qai.config.yaml`, which does not exist.
+  The criterion was demonstrated against the real path and both halves hold.
+
+- Started 2026-08-18 on the human's instruction, after PRs #7, #8 and #9 were merged. Branch `feat/m7-report`, cut from `dev` at `5d60d9f`.
+- M7 finished 2026-08-18 and opened as PR #10, eleven commits, unmerged. `feat/m8-cli-ci` is cut from `feat/m7-report` rather than from `dev`, because M8 imports emitters that do not exist on `dev` until #10 merges. Rebase onto `dev` once it does.
 
 ## S7. Store and delta (M6)
 
@@ -269,6 +332,286 @@ Surprises worth recording:
 - [ ] not started
 
 ## Notes carried forward
+
+- M8.9 drives `main` rather than spawning the binary. Spawning would test that pnpm linked
+  a bin, which is true or false regardless of anything in this repository, and would make
+  every assertion about a subprocess's stdout rather than about the command. `main` takes
+  its streams, environment, and working directory as arguments for exactly this reason.
+- M8.9 pins both directions, exit 1 with the defects on and 0 with them off, so a command
+  that always failed or always passed breaks one of them. Proved by breaking it: forcing
+  the exit code to 0 failed three tests including that one.
+- M8.9: the verdict counts reached through the command match the M7.7 goldens exactly, 15
+  requirements as 7, 6, and 2 and 24 checks as 13, 9, and 2. The goldens were captured by
+  a script, so this is what says the command and the script agree rather than each being
+  separately plausible.
+- M8.9: each test starts its own ledger on an ephemeral port and writes a config naming
+  it, so nothing depends on a server somebody left running. That is the hazard that cost
+  this session an hour at M7.7, turned into a test.
+- M8.9: the probe test asserts D5 both ways. A probe that reported the debug endpoint
+  whatever the switch said would be describing something other than the application in
+  front of it, and one that never reported it would pass just as quietly.
+- M8 is complete. Every command in the module's table exists except `report <runId>`,
+  which is blocked on M6 run persistence and recorded in the module's open questions, and
+  `diff`, which the module already assigns to S7.
+
+- M8.8: the Action runs `qai check` once, never twice. A second run to collect counts in
+  another format would double the traffic against the target and could disagree with the
+  first, since a run writes to whatever it is allowed to write to. Every output comes out
+  of the SARIF, which carries coverage, the unverified count, and the model assisted count
+  in `runs[0].properties` because M7.4 put them there for exactly this caller.
+- M8.8: the check step captures the exit code instead of letting it end the step. A run
+  that found something still has a report worth uploading, and failing there would skip
+  the upload and leave the findings invisible on the pull request. The workflow fails at
+  the end with the code the CLI returned, applied and never recomputed from the counts.
+- M8.8: output computation is TypeScript and orchestration is YAML, because a decision in
+  YAML is a decision nobody can test. Thirteen tests cover the computation, and one of
+  them asserts that the set of names written matches the set declared in `action.yml`: an
+  output declared with nothing writing it comes back as an empty string, which a workflow
+  reads as zero findings.
+- M8.8: an unreadable SARIF throws rather than reporting zero. An Action that said no
+  findings because it could not read the file is the quietest possible failure.
+- M8.8 verified against a real report, not a hand-built one: the fixture's defective run
+  gives 15 findings, 3 error, 7 warning, 5 note, coverage 87%, 2 unverified, 1 model
+  assisted, which matches the M7.7 golden exactly.
+- M8.8: `upload-sarif` is an input although it mirrors no flag. Uploading needs code
+  scanning enabled on the repository, and a workflow that only wants the outputs should
+  not fail on that. Every other input mirrors a global flag, since a flag and an input
+  that meant different things would be two surfaces to learn.
+- M8.8: the repository now has a README, which it did not before. The module asks for the
+  three line workflow snippet to live there, and there was nowhere to put it.
+- M8.8: `packages/action` got its own vitest config, the third time the M1.2 trap has
+  come up. Without one the package's Definition of Done command passes by running nothing.
+
+- M8.7: there were nine error sites each formatting its own shape. A user learns the shape
+  of a tool's errors the way they learn its output, by seeing the same thing twice, and
+  the only way that holds across nine sites is if none of them formats its own. They all
+  go through `present` now, which takes the summary, the where, the reason, and one
+  suggested fix, and returns the exit code the error carries.
+- M8.7: the code travels with the error rather than being chosen by the caller. That is
+  what stops a new error path picking 1, which belongs to a completed run with findings.
+- M8.7: a stack trace appears only under `--verbose`. A trace through this tool's
+  internals tells a user nothing about their spec, and printing one by default trains
+  people to skip error output. Proved by breaking it: printing it unconditionally failed
+  exactly the test written for it.
+- M8.7: `main` now catches anything that is not a Commander error and presents it as exit
+  3, which 03-CONTRACTS.md gives to a fatal runtime error with the run aborted. Without
+  it the binary ended in a raw trace and whatever code Node chose, which for a tool whose
+  exit code is the product is worse than the crash.
+- M8.7: a spec diagnostic becomes one error per problem rather than a summary and a list,
+  so a spec with four mistakes costs one run instead of four. The suggestion names the
+  path rather than guessing the fix, since a tool that guessed what somebody meant by a
+  malformed requirement would be wrong often enough to be worse than saying where to look.
+- M8.7: the Definition of Done sentence, that a malformed spec exits 2 naming file, path,
+  reason, and a suggested fix with no stack trace, is five assertions and is tested as
+  five, including the negative.
+- M8.7 escape trap, fourth time this session and the most expensive yet: the Bash tool
+  strips one level of backslash before Python sees a heredoc, so `\n` in a pattern
+  arrives as a real newline and never matches TypeScript source containing a literal
+  backslash-n. An earlier patch silently wrote real newlines inside template literals
+  because of it. Two rules that work: build the escape from `chr(92)`, and normalize CRLF
+  before matching, since Prettier writes CRLF here and multi-line LF patterns never match.
+
+- M8.6 is half done and the half that is missing is blocked, not skipped. `probe` is
+  implemented. `report <runId>` re-renders a stored run and nothing stores one:
+  `packages/core/src/store/` does not exist and run persistence is M6. The module header
+  says M6 is "required only by the `diff` subcommand", which is not true of `report`
+  either, and that is a plan error rather than a coding decision. Three ways out are in
+  the M8 open questions; none was taken, because the persistence layout belongs to M6 and
+  inventing one here would leave that module adopting somebody else's choice.
+- M8.6: `probe` loads the spec and still does not give it to the probe. M4 is deliberate
+  that an Observation shaped by the spec cannot support a finding that the two disagree.
+  The spec is read for its `sensitive: true` fields, which redaction needs before any
+  response is written, per rule R8.
+- M8.6: probing with no spec at all is allowed, since the point of the command is
+  answering what is in here before a spec exists. It warns, because redaction then covers
+  only credentials and the configured patterns. Two tests, one each way, so the warning
+  cannot pass by always firing.
+- M8.6: `probe` can never exit 1. It produces no findings, so the failure threshold has
+  nothing to act on, and 1 would tell CI an application has findings from a command that
+  judged nothing. Swept across every refusal path in one test.
+- M8.6: `--format sarif` and `--format junit` on a probe say so rather than emitting an
+  empty document. An empty findings document reports a clean application, where the truth
+  is an unjudged one.
+- M8.6 test bug caught while writing it: the first version of the redaction warning test
+  asserted a tautology, `!x || x`, which passes whatever happens. Replaced with a
+  capturing reporter and a negative case. Worth remembering that a test written to make a
+  suite green is easier to write than one that can fail.
+
+- M8.5: `qai check` runs end to end against the real fixture and the numbers match the
+  M7.7 goldens exactly. Defects on: 15 requirements, 7 verified, 6 failed, 2 unverified,
+  24 checks, 13 pass, 9 fail, 2 inconclusive, exit 1. Defects off: 13 verified, 0 failed,
+  22 pass, exit 0. That is the M8 Definition of Done met, and the first time the emitters
+  have been driven by the command rather than by a script.
+- M8.5: the M7 Definition of Done command finally runs. `qai check --format sarif` writes
+  a conforming document with 15 results across all three rules and levels error, warning,
+  and note. Every stage since S1 has carried a Definition of Done line that could not run
+  until the CLI existed; this is where they stop being deferred.
+- M8.5: the M8 Definition of Done names `fixtures/ledger/qai.config.yaml`, which does not
+  exist. The target configuration is at the repository root and `fixtures/ledger` holds
+  the application and its spec. The criterion was demonstrated against the real path and
+  both halves hold, so the written path is what is wrong. Recorded in the M8 open
+  questions rather than corrected unilaterally.
+- M8.5: exit 3 is established by one unauthenticated request to the base URL before any
+  other work, so an unreachable target is reported as one rather than as a report full of
+  inconclusive checks. Whether the root answers 200 or 401 is a fact about the
+  application; whether anything answered at all is what that request asks. Proved by
+  breaking it: returning 1 there failed the two tests that pin the refusal codes.
+- M8.5: nothing that failed to start may return 1. 03-CONTRACTS.md gives 1 to a completed
+  run with findings, so a missing config, an unloadable spec, an absent baseUrl, and an
+  unreachable target are 2, 2, 2, and 3. A test sweeps all of them together rather than
+  asserting one at a time, since the risk is one drifting onto 1 later.
+- M8.5: the capability report prints before any work and states the available half as
+  well as the gaps. `createTargetContext` already phrases every gap as what will not be
+  checked and the contract calls those lines something a surface prints verbatim, so they
+  are printed verbatim. The browser line is added here, since Playwright detection lives
+  in M5 and the context does not know about it.
+- M8.5: the M7.3 deviation pays off exactly where it was meant to. `check` holds the
+  Observation, so it passes it into `renderText` and the report's second section shows 4
+  endpoints by origin and confidence instead of saying no probe was recorded. Without it
+  the section was blank in a real run, which is how the gap became visible.
+- M8.5: terminal detection is two answers, not one. Progress goes to stderr and the
+  report to stdout, and piping one does not pipe the other, so `stderrTty` and
+  `stdoutTty` travel separately from the binary. Nothing below the binary sniffs.
+- M8.5: `pnpm --filter @qai/cli exec qai ...` does not resolve until `pnpm install` has
+  run since the `bin` entry was added. The workspace link is created at install time, so
+  adding a bin to a package.json is not enough on its own.
+
+- M8.4: an error exits 2 and a warning does not. `diagnostics.ts` already says the two
+  are different things, an error meaning no Spec could be produced and a warning meaning
+  the spec loaded and something is worth saying out loud. Failing the command over a
+  warning would teach people to stop reading warnings, which costs more than the warning
+  was worth. Proved by breaking it: treating every diagnostic as an error failed the two
+  tests written for that split.
+- M8.4: nothing to validate is a failure. A clean summary over zero matched files is the
+  vacuous green this repository keeps catching, so a glob that matched nothing exits 2.
+- M8.4: two real path bugs, both found by running the command rather than by reading it.
+  `readAndValidate` joined cwd and file with a slash, which is wrong for an absolute path
+  and on Windows produced a path with two drive letters. And `resolveFiles` handed
+  backslashes to fast-glob, which treats them as escape characters, so a Windows path
+  matched nothing and the loader said no spec files matched the one that was named. Both
+  fixed in M1's file, both proved by reverting them one at a time.
+- M8.4: `LoadedSpec` now reports `files`, the paths actually read. A caller hands in
+  patterns and gets one merged Spec, so nothing downstream could say where it came from.
+  `RunResult.spec.files` is exactly that list and M8.5 needs it, and `validate` has to
+  name what it read or a user cannot tell a passing spec from a glob that matched the
+  wrong directory. A cross-module edit into M1's file.
+- M8.4: `--format` is reported as inapplicable rather than ignored. The emitters project
+  a RunResult and a spec summary is not one. A silently ignored flag is a user believing
+  they configured something they did not, which is the same rule the program applies to
+  an unknown option.
+- M8.4 test bug worth remembering: two spec files in one glob cannot both declare
+  REQ-001. The loader calls that a conflicting redefinition, correctly, and the test that
+  wrote the same spec twice was asserting the wrong thing about the glob.
+- M8.4 verified against the real fixture spec, and the numbers match the M1.8 record
+  exactly: 4 actors, 4 entities, 15 requirements, 8 access rules, 16 criteria of which 1
+  is model assisted, 4 parsed conditions, and 1 warning for REQ-007 having no checks.
+
+- M8.3: `init` never overwrites, and that is invariant I7 landing in the one command that
+  writes. An existing file is left alone and named, and running init twice is a success
+  rather than an error: refusing would be hostile to exactly the user who is unsure
+  whether they ran it already. Proved by breaking it: removing the existence check failed
+  three tests.
+- M8.3, the tests that are actually worth having: the generated config is run through
+  `loadConfig` and the generated spec through `loadSpec`, and the spec test asserts zero
+  diagnostics rather than merely no error. A starter that produces authoring warnings
+  makes a user's first `qai validate` red over a file they did not write. That is why the
+  template's actors are all referenced by an access rule and every criterion is written
+  in the request and assertion vocabularies.
+- M8.3: the `.gitignore` append adds a newline first when the existing file does not end
+  with one. Without it the entry is glued to the last line as `dist/.qai/`, which ignores
+  neither. Found by writing the test before the code.
+- M8.3: the starter config names environment variables and never holds a value. M2.1
+  rejects a literal at load time, and a template that taught the habit would be worse
+  than the check that catches it. A test asserts no bare `token:` appears.
+- M8.3 surprise from registering the first subcommand: Commander sees a program with
+  subcommands and no root action, decides the user must have meant to name one, and
+  prints help and throws before anything else runs. That silently preempted
+  `qai --verbose` and turned three passing tests red. The root now has an explicit no-op
+  action and `main` decides what a bare invocation does.
+- M8.3 behavior change, deliberate: a bare `qai` now prints help instead of succeeding
+  silently. Succeeding silently reads as though something ran. `qai --verbose` still
+  prints the resolved configuration, since that is what the flag is for.
+- M8.3: commands record an exit code in an outcome object rather than exiting, and `main`
+  reads it. Commander action handlers return nothing useful, and keeping the single place
+  that ends the process in the binary is the same rule that keeps `core` from exiting.
+
+- M8.2: the config file layer needed a schema change. `TargetConfigSchema` is strict, so
+  before this a project writing `format: sarif` into `qai.config.yaml` got a load error,
+  and the third layer of the precedence the module states could not exist. `defaults` is
+  a cross-module edit into M2's file, same shape as M3.2 and M2.8.
+- M8.2: every resolved setting carries the layer it came from, and `--verbose` prints it.
+  The value alone does not answer the question a confused user is asking. Somebody
+  staring at a `sarif` report they did not ask for needs to be told it came from
+  `QAI_FORMAT` in their shell profile, or the value sends them to the wrong file.
+- M8.2 proved by breaking it: swapping the flag and environment branches in `pick` failed
+  two tests, including the one that sets all four layers at once. Single-layer tests are
+  the trap here, since a resolver that reads only the layer a test supplies passes every
+  one of them and still gets the order wrong.
+- M8.2: an environment value outside its closed set is an error, not a fallback. Rule R2.
+  A bad `QAI_FORMAT` that quietly became text would hand somebody a report in a shape
+  their pipeline cannot read with nothing anywhere saying why.
+- M8.2: an empty variable counts as unset, and `QAI_FAIL_ON_UNVERIFIED=0` counts as off.
+  An empty variable is how a shell spells unset by accident, and reading either as on is
+  the surprise that costs a red build nobody can explain.
+- M8.2: an absent switch is undefined, never false. Commander leaves it undefined, and
+  reading that as an explicit false would make the flag layer always win and silence the
+  two layers beneath it. There is a test for exactly that.
+- M8.2: a missing config file is not an error while resolving settings, but a file that
+  exists and will not load is. `loadConfig` reports both identically as "could not read",
+  so the CLI checks existence first. Before `qai init` has run there is no file and
+  `qai --verbose` should still say what it resolved; reading a malformed config as absent
+  would run against built-in defaults and report on the wrong target.
+- M8.2: `--verbose` goes to stderr, like all diagnostics. Proved by breaking it: pointing
+  it at stdout failed three tests. A user running `qai check --format json --verbose | jq`
+  has to get a clean document.
+- M8.2 found by running the binary, not by the suite: `fail-on-unverified` is exactly
+  eighteen characters, so a column of eighteen ran the name straight into its value. The
+  suite only ever asserted that the words appear.
+
+- M8 is branched from `feat/m7-report`, not from `dev`, and that is a deliberate
+  deviation from the one rule in 04-CONVENTIONS.md that says base every branch on `dev`.
+  M8's CLI imports `renderSarif`, `renderJunit`, and `computeExitCode`, none of which
+  exist on `dev` until PR #10 merges, and merging that PR is not the agent's call. PR #2
+  stacked on the S0 branch for the same reason, and since S1 removed the `pull_request`
+  branch filter a stacked PR still gets CI. Rebase M8 onto `dev` once #10 merges.
+- M8.1: `Reporter` did not exist. 03-CONTRACTS.md lists it among the shared runtime types
+  with M7 as its owner, and M7 completed without building it, so this is a cross-module
+  edit into `packages/core/src/report/` from the M8 branch. Same shape as M3.2 adding
+  `resources` to M2's file and M2.8 adding `stateActor`.
+- M8.1, stated plainly so nobody assumes otherwise: nothing in `core` accepts a
+  `Reporter` yet. `probe`, `runAccessChecks`, and `runBehavioralChecks` report no progress
+  at all, and threading one through them changes signatures owned by M4 and M5. Declaring
+  the port is what makes that a mechanical follow-up instead of a design question.
+- M8.1: the reporter writes every level to stderr and never to stdout, because stdout
+  carries the report and nothing else so `qai check --format json | jq` works. Proved by
+  breaking it: pointing the writer at stdout failed four tests, led by the one written
+  for exactly that.
+- M8.1: a bad invocation exits 2, not 1. Commander's own default for a usage error is 1,
+  and 1 is spoken for by 03-CONTRACTS.md as a run that completed and found something at
+  or above the threshold. A misspelled flag exiting 1 would tell CI the application has
+  findings, which is the worst lie available here.
+- M8.1: `exitOverride` makes Commander throw for `--help` and `--version` too, after the
+  output has already printed. The first run of the built binary ended `qai --help` in a
+  stack trace because of it. `main` now treats those three Commander codes as a clean 0.
+  Found by running the binary, not by reading the suite.
+- M8.1: `packages/cli/vitest.config.ts` exists for the M1.2 trap, which that note
+  predicted would arrive here. Without it vitest walks to the root config, whose include
+  patterns are relative to the repository root, matches nothing, and exits 0. M8's
+  Definition of Done runs `pnpm --filter @qai/cli test`, so it would have passed by
+  running nothing.
+- M8.1: the CLI dts build reads `@qai/core` from its `dist`, not its source, so adding an
+  export to core and building only the CLI fails with the export missing. Build core
+  first, or run `pnpm build` at the root, which builds in dependency order.
+- M8.1: `bin/qai.js` imports `process` from `node:process` rather than taking the global,
+  so the file needs no lint environment of its own. ESLint flagged the global, and the
+  import is a smaller fix than a config carve out.
+- M8.1: `picocolors` is now a dependency of `@qai/cli` as well as `@qai/core`. pnpm's
+  strict layout will not let one workspace package reach another's dependency, and it is
+  right not to.
+- M8.1 left for M8.2 and M8.7: Commander writes its help and its usage errors straight to
+  the real streams, so the CLI suite is noisy and the wording is Commander's rather than
+  this project's. Routing that through injected streams belongs with configuration
+  resolution and error presentation.
 
 - M7.7 done. Both goldens captured against a freshly started `fixtures/ledger`, one per
   configuration. Defective: 15 requirements, 7 verified, 6 failed, 2 unverified, 24
@@ -1084,6 +1427,12 @@ Surprises worth recording:
 - `origin/main` does not exist. Only `dev` and the stage branch are pushed. Create `main` before the first release.
 
 ## Blocked
+
+- **Pushing `feat/m8-cli-ci`, and with it the S6 exit criterion.** The token has no
+  `workflow` scope, so GitHub rejects the entire push because one commit adds
+  `.github/workflows/qai.yml`. The workflow is what runs `qai check` on a pull request, so
+  removing it to get the push through would discard the thing the criterion needs. A human
+  either adds the Workflows permission to the token or pushes under another credential.
 
 - none. The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the
   leftover ledger, and confirmed the mid-session HEAD move was their own accident rather

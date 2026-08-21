@@ -502,3 +502,27 @@ requirements:
     expect(diagnostics.some((d) => d.message.includes('AuditLog'))).toBe(true);
   });
 });
+
+describe('paths, on every platform', () => {
+  it('loads a spec named by an absolute path', () => {
+    // Found at M8.4 by handing `qai validate` an absolute path. The read used to join
+    // cwd and the file with a slash, which on Windows produced a path carrying two
+    // drive letters and failed naming something nobody wrote.
+    write('a.spec.yaml', LEDGER);
+
+    const result = loadSpec([join(dir, 'a.spec.yaml')], { cwd: dir });
+
+    expect(isLoadFailure(result)).toBe(false);
+    if (isLoadFailure(result)) throw new Error('unreachable');
+    expect(result.spec.name).toBe('Invoicing app');
+  });
+
+  it('reports the files it actually read, not the patterns it was given', () => {
+    write('a.spec.yaml', LEDGER);
+    write('b.spec.yaml', LEDGER.replace(/REQ-014/g, 'REQ-015').replace(/AR-014/g, 'AR-015'));
+
+    const loaded = load('*.spec.yaml');
+
+    expect([...loaded.files].sort()).toStrictEqual(['a.spec.yaml', 'b.spec.yaml']);
+  });
+});

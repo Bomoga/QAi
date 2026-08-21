@@ -1,6 +1,6 @@
-# M8: CLI and CI Action
+﻿# M8: CLI and CI Action
 
-**Status:** not started
+**Status:** complete except `report`, which is blocked on M6
 **Owns:** `packages/cli/`, `packages/action/`
 **Depends on:** M1, M2, M3, M4, M5, M7
 **Optionally consumes:** M6, required only by the `diff` subcommand
@@ -86,4 +86,46 @@ pnpm --filter @qai/cli exec qai check --config fixtures/ledger/qai.config.yaml -
 
 ## Open questions
 
-- None blocking.
+- **The branch cannot be pushed while it adds a workflow file.** The fine-grained token
+  `gh` is authenticated with has no `workflow` scope, so GitHub rejects the whole push:
+  `refusing to allow a Personal Access Token to create or update workflow
+  .github/workflows/qai.yml without workflow scope`. That file is what runs the check on
+  a pull request, so the S6 exit criterion cannot be demonstrated without it. Two ways
+  out, both a human's: add the Workflows permission to the token, or push the branch and
+  add the workflow file under a different credential. Nothing was dropped from the branch
+  to work around it, since the workflow is the part the criterion needs.
+
+- **M8.6 is half done: `probe` is implemented and `report <runId>` is blocked.** The
+  command re-renders a stored run, and nothing stores one. `packages/core/src/store/`
+  does not exist, M6 owns run persistence, and this module's header says M6 is
+  "required only by the `diff` subcommand", which is not true of `report` either. Three
+  ways out, none taken here because the layout is M6's to choose: implement `report`
+  after M6 in S7 alongside `diff`; have M8 write `.qai/runs/<runId>.json` from `check`
+  and read it back, which invents a persistence layout M6 would then have to adopt or
+  migrate; or change the command to take a path rather than a run id, which is a change
+  to the command surface and needs approval. Recorded rather than guessed.
+
+- **The Definition of Done names a config path that does not exist.** It runs
+  `qai check --config fixtures/ledger/qai.config.yaml`, and this repository's target
+  configuration lives at the root as `qai.config.yaml`. `fixtures/ledger/` holds the
+  application and its spec, never a config. The command was run at M8.5 against the real
+  path and both halves of the criterion hold: exit 1 with the defect switches on, exit 0
+  with them off. Correct the path here, or move the config, but the two should agree.
+- **M8.1 deviation, recorded rather than assumed.** `Reporter` is listed in
+  `03-CONTRACTS.md` as a shared runtime type owned by M7, and M7 completed without
+  building it, so M8.1 added it to `packages/core/src/report/`. Nothing in `core` accepts
+  one yet: `probe`, `runAccessChecks`, and `runBehavioralChecks` report no progress at
+  all, and threading one through them changes signatures owned by M4 and M5. The CLI
+  implements the port and reports its own progress in the meantime.
+- **M8.2 cross-module edit.** `TargetConfigSchema` gained a `defaults` section. The
+  module states a precedence of flag, environment, config file, then built-in default,
+  and the schema is strict, so without a section for these settings the config file layer
+  could not exist: writing `format: sarif` was a load error.
+- **M8.4 cross-module edit.** `LoadedSpec` gained `files`, the paths actually read.
+  `RunResult.spec.files` needs exactly that list and nothing else could supply it, and
+  `validate` has to name what it read or a user cannot tell a passing spec from a glob
+  that matched the wrong directory.
+- **M8 is branched from `feat/m7-report`, not from `dev`.** The one deviation from the
+  branching rule in `04-CONVENTIONS.md`. M8 imports `renderSarif`, `renderJunit`, and
+  `computeExitCode`, none of which exist on `dev` until PR #10 merges. PR #2 stacked the
+  same way in S1. Rebase onto `dev` once #10 lands.
