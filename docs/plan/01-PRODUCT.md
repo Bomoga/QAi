@@ -64,11 +64,15 @@ Out of scope for the MVP, and to be actively refused if a task drifts toward it:
 
 The MVP is successful when this sequence runs unassisted, end to end, in under five minutes on a machine that has never seen the project:
 
-1. `npx qai init` in a repository containing a generated application
+1. `qai init` in a repository containing a generated application
 2. A hand-written spec of roughly fifteen requirements is validated
-3. `npx qai check` exits non-zero with at least one access finding carrying a file reference and a request and response pair
+3. `qai check` exits non-zero with at least one access finding carrying a file reference and a request and response pair
 4. The finding is fixed
-5. `npx qai check` exits zero
-6. `npx qai diff` shows the requirement moving from failed to verified between the two runs
+5. `qai check` exits zero
+6. `qai diff` shows the requirement moving from failed to verified between the two runs
+
+**What `qai` means, corrected at S9.3.** These six steps read `npx qai` until S9.3, and `npx qai` has never been run and cannot be: `packages/cli` is `"private": true`, its name is `@qai/cli` rather than `qai`, and nothing is published to a registry. Publishing is release work nobody has scoped, and it is not something an agent decides. Until it happens, `qai` here is `node packages/cli/bin/qai.js` from a clone, which is the only invocation that exists and is what the rehearsal types. The published form returns to this document when there is a published package to name, and no other clause changes when it does.
+
+**The file reference in step 3 is meant literally, and it stays.** It was not achievable until S9.3, for two reasons that were both defects rather than gaps in the demo: the CLI never handed the probe the configured source root, and an access plan could not reach a handler reference even when the probe had one. Both are fixed. The target it is demonstrated against has to be an application whose source an adapter reads, which is what `fixtures/ledger-express` is for. Correcting this clause to say "when source is available" was considered at S9.3 and rejected: `04-CONVENTIONS.md` says that because a run against a black box target genuinely has nothing to cite, not because the tool may decline to cite anything at all.
 
 Everything in `05-BUILD-ORDER.md` exists to make that sequence real. Work that does not serve it is out of scope by default.

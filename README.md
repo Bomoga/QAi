@@ -89,12 +89,18 @@ established, it just came out badly.
 
 ## On the command line
 
+**QAi is not published to a registry yet, so `npx qai` does not resolve.** Clone this
+repository, install, build, and run the binary directly:
+
 ```bash
-npx qai init
+node packages/cli/bin/qai.js init
 ```
 
 That writes `qai.config.yaml`, a starter spec at `spec/app.spec.yaml`, and a `.gitignore`
 entry for `.qai/`. It never overwrites anything.
+
+The table below writes `qai` for the command. Read it as `node <clone>/packages/cli/bin/qai.js`
+until there is a package to install.
 
 | Command                   | What it does                                                     |
 | ------------------------- | ---------------------------------------------------------------- |

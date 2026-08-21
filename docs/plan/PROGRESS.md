@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-21T19:05:00Z
+Updated: 2026-08-21T23:30:00Z
 Current stage: S9, buffer and demo. Branch `fix/source-file-references` is in flight.
-Next task: S9.3, the two clauses of the success criterion that cannot be met as written
+Next task: S9.4, rehearse the sequence again, cold, and record the real output
 
 This header names a branch only while one is in flight. Naming the working branch
 unconditionally went stale on every merge, twice in one afternoon, because the branch is
@@ -601,9 +601,10 @@ are what it exposed rather than a guess at what it might.
 - [x] S9.1 correct the stage header left stale by the S8 merge (commits 2bc4fe6 and
   669a572, which stopped it naming a branch that a merge deletes)
 - [x] S9.2 make a clean install work (commit 0d45437)
-- [ ] S9.3 the two clauses of the success criterion that cannot be met as written
+- [x] S9.3 the two clauses of the success criterion that cannot be met as written
   (source root reaches the probe at c6085f5, a finding cites the handler at d9a86cb, the
-  demo target in the commit backfilled below)
+  dependency scope at 38e9294, the demo target at a22c4c5, and the criterion itself in the
+  commit backfilled below)
 - [ ] S9.4 rehearse the sequence again, cold, and record the real output
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
   minutes, on a machine that has never seen the project.
@@ -724,6 +725,19 @@ are what it exposed rather than a guess at what it might.
   That is true: the route index names `/api/invoices/{id}`, which answers 404, so nothing
   links the instance routes. It is the first time in this project that a run has had two
   sides to disagree.
+- **Clause 1 settled rather than raised, because publishing is a stop and that decides
+  it.** The six steps read `npx qai`, which cannot work and never has. The only invocation
+  that exists is `node packages/cli/bin/qai.js`, publishing is release work nobody has
+  scoped, and creating a registry package is explicitly not an agent's call. So the
+  criterion now writes `qai` and says once, above the list, what `qai` is until there is a
+  package to install. The published form returns to the document the day there is one, and
+  no other clause moves when it does.
+- **The README told a reader to run `npx qai init`, and the repository is public.** That is
+  step 1 of the definition of success, printed on the front page of a public repository,
+  naming a command that does not resolve. Corrected in the same commit, along with the
+  naming table in 00-INDEX.md. Worth recording as a class: the criterion said `npx` and
+  three other places quietly agreed with it, so a wrong sentence had propagated into the
+  one document a stranger reads first.
 - **The behavioral planner has the same defect and is deliberately not fixed here.**
   `routeTemplateFor` and `handlerRefFor` in `checks/behavioral/plan.ts` both match on
   `responseShape.entity`, so no behavioral finding can carry a file reference either.

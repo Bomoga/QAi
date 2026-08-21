@@ -48,7 +48,7 @@ The product name is confirmed: **QAi**, quality assurance with AI. `QAi` is the 
 |---|---|---|
 | Display name | `QAi` | Prose, documentation, and headings only |
 | Identifier token | `qai` | Lowercase, used in every identifier, path, and command |
-| Binary | `qai` | Invoked as `npx qai` |
+| Binary | `qai` | `npx qai` once published, which it is not. Today: `node packages/cli/bin/qai.js` |
 | Package scope | `@qai/` | `core`, `cli`, `action` |
 | Config file | `qai.config.yaml` | Project root |
 | Spec file default | `spec/*.spec.yaml` | Multiple files allowed |
