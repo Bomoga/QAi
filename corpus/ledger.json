@@ -20,6 +20,15 @@
       "note": "Literally true: a route index exists at / and no requirement mentions it. Low value, and info is the right severity for it, which is the noise class doing its job rather than a wrong answer."
     },
     {
+      "app": "p2-tickets-query-filter",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index again. True, low value, correctly rated info. Third application in a row, which is worth noticing: it is the same finding every time and it will appear once per application in the corpus."
+    },
+    {
       "app": "p3-notes-shared-flag",
       "findingId": "CHK-bf665f85235d",
       "type": "behavioral",
@@ -48,6 +57,54 @@
       "title": "endpoint GET / was observed and is specified nowhere",
       "classification": "true-positive",
       "note": "Same as the invoicing one: true, low value, correctly rated info."
+    },
+    {
+      "app": "p5-files-membership",
+      "findingId": "STRUCT-fieldMismatch:File",
+      "type": "structural",
+      "severity": "low",
+      "title": "fields of File disagree between the spec and the target",
+      "classification": "false-positive",
+      "note": "File.contents is marked sensitive and is returned only by the detail route, which the crawl did not reach. Both of the causes already recorded at once: a field the spec forbids in a listing, and a field the probe never saw. Second application with a sensitive field and second false positive, so this is a class rather than an accident."
+    },
+    {
+      "app": "p5-files-membership",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index."
+    },
+    {
+      "app": "p6-messages-dm-leak",
+      "findingId": "CHK-deb64e1d07f5",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-002-01",
+      "detail": "GET /api/messages/MSG-3 as actor outsider returned status 200, Message.body in the body. The criterion requires: status in 403, 404 and body omits field Message.body.",
+      "requirementId": "REQ-002",
+      "ruleId": "AC-002-01",
+      "classification": "true-positive",
+      "note": "The planted defect, caught exactly. The outsider reads MSG-3, a direct message between two other people, and the body comes back. REQ-001 passing while REQ-002 fails is the shape that says the team rule works and the direct message rule was never written."
+    },
+    {
+      "app": "p6-messages-dm-leak",
+      "findingId": "STRUCT-fieldMismatch:Message",
+      "type": "structural",
+      "severity": "low",
+      "title": "fields of Message disagree between the spec and the target",
+      "classification": "true-positive",
+      "note": "Message.participants is returned and the spec declares no such field. Genuinely undeclared, and it is the participant list of a direct message, which is exactly the field a reviewer would want to know is being served. The first structural field finding in the corpus that is right."
+    },
+    {
+      "app": "p6-messages-dm-leak",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index."
     },
     {
       "app": "p7-inventory-open",

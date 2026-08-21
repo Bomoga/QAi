@@ -1,0 +1,112 @@
+specVersion: '0.1'
+name: 'File storage, per project'
+
+# Written from prompt P5 in corpus/prompts.md, before reading the application.
+
+actors:
+  - id: member
+    description: 'A signed in member of project PROJ-A'
+  - id: nonMember
+    description: 'A signed in person who is not a member of PROJ-A'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: File
+    fields:
+      - name: id
+        type: string
+      - name: project_id
+        type: string
+      - name: name
+        type: string
+      - name: size_bytes
+        type: number
+      - name: contents
+        type: string
+        sensitive: true
+
+requirements:
+  - id: REQ-001
+    statement: 'A person can download files only from projects they are a member of'
+    entities: [File]
+    fields: [File.project_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: nonMember
+        action: read
+        resource: File
+        condition: 'File.project_id != actor.project_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a file in a project the caller is not a member of'
+        when: 'actor nonMember reads File FILE-1'
+        then: 'status in 403, 404 and body omits field File.contents'
+
+  - id: REQ-002
+    statement: 'A directory listing shows only files from projects the caller is a member of'
+    entities: [File]
+    fields: [File.project_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: nonMember
+        action: list
+        resource: File
+        condition: 'File.project_id != actor.project_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'files in two projects'
+        when: 'actor nonMember lists File'
+        then: 'every row has field project_id equal to actor.project_id'
+
+  - id: REQ-003
+    statement: 'A directory listing never includes the contents of a file'
+    entities: [File]
+    fields: [File.contents]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'files the caller can reach'
+        when: 'actor member lists File'
+        then: 'body omits field File.contents'
+
+  - id: REQ-004
+    statement: 'A caller who is not signed in reaches no file'
+    entities: [File]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: File
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an existing file'
+        when: 'actor anonymous reads File FILE-1'
+        then: 'status in 401, 403, 404 and body omits field File.contents'
+
+  - id: REQ-005
+    statement: 'A member can download a file from their own project'
+    entities: [File]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: member
+        action: read
+        resource: File
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'a file in the caller project'
+        when: 'actor member reads File FILE-1'
+        then: 'status is 200 and body has field File.name'
