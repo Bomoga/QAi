@@ -2,7 +2,7 @@
 
 Updated: 2026-08-20T21:15:00Z
 Current stage: S7, module M6, branch feat/m6-store-delta
-Next task: none, S7 is complete and waiting on review
+Next task: none, S7 is open as PR #12 and waiting on review
 
 ## S0. Skeleton
 
@@ -346,6 +346,9 @@ Surprises worth recording:
   endpoints appeared. `qai report RUN-20260820-210052` re-renders the earlier run and
   exits 0. Full output is in the pull request.
 - Started 2026-08-18 on the human's instruction. Branch `feat/m6-store-delta`, cut from `feat/m8-cli-ci` rather than from `dev`, because 05-BUILD-ORDER.md says S7 depends on M7 assembly and M8 surface and neither is on `dev` until PRs #10 and #11 merge. Third stacked branch; rebase onto `dev` once they land.
+- Pushed 2026-08-20 and opened as PR #12 into `dev`, 48 commits, unmerged. The same push
+  carried `a50d323` to the remote, which is what let `feat/m8-cli-ci` fast-forward onto
+  its held-back tip, so PR #11 is complete for the first time since S6.
 - Not rebased onto `dev` at the stage boundary, deliberately. PRs #10 and #11 were still
   open on 2026-08-20, so `assembleRun` and the whole command surface are still absent
   from `dev` and a rebase would produce a branch that does not build. The stack collapses
@@ -1810,27 +1813,17 @@ Deferred, with reasons rather than assumptions:
 
 ## Blocked
 
-- **Pushing `feat/m8-cli-ci`, and with it the S6 exit criterion.** The token has no
-  `workflow` scope, so GitHub rejects the entire push because one commit adds
-  `.github/workflows/qai.yml`. The workflow is what runs `qai check` on a pull request, so
-  removing it to get the push through would discard the thing the criterion needs. A human
-  either adds the Workflows permission to the token or pushes under another credential.
+- none. Both push blockers were cleared on 2026-08-20: the human added the Workflows
+  permission to the token, `feat/m6-store-delta` pushed and opened as PR #12, and
+  `feat/m8-cli-ci` fast-forwarded onto its held-back tip so `.github/workflows/qai.yml`
+  is finally on the remote and PR #11 is complete. Nothing was rewritten to get either
+  push through.
 
-- **Pushing `feat/m6-store-delta`, and with it the S7 pull request.** The same rejection,
-  for the same one file, because `a50d323` is an ancestor of this branch. Attempted
-  2026-08-20 with the stage complete and the tree clean:
+- Still waiting on a human, but not blocking any work: code scanning is not enabled on
+  this private repository, so `upload-sarif` returns 403 and no finding reaches a pull
+  request whatever a run found. That is the last piece of the S6 exit criterion, and the
+  workflow that would demonstrate it is now on the remote.
 
-  ```
-  ! [remote rejected] feat/m6-store-delta -> feat/m6-store-delta
-    (refusing to allow a Personal Access Token to create or update workflow
-     `.github/workflows/qai.yml` without `workflow` scope)
-  ```
-
-  Nothing was rewritten to get around it. Dropping the commit from this branch would make
-  it diverge from the head of PR #11, and rewriting a branch with an open pull request is
-  forbidden by 04-CONVENTIONS.md. One credential fix unblocks both pushes at once. S7 is
-  complete and committed locally, at `fb6c849`, waiting only on that.
-
-- none. The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the
-  leftover ledger, and confirmed the mid-session HEAD move was their own accident rather
-  than a second session.
+- The M7.7 blocker was cleared on 2026-08-18: the human authorized stopping the leftover
+  ledger, and confirmed the mid-session HEAD move was their own accident rather than a
+  second session.
