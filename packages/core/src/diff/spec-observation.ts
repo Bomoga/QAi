@@ -7,7 +7,7 @@ import type {
   StructuralFindings,
 } from '../contracts/index.ts';
 import { looksLikeAsset } from '../probe/crawl.ts';
-import { DERIVED_PARAMETER, pathIdentity } from '../probe/identity.ts';
+import { pathIdentity, templateIdentity } from '../probe/identity.ts';
 
 /**
  * The structural diff: what was asked for, what is there, and where they disagree.
@@ -219,17 +219,6 @@ export function severityForUndeclared(endpoint: ObservedEndpoint, spec: Spec): S
   if (isNoiseRoute(endpoint.path)) return OBSERVED_NOT_SPECIFIED_NOISE_SEVERITY;
 
   return OBSERVED_NOT_SPECIFIED_SEVERITY;
-}
-
-/**
- * A configured route template as a path identity.
- *
- * Templates are written `/api/stock/{id}` and the crawl derives `/api/stock/:id`, so both
- * sides go through the same parameter erasure `identityKey` uses. One implementation,
- * because two answers to "is this the same route" eventually disagree.
- */
-function templateIdentity(template: string): string {
-  return pathIdentity(template.replace(/\{[^}/]+\}/gu, DERIVED_PARAMETER));
 }
 
 /** Field names observed for an entity, gathered from every endpoint that names it. */

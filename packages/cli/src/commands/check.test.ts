@@ -336,6 +336,38 @@ describe('qai check, against a target whose source can be read', () => {
       await stop(target.server);
     }
   });
+
+  it('ends an access finding with the file that serves the route', async () => {
+    // Step 3 of the definition of success in 01-PRODUCT.md, end to end: a failed access
+    // check citing the handler rather than the request. `app.get('/api/invoices/:id',
+    // readInvoice)` is on line 6 of the source written above.
+    const target = await startTarget();
+    try {
+      const { code, out } = await check({ config: sourcedConfig(target.baseUrl, 'app') });
+
+      expect(code).toBe(1);
+      expect(out).toContain('AR-001-01');
+      expect(out).toContain('Source: server.js:6');
+    } finally {
+      await stop(target.server);
+    }
+  });
+
+  it('ends it with the request when there is no source to cite', async () => {
+    // 04-CONVENTIONS.md: a file reference when source is available and a request
+    // reference when it is not. Without this half the assertion above could pass against
+    // a tool that attached a file reference to everything.
+    const target = await startTarget();
+    try {
+      const { code, out } = await check({ config: sourcedConfig(target.baseUrl) });
+
+      expect(code).toBe(1);
+      expect(out).toContain('Request: GET /api/invoices/INV-1');
+      expect(out).not.toContain('Source:');
+    } finally {
+      await stop(target.server);
+    }
+  });
 });
 
 describe('the run id', () => {

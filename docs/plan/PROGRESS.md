@@ -602,7 +602,8 @@ are what it exposed rather than a guess at what it might.
   669a572, which stopped it naming a branch that a merge deletes)
 - [x] S9.2 make a clean install work (commit 0d45437)
 - [ ] S9.3 the two clauses of the success criterion that cannot be met as written
-  (source root reaches the probe, commit backfilled below)
+  (source root reaches the probe at c6085f5, a finding cites the handler in the commit
+  backfilled below)
 - [ ] S9.4 rehearse the sequence again, cold, and record the real output
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
   minutes, on a machine that has never seen the project.
@@ -660,18 +661,39 @@ are what it exposed rather than a guess at what it might.
   repository that do. Measured on the hybrid observation above, with every invoice endpoint
   carrying a handler reference: **0 of 8 access plans carried a `locationRef`.** The
   behavioral planner matches the same way in two places and has the same gap.
-- **This is the vacuous test pattern again, in its most expensive form yet.**
-  `plan.test.ts` proves the planner uses a handler reference when the observation carries
-  `responseShape.entity`, against an Observation the test wrote itself. The test is true
-  and the code is unreachable, so nothing went red for the whole of S4 through S8 while
-  every SARIF result lacked a physical location and the S6 exit criterion could not be met.
-  The S6 note already recorded the symptom, that no check carries a `locationRef`, and read
-  it as a fact about the fixture rather than about the planner.
+- **Every test of a `locationRef` hands the value in by hand, and that is why nothing went
+  red.** Twelve tests across the planners, the finding text, and all three emitters mention
+  the field, and every one of them constructs the plan, the check, or the Observation that
+  carries it. The access planner had **no test of `locationRef` at all**; the behavioral one
+  has a single test that builds an Observation with `responseShape.entity` set, which no
+  probe produces. The chain was tested from the point where the value already exists, so it
+  was true at every link and dead from end to end, through S4 to S8, while every SARIF
+  result lacked a physical location. The S6 note recorded the symptom, that no check carries
+  a `locationRef`, and read it as a fact about the fixture rather than about the planner.
 - **The fix has to leave the probe spec-blind.** M4 is deliberate that an Observation
   shaped by the spec cannot support a finding that the two disagree, so teaching the probe
   to name spec entities is not available. The configured route is the authoritative mapping
   from an entity and an action to a URL, and the observation maps a URL to a handler, so
   joining those two says where the code is without the probe knowing what was specified.
+  `resolveRoute` does that join now, and the unreachable branch above it is kept, with a
+  comment saying it is unreachable, because it is the right precedence the day an adapter
+  does name the entity an endpoint serves.
+- **`templateIdentity` moved to `probe/identity.ts`, a cross-module edit into M4's file.**
+  The structural diff already had it privately, with a comment saying two answers to "is
+  this the same route" eventually disagree. The access planner is now the second caller
+  asking that question, so it lives beside `pathIdentity` and both import it. Same shape as
+  M3.2 adding `resources` to M2's file and M2.8 adding `stateActor`.
+- **Both halves proved by breaking them.** Dropping the method comparison let a DELETE
+  handler be cited for a GET route and failed exactly the test written for it; comparing
+  the written path instead of the identity failed the positive test, since a configured
+  `/api/invoices/{id}` and an observed `/api/invoices/:id` are the same route spelled twice.
+- **The behavioral planner has the same defect and is deliberately not fixed here.**
+  `routeTemplateFor` and `handlerRefFor` in `checks/behavioral/plan.ts` both match on
+  `responseShape.entity`, so no behavioral finding can carry a file reference either.
+  04-CONVENTIONS.md asks every finding to end with a file reference when source is
+  available, so this is a real gap, and the S9 instruction is to fix only what the demo
+  sequence exposes. The sequence names an access finding. Recorded here rather than fixed,
+  and it wants the same join.
 
 ## Notes carried forward
 
