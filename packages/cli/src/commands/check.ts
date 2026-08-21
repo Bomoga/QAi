@@ -339,8 +339,15 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   }
 
   reporter.step('Probing the target');
+  // The source root travels with the base URL. Without it the probe is black box on
+  // every run whatever the config said, so no endpoint carries a handler reference and
+  // no finding can cite a file.
+  const sourceRoot = config.target.sourceRoot;
   const observation = await probe(
-    { config: { target: { baseUrl } }, sessions: target.sessions },
+    {
+      config: { target: { baseUrl, ...(sourceRoot === undefined ? {} : { sourceRoot }) } },
+      sessions: target.sessions,
+    },
     { deps, baseUrl, cwd },
   );
   reporter.info(

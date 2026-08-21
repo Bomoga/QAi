@@ -1,3 +1,4 @@
+import { createServer, type Server } from 'node:http';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -186,6 +187,154 @@ describe('qai check, before a run can start', () => {
     writeFileSync(join(dir, 'spec', 'app.spec.yaml'), SPEC, 'utf8');
 
     expect((await check({ config: configWith(CLOSED_PORT_URL) })).out).toBe('');
+  });
+});
+
+/**
+ * A run against a target whose source an adapter can read.
+ *
+ * M8.9's integration test is the live run against `fixtures/ledger`, and it cannot
+ * exercise this: the ledger is a hand-written `node:http` server that no adapter
+ * recognizes, so every observation of it is black box and no endpoint in it names a
+ * handler. The target here is a local socket answering the two paths the source declares,
+ * which is the smallest thing that makes a source reading real. Rule R9 holds; nothing
+ * leaves loopback.
+ */
+
+/** Read as text and never executed. The adapter takes the route table out of the call sites. */
+const EXPRESS_SOURCE = [
+  "import express from 'express';",
+  '',
+  'const app = express();',
+  '',
+  "app.get('/api/invoices', listInvoices);",
+  "app.get('/api/invoices/:id', readInvoice);",
+  '',
+  'function listInvoices(req, res) {',
+  "  res.json({ invoices: [{ id: 'INV-1' }] });",
+  '}',
+  '',
+  'function readInvoice(req, res) {',
+  "  res.json({ id: 'INV-1', org_id: 'org-1' });",
+  '}',
+  '',
+].join('\n');
+
+const LEAKY_SPEC = `specVersion: '0.1'
+name: 'Invoices'
+actors:
+  - id: owner
+    description: 'A member of the owning organization'
+  - id: outsider
+    description: 'A member of another organization'
+entities:
+  - name: Invoice
+    fields:
+      - name: id
+        type: string
+      - name: org_id
+        type: string
+requirements:
+  - id: REQ-001
+    statement: 'An invoice is readable only inside its own organization'
+    entities: [Invoice]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: read
+        resource: Invoice
+        effect: deny
+`;
+
+function sourcedConfig(baseUrl: string, sourceRoot?: string): TargetConfig {
+  const body = [
+    'target:',
+    `  baseUrl: ${baseUrl}`,
+    ...(sourceRoot === undefined ? [] : [`  sourceRoot: ${sourceRoot}`]),
+    '  disposable: false',
+    'actors:',
+    '  - id: owner',
+    '    auth:',
+    '      kind: none',
+    '  - id: outsider',
+    '    auth:',
+    '      kind: none',
+    'resources:',
+    '  - name: Invoice',
+    '    routes:',
+    '      read: /api/invoices/{id}',
+    '      list: /api/invoices',
+    '    instances:',
+    '      - id: INV-1',
+    '',
+  ].join('\n');
+
+  writeFileSync(join(dir, 'qai.config.yaml'), body, 'utf8');
+  const loaded = loadConfig('qai.config.yaml', dir);
+  if (isConfigFailure(loaded)) throw new Error(loaded.error.message);
+  return loaded.config;
+}
+
+async function startTarget(): Promise<{ server: Server; baseUrl: string }> {
+  const server = createServer((request, response) => {
+    response.setHeader('content-type', 'application/json');
+
+    if (request.url === '/api/invoices') {
+      response.end(JSON.stringify({ invoices: [{ id: 'INV-1', org_id: 'org-1' }] }));
+      return;
+    }
+
+    if (request.url?.startsWith('/api/invoices/') === true) {
+      // Handed to anybody who asks, which is what AR-001-01 forbids.
+      response.end(JSON.stringify({ id: 'INV-1', org_id: 'org-1' }));
+      return;
+    }
+
+    response.end(JSON.stringify({ routes: ['/api/invoices', '/api/invoices/INV-1'] }));
+  });
+
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const address = server.address();
+  const port = address !== null && typeof address !== 'string' ? address.port : 0;
+
+  return { server, baseUrl: `http://127.0.0.1:${port}` };
+}
+
+async function stop(server: Server): Promise<void> {
+  await new Promise<void>((done) => server.close(() => done()));
+}
+
+describe('qai check, against a target whose source can be read', () => {
+  beforeEach(() => {
+    mkdirSync(join(dir, 'app'), { recursive: true });
+    writeFileSync(join(dir, 'app', 'server.js'), EXPRESS_SOURCE, 'utf8');
+    writeFileSync(join(dir, 'spec', 'invoices.spec.yaml'), LEAKY_SPEC, 'utf8');
+  });
+
+  it('reports endpoints read from source, so the source root reaches the probe', async () => {
+    // The command used to build the probe context from `baseUrl` alone, so the configured
+    // source root reached the capability report and nothing else.
+    const target = await startTarget();
+    try {
+      const { out } = await check({ config: sourcedConfig(target.baseUrl, 'app') });
+
+      expect(out).toContain('by origin: source 2');
+    } finally {
+      await stop(target.server);
+    }
+  });
+
+  it('reports no source endpoints when no source root is configured', async () => {
+    // The negative half, so the assertion above cannot pass against a probe that reads
+    // source whatever the configuration says.
+    const target = await startTarget();
+    try {
+      const { out } = await check({ config: sourcedConfig(target.baseUrl) });
+
+      expect(out).toContain('by origin: source 0');
+    } finally {
+      await stop(target.server);
+    }
   });
 });
 

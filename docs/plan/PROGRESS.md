@@ -1,7 +1,7 @@
 ﻿# Progress
 
-Updated: 2026-08-21T14:20:00Z
-Current stage: S9, buffer and demo. Nothing in flight, dev is current.
+Updated: 2026-08-21T19:05:00Z
+Current stage: S9, buffer and demo. Branch `fix/source-file-references` is in flight.
 Next task: S9.3, the two clauses of the success criterion that cannot be met as written
 
 This header names a branch only while one is in flight. Naming the working branch
@@ -598,10 +598,11 @@ and fix only what that sequence exposes. **The rehearsal was run first**, cold, 
 taken from GitHub into an empty directory with its own package store, so the tasks below
 are what it exposed rather than a guess at what it might.
 
-- [x] S9.1 correct the stage header left stale by the S8 merge (commits 2bc4fe6 and the
-  one backfilled below, which stopped it naming a branch that a merge deletes)
+- [x] S9.1 correct the stage header left stale by the S8 merge (commits 2bc4fe6 and
+  669a572, which stopped it naming a branch that a merge deletes)
 - [x] S9.2 make a clean install work (commit 0d45437)
 - [ ] S9.3 the two clauses of the success criterion that cannot be met as written
+  (source root reaches the probe, commit backfilled below)
 - [ ] S9.4 rehearse the sequence again, cold, and record the real output
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
   minutes, on a machine that has never seen the project.
@@ -629,14 +630,48 @@ are what it exposed rather than a guess at what it might.
   `ignoredBuiltDependencies` fails the same way, and only the explicit `false` installs, in
   three seconds. The placeholder pnpm writes is where the one quoted in the M6.1 note came
   from: the setting has three states, not two.
-- **S9.3 is a decision rather than code.** Step 1 says `npx qai init`, which has never been
-  run and cannot work: the package is private, named `@qai/cli`, and `origin/main` does not
-  exist. Step 3 asks for a finding carrying a file reference, and the defective run produces
-  nine access findings with a request and a response and zero with a file reference, because
-  the fixture is black box only. Either give the demo a target with readable source, which
-  also exercises the one path twenty corpus applications never did, or correct the criterion
-  to match 04-CONVENTIONS.md, which already says a file reference is for when source is
-  available. Do not quietly reword the criterion to match what the tool does.
+- **S9.3 was recorded as a decision rather than code, and that was wrong.** Step 1 says
+  `npx qai init`, which has never been run and cannot work: the package is private, named
+  `@qai/cli`, and `origin/main` does not exist. That half is a decision. Step 3 asks for a
+  finding carrying a file reference, and the reading that the fixture being black box is
+  the only thing in the way does not survive contact with the code. **Two defects sit
+  between a readable source tree and a file reference, and a demo target with source would
+  have produced nothing without them.** Both are below, both proved by running the tool
+  rather than by reading it.
+- **S9.3 defect one: the CLI never gave the probe the configured source root.** `check` and
+  `probe` both built the probe context as `{ config: { target: { baseUrl } } }`, so
+  `target.sourceRoot` reached the capability report, reached the missing-directory warning
+  in `createTargetContext`, and reached nothing that reads source. **Every run of the
+  binary has been black box, whatever the config said**, and the report printed
+  `source  fixtures/ledger` beside it. Measured on a project whose config named a source
+  root the Express adapter recognizes: the command reported `mode: blackbox` and the note
+  "No source root is configured", while calling `probe` with that same root gives
+  `mode: hybrid` and four endpoints carrying `handlerRef`.
+- **The adapters were never the problem.** Pointed at a four route Express file the
+  adapter returns `server.js:5`, `server.js:6`, `server.js:7`, and `server.js:8`, in the
+  `path:line` form M4 says SARIF needs. The reading was correct and the caller threw it
+  away.
+- **S9.3 defect two: an access plan cannot reach a `handlerRef` even when one exists.**
+  `resolveRoute` prefers an observed endpoint whose `responseShape.entity` names the rule's
+  resource and takes its `handlerRef` from there. **Nothing in the probe ever sets
+  `responseShape.entity`.** The crawler writes `responseShape.fields` only, no source
+  adapter writes a response shape at all, and `mergeFields` can only carry an entity one
+  side already had. Three tests set the field by hand and are the only things in the
+  repository that do. Measured on the hybrid observation above, with every invoice endpoint
+  carrying a handler reference: **0 of 8 access plans carried a `locationRef`.** The
+  behavioral planner matches the same way in two places and has the same gap.
+- **This is the vacuous test pattern again, in its most expensive form yet.**
+  `plan.test.ts` proves the planner uses a handler reference when the observation carries
+  `responseShape.entity`, against an Observation the test wrote itself. The test is true
+  and the code is unreachable, so nothing went red for the whole of S4 through S8 while
+  every SARIF result lacked a physical location and the S6 exit criterion could not be met.
+  The S6 note already recorded the symptom, that no check carries a `locationRef`, and read
+  it as a fact about the fixture rather than about the planner.
+- **The fix has to leave the probe spec-blind.** M4 is deliberate that an Observation
+  shaped by the spec cannot support a finding that the two disagree, so teaching the probe
+  to name spec entities is not available. The configured route is the authoritative mapping
+  from an entity and an action to a URL, and the observation maps a URL to a handler, so
+  joining those two says where the code is without the probe knowing what was specified.
 
 ## Notes carried forward
 
