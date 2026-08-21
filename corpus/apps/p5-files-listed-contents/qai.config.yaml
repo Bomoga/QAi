@@ -1,0 +1,39 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: member
+    auth:
+      kind: bearer
+      tokenEnv: DOCS_MEL_TOKEN
+    attributes:
+      project_id: PROJ-X
+
+  - id: nonMember
+    auth:
+      kind: bearer
+      tokenEnv: DOCS_NILS_TOKEN
+    attributes:
+      project_id: PROJ-Y
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: member
+
+resources:
+  - name: Document
+    routes:
+      read: /api/documents/{id}
+      list: /api/documents
+    instances:
+      - id: DOC-1
+        attributes:
+          project_id: PROJ-X
+      - id: DOC-7
+        attributes:
+          project_id: PROJ-Y

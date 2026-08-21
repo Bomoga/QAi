@@ -1,0 +1,131 @@
+specVersion: '0.1'
+name: 'Course enrolment'
+
+# Written from prompt P8 in corpus/prompts.md, before the application existed. The second
+# application from that prompt.
+
+actors:
+  - id: learner
+    description: 'Signed in student ines, enrolled on ENR-10'
+  - id: otherLearner
+    description: 'Signed in student jonas, enrolled on ENR-30'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Course
+    fields:
+      - name: id
+        type: string
+      - name: title
+        type: string
+      - name: teacher_id
+        type: string
+
+  - name: Enrolment
+    fields:
+      - name: id
+        type: string
+      - name: course_id
+        type: string
+      - name: student_id
+        type: string
+      - name: grade
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'A student sees their own enrolments'
+    entities: [Enrolment]
+    fields: [Enrolment.student_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: learner
+        action: list
+        resource: Enrolment
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'enrolments belonging to two students'
+        when: 'actor learner lists Enrolment'
+        then: 'every Enrolment has student_id equal to actor.student_id'
+
+  - id: REQ-002
+    statement: 'A grade is visible to the student it belongs to and to nobody else'
+    entities: [Enrolment]
+    fields: [Enrolment.grade]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: otherLearner
+        action: read
+        resource: Enrolment
+        condition: 'Enrolment.student_id != actor.student_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'an enrolment belonging to another student'
+        when: 'actor otherLearner reads Enrolment ENR-10'
+        then: 'status in 403, 404 and body omits field Enrolment.grade'
+
+  - id: REQ-003
+    statement: 'A course record never carries a grade'
+    entities: [Course, Enrolment]
+    fields: [Enrolment.grade]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a course with enrolments behind it'
+        when: 'actor otherLearner reads Course CRS-10'
+        then: 'status is 200 and body omits field Enrolment.grade'
+
+  - id: REQ-004
+    statement: 'The course list is readable by a signed in student'
+    entities: [Course]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: learner
+        action: list
+        resource: Course
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'courses on offer'
+        when: 'actor learner lists Course'
+        then: 'status is 200 and body contains field Course.title'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in reads no enrolment'
+    entities: [Enrolment]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: read
+        resource: Enrolment
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'an existing enrolment'
+        when: 'actor anonymous reads Enrolment ENR-10'
+        then: 'status is 401'
+
+  - id: REQ-006
+    statement: 'A student reads their own enrolment'
+    entities: [Enrolment]
+    fields: [Enrolment.student_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: learner
+        action: read
+        resource: Enrolment
+        condition: 'Enrolment.student_id == actor.student_id'
+        effect: allow

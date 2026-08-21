@@ -1,0 +1,49 @@
+target:
+  baseUrl: http://127.0.0.1:47810
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: author
+    auth:
+      kind: cookie
+      name: session
+      valueEnv: NOTES_DARA_SESSION
+    attributes:
+      user_id: dara
+
+  - id: reader
+    auth:
+      kind: cookie
+      name: session
+      valueEnv: NOTES_REMY_SESSION
+    attributes:
+      user_id: remy
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: author
+
+resources:
+  - name: Note
+    routes:
+      read: /api/notes/{id}
+      list: /api/notes
+      update: /api/notes/{id}
+      delete: /api/notes/{id}
+    instances:
+      - id: NOTE-A
+        attributes:
+          owner_id: dara
+          shared: 'false'
+      - id: NOTE-S
+        attributes:
+          owner_id: dara
+          shared: 'true'
+      - id: NOTE-R
+        attributes:
+          owner_id: remy
+          shared: 'false'

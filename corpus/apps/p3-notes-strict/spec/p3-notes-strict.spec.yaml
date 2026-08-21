@@ -1,0 +1,140 @@
+specVersion: '0.1'
+name: 'Personal notes'
+
+# Written from prompt P3 in corpus/prompts.md, before the application existed. The second
+# application from that prompt; the first, p3-notes-shared-flag, serves a shared note to a
+# caller it never resolved.
+
+actors:
+  - id: author
+    description: 'Signed in, owns NOTE-A and NOTE-S'
+  - id: reader
+    description: 'Signed in, owns nothing the author owns'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Note
+    fields:
+      - name: id
+        type: string
+      - name: owner_id
+        type: string
+      - name: title
+        type: string
+      - name: body
+        type: string
+      - name: shared
+        type: boolean
+
+requirements:
+  - id: REQ-001
+    statement: 'A note belongs to one person and nobody else can read it'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: reader
+        action: read
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id and Note.shared == "false"'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a private note belonging to somebody else'
+        when: 'actor reader reads Note NOTE-A'
+        then: 'status in 403, 404 and body omits field Note.body'
+
+  - id: REQ-002
+    statement: 'Nobody else can change a note that is not theirs'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: reader
+        action: update
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'a note belonging to somebody else'
+        when: 'actor reader updates Note NOTE-A'
+        then: 'status in 403, 404 and record Note NOTE-A is unchanged'
+
+  - id: REQ-003
+    statement: 'Nobody else can delete a note that is not theirs'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-003-01
+        actor: reader
+        action: delete
+        resource: Note
+        condition: 'Note.owner_id != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a note belonging to somebody else'
+        when: 'actor reader deletes Note NOTE-A'
+        then: 'status in 403, 404 and record Note NOTE-A is unchanged'
+
+  - id: REQ-004
+    statement: 'A shared note is readable by anyone signed in'
+    entities: [Note]
+    fields: [Note.shared]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: reader
+        action: read
+        resource: Note
+        condition: 'Note.shared == "true"'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'a note its owner marked shared'
+        when: 'actor reader reads Note NOTE-S'
+        then: 'status is 200 and body contains field Note.body'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in reads no note, shared or otherwise'
+    entities: [Note]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: read
+        resource: Note
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'a note its owner marked shared'
+        when: 'actor anonymous reads Note NOTE-S'
+        then: 'status is 401 and body omits field Note.body'
+
+  - id: REQ-006
+    statement: 'A listing shows a caller their own notes'
+    entities: [Note]
+    fields: [Note.owner_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: author
+        action: list
+        resource: Note
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'notes belonging to two people'
+        when: 'actor author lists Note'
+        then: 'every Note has owner_id equal to actor.user_id'

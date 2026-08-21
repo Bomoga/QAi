@@ -1,0 +1,121 @@
+specVersion: '0.1'
+name: 'File storage, per project'
+
+# Written from prompt P5 in corpus/prompts.md, before the application existed. The second
+# application from that prompt.
+
+actors:
+  - id: member
+    description: 'Signed in, member of project PROJ-X'
+  - id: nonMember
+    description: 'Signed in, member of project PROJ-Y only'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Document
+    fields:
+      - name: id
+        type: string
+      - name: project_id
+        type: string
+      - name: name
+        type: string
+      - name: size_bytes
+        type: number
+      - name: contents
+        type: string
+        sensitive: true
+
+requirements:
+  - id: REQ-001
+    statement: 'A person downloads files only from projects they are a member of'
+    entities: [Document]
+    fields: [Document.project_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: nonMember
+        action: read
+        resource: Document
+        condition: 'Document.project_id != actor.project_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a file in a project the caller is not a member of'
+        when: 'actor nonMember reads Document DOC-1'
+        then: 'status in 403, 404 and body omits field Document.contents'
+
+  - id: REQ-002
+    statement: 'A directory response never carries file contents'
+    entities: [Document]
+    fields: [Document.contents]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'a project with files in it'
+        when: 'actor member lists Document'
+        then: 'body omits field Document.contents'
+
+  - id: REQ-003
+    statement: 'A directory response carries the name and the size'
+    entities: [Document]
+    fields: [Document.name, Document.size_bytes]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'a project with files in it'
+        when: 'actor member lists Document'
+        then: 'status is 200 and body contains field Document.name'
+
+  - id: REQ-004
+    statement: 'A caller who is not signed in reaches no file'
+    entities: [Document]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: Document
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'an existing file'
+        when: 'actor anonymous reads Document DOC-1'
+        then: 'status is 401'
+
+  - id: REQ-005
+    statement: 'A listing shows only files from projects the caller is a member of'
+    entities: [Document]
+    fields: [Document.project_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-005-01
+        actor: nonMember
+        action: list
+        resource: Document
+        condition: 'Document.project_id != actor.project_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'files in two projects'
+        when: 'actor nonMember lists Document'
+        then: 'every Document has project_id equal to actor.project_id'
+
+  - id: REQ-006
+    statement: 'A member downloads a file from their own project'
+    entities: [Document]
+    fields: [Document.project_id]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: member
+        action: read
+        resource: Document
+        condition: 'Document.project_id == actor.project_id'
+        effect: allow
