@@ -30,6 +30,15 @@
       "note": "Literally true: a route index exists at / and no requirement mentions it. Low value, and info is the right severity for it, which is the noise class doing its job rather than a wrong answer."
     },
     {
+      "app": "p2-tickets-agent-404",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
+    },
+    {
       "app": "p2-tickets-query-filter",
       "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
       "type": "structural",
@@ -70,6 +79,15 @@
       "note": "Same as the invoicing one: true, low value, correctly rated info."
     },
     {
+      "app": "p3-notes-strict",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
+    },
+    {
       "app": "p4-bookings-cookie",
       "findingId": "STRUCT-fieldMismatch:Booking",
       "type": "structural",
@@ -86,6 +104,27 @@
       "title": "endpoint GET / was observed and is specified nowhere",
       "classification": "true-positive",
       "note": "The route index. Correct and correctly rated info."
+    },
+    {
+      "app": "p5-files-listed-contents",
+      "findingId": "CHK-5093d63c5077",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-002-01",
+      "detail": "GET /api/documents as actor member returned Document.contents in the body. The criterion requires: body omits field Document.contents.",
+      "requirementId": "REQ-002",
+      "ruleId": "AC-002-01",
+      "classification": "true-positive",
+      "note": "The planted defect, caught exactly. One documentView was written for the download route and the directory route calls it too, so every file in the project is handed over in full to anyone who lists it. \"GET /api/documents as actor member returned Document.contents in the body.\" Nothing about the access rules is wrong and the finding does not claim otherwise: it is a field level claim about a listing, which is the only level this defect exists at."
+    },
+    {
+      "app": "p5-files-listed-contents",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
     },
     {
       "app": "p5-files-membership",
@@ -144,6 +183,15 @@
       "title": "endpoint GET / was observed and is specified nowhere",
       "classification": "true-positive",
       "note": "The route index. Correct and correctly rated info."
+    },
+    {
+      "app": "p7-inventory-manager-only",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
     },
     {
       "app": "p7-inventory-open",
@@ -247,6 +295,27 @@
       "classification": "false-positive",
       "note": "REQ-002 is about listing StockLine and the config maps list to GET /api/stock, so the endpoint is specified and the tool says it is not. It fires here and not on GET /api/invoices because the entity name matching relates invoices to Invoice and cannot relate stock to StockLine. Medium severity, which makes it the most damaging of the three: it is the kind of confident wrong answer that teaches a reader to stop reading the category.",
       "absent": true
+    },
+    {
+      "app": "p8-enrolment-course-leak",
+      "findingId": "CHK-de6e8586275c",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-003-01",
+      "detail": "GET /api/courses/CRS-10 as actor otherLearner returned Enrolment.grade in the body. The criterion requires: status is 200 and body omits field Enrolment.grade.",
+      "requirementId": "REQ-003",
+      "ruleId": "AC-003-01",
+      "classification": "true-positive",
+      "note": "The planted defect, caught, and caught on a route that serves a different entity. Every enrolment access rule passes, correctly, because the enrolment routes are right. The grades leave through the course detail view, which embeds the roster. \"GET /api/courses/CRS-10 as actor otherLearner returned Enrolment.grade in the body.\" That is the shape of leak that survives a review of the access rules, and the tool found it."
+    },
+    {
+      "app": "p8-enrolment-course-leak",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
     },
     {
       "app": "p8-enrolment-middleware",
