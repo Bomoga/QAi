@@ -2,6 +2,15 @@
   "version": "0.1",
   "entries": [
     {
+      "app": "p1-invoicing-empty-list",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
+    },
+    {
       "app": "p1-invoicing-header-filter",
       "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
       "type": "structural",
@@ -39,6 +48,15 @@
       "note": "The route index. Correct, worth little, and correctly rated info. It appears once per application in this corpus and is the single most repeated finding the tool produces."
     },
     {
+      "app": "p2-tickets-header-agent",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
+    },
+    {
       "app": "p2-tickets-query-filter",
       "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
       "type": "structural",
@@ -46,6 +64,15 @@
       "title": "endpoint GET / was observed and is specified nowhere",
       "classification": "true-positive",
       "note": "The route index again. True, low value, correctly rated info. Third application in a row, which is worth noticing: it is the same finding every time and it will appear once per application in the corpus."
+    },
+    {
+      "app": "p3-notes-delete-open",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
     },
     {
       "app": "p3-notes-shared-flag",
@@ -104,6 +131,75 @@
       "title": "endpoint GET / was observed and is specified nowhere",
       "classification": "true-positive",
       "note": "The route index. Correct and correctly rated info."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-01b0e17b1afc",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-003-01",
+      "detail": "POST /api/bookings as actor anonymous returned status 201. The criterion requires: status is 401.",
+      "requirementId": "REQ-003",
+      "ruleId": "AC-003-01",
+      "classification": "true-positive",
+      "note": "AC-003-01. An unsigned caller created a booking and got 201 where the criterion requires 401. The behavioral half of the same defect the high severity access finding reports, from the status rather than from the fields."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-56d221da8e66",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-004-01",
+      "detail": "GET /api/bookings as actor anonymous returned status 200. The criterion requires: status is 401.",
+      "requirementId": "REQ-004",
+      "ruleId": "AC-004-01",
+      "classification": "true-positive",
+      "note": "AC-004-01. An unsigned caller listed the bookings and got 200 where the criterion requires 401. Worth noting beside it: the matching access rule came back inconclusive, correctly, because ownership of the returned rows could not be established from the rule condition. The criterion is what turned that into a finding, which is the argument for having both families."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-c2e7442c68b1",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-002-01",
+      "detail": "DELETE /api/bookings/B-2 as actor anonymous returned status 200. The criterion requires: status is 401.",
+      "requirementId": "REQ-002",
+      "ruleId": "AC-002-01",
+      "classification": "true-positive",
+      "note": "AC-002-01. An unsigned caller cancelled a booking and got 200 where the criterion requires 401. True against an application that authenticates nobody."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-db24924ab080",
+      "type": "behavioral",
+      "severity": "medium",
+      "title": "Acceptance criterion AC-001-01",
+      "detail": "DELETE /api/bookings/B-2 as actor colleague returned status 200. The criterion requires: status in 401, 403, 404.",
+      "requirementId": "REQ-001",
+      "ruleId": "AC-001-01",
+      "classification": "true-positive",
+      "note": "AC-001-01. \"DELETE /api/bookings/B-2 as actor colleague returned status 200. The criterion requires: status in 401, 403, 404.\" A colleague cancelled somebody else's booking and the application allowed it. True, and it is the criterion rather than the access rule that caught it, because the access rule saw a 200 with no recognizable fields and declined."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "CHK-e63156522b70",
+      "type": "access",
+      "severity": "high",
+      "title": "Booking readable by actor anonymous, which the spec denies",
+      "detail": "POST /api/bookings as actor anonymous returned 201 with Booking fields booked_by, id, room_id, starts_at Request: POST /api/bookings. Evidence: EV-000008. Suggestion: in the POST /api/bookings handler, check the caller identity before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
+      "requirementId": "REQ-003",
+      "ruleId": "AR-003-01",
+      "classification": "true-positive",
+      "note": "The only high severity access finding in the corpus, and it is right. \"POST /api/bookings as actor anonymous returned 201 with Booking fields booked_by, id, room_id, starts_at.\" The application has no authentication at all, so an unsigned caller creates a booking. The finding names the actor, the request, the status, and the fields that came back, which is the shape 04-CONVENTIONS.md asks for."
+    },
+    {
+      "app": "p4-bookings-open",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
     },
     {
       "app": "p5-files-listed-contents",
@@ -174,6 +270,15 @@
       "title": "endpoint GET / was observed and is specified nowhere",
       "classification": "true-positive",
       "note": "The route index."
+    },
+    {
+      "app": "p6-messages-guard",
+      "findingId": "STRUCT-observedNotSpecified:endpoint:GET /",
+      "type": "structural",
+      "severity": "info",
+      "title": "endpoint GET / was observed and is specified nowhere",
+      "classification": "true-positive",
+      "note": "The route index. Correct, worth little, correctly rated info, and now the single most repeated finding in the corpus at one per application."
     },
     {
       "app": "p6-messages-strict",

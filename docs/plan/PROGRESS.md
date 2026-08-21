@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-21T13:20:00Z
+Updated: 2026-08-21T13:40:00Z
 Current stage: S8, corpus run, branch fix/s8-structural-false-positives
-Next task: S8.3, more applications, then S8.5 again, then S8.7
+Next task: S8 is complete. Open the pull request and stop.
 
 ## S0. Skeleton
 
@@ -417,16 +417,18 @@ every other stage does.
 - [x] S8.1 corpus layout, and the runner that executes the tool over every application
   (commit 3902e82)
 - [x] S8.2 the findings ledger and the per-check false positive rate (commit 09d19dd)
-- [~] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
-  (3 in commit 6fc7c32, 3 more in commit b787a67, 4 more in commit ddf4154, with the
-  criteria correction at 1d863f6; the stage wants twenty to fifty, so this is ten)
+- [x] S8.3 generate the corpus from a fixed prompt set, with a shallow spec for each
+  (3 in 6fc7c32, 3 in b787a67, 4 in ddf4154, 5 in e2eebce, 5 in 08218f2, with the criteria
+  correction at 1d863f6). **Twenty applications**, which is the lower bound 06-TESTING.md
+  names. Thirteen intended correct, seven intended broken.
 - [x] S8.4 run the tool over the corpus and record every finding (commit e0f18a9)
-- [~] S8.5 manually review every finding as true positive, false positive, or unclear
-  (all 21 findings across ten applications reviewed, nothing outstanding)
+- [x] S8.5 manually review every finding as true positive, false positive, or unclear
+  (all 38 findings across twenty applications reviewed, nothing outstanding; 0ac7798,
+  afe5afb, and the commit backfilled below)
 - [x] S8.6 compute the rates, and disable any check above five percent (commits c00089f,
   795e540, e235f88, ea3f7fb). **No check was disabled, because none needed to be.** The
   three causes were fixed and structural came back at 0.0%.
-- [ ] S8.7 the written summary and the aggregate
+- [x] S8.7 the written summary and the aggregate, in `corpus/RESULTS.md`
 - Exit criterion: a results table with per-application findings, a false positive rate computed by manual review of every finding, and a written summary. Any check with a false positive rate above five percent is disabled before the demo, per invariant I2.
 - Started 2026-08-21 on the human's instruction, immediately after S7 merged. Branch
   `chore/s8-corpus`, cut from `dev` at `8df47a1`. `chore/` rather than `feat/` because
@@ -439,16 +441,53 @@ every other stage does.
   consenting targets only. The first, applications generated for this purpose from a
   fixed prompt set, needs nobody's permission and is the stated preference. The corpus is
   built that way, and `corpus/README.md` says so where a reader will find it.
-- **Result over six applications, 19 findings, every one reviewed.** Access checks 0%
-  false positive over 3 judged, behavioral 0% over 5, **structural 36.4% over 11**,
-  overall 21.1%. Still provisional: the stage wants twenty to fifty applications.
-  **Every false positive is in the structural diff and none is in a verdict**, which held
-  across both batches and is the single most useful thing the corpus has said so far.
-- **Three correct applications produced no failed check at all.** Enforcement in a
-  middleware, in a query filter, and through a membership lookup; refusals as 404, 404,
-  and 403; bearer tokens, a session cookie, and an identity header. The access and
-  behavioral checks did not fire once on any of them, which is what a 0% rate has to mean
-  before it means anything.
+
+### S8 summary
+
+**Twenty applications, 38 findings, every one reviewed by hand, 0.0% false positive rate
+in every check family.** Access 0.0% over 4 judged, behavioral 0.0% over 12, structural
+0.0% over 22. Nothing unreviewed, nothing unclear, and no check disabled, because none was
+above the five percent invariant I2 sets. `corpus/RESULTS.md` is the written result: the
+rate, the per application table, the aggregate, and the limits on the number.
+
+**No correct application produced a single failed check.** Thirteen of them, across four
+credential kinds, four enforcement styles, and four refusal shapes, and neither the access
+family nor the behavioral family fired once on any of them. The fourteen findings against
+correct applications are all structural and all benign: one route index per application at
+info, plus one undeclared field. That is what a 0.0% rate has to mean before it means
+anything.
+
+**The aggregate 06-TESTING.md asks to publish: five of twenty applications had at least
+one access rule specified and not enforced.** The tool reported two of the five through a
+failed access check, two more through a failed behavioral criterion with every access check
+passing, and **missed one entirely**. It did not claim the missed one was fine: REQ-003 on
+`p3-notes-delete-open` came back unverified rather than verified, which is invariant I4
+being the difference between a miss and a lie.
+
+**The corpus found three recall problems and no precision problems**, which is the most
+useful thing it produced and is written up in full in `corpus/RESULTS.md`:
+
+1. A successful destructive request returning no resource fields is inconclusive rather
+   than a failure. Right for a read, and it costs a finding on a delete. Three sightings.
+2. A destructive check changes the application under the checks that follow it. On
+   `p4-bookings-open` an anonymous delete **passed** with a 404 because an earlier check
+   had already removed the record. The disposability gate worked; what is missing is a
+   reset between checks, and a corpus holding state in memory cannot supply one.
+3. Candidate selection picked a seeded instance the application does refuse while the
+   violation was on a different instance, twice. The behavioral criterion caught both.
+
+**Three limits on the number, stated as part of it rather than under it.** The corpus was
+generated by the same model that wrote the checker, so both sides share its habits. The
+review was performed by that same agent, and step four of the procedure exists to be
+independent, which makes this the largest single limit. Twenty is the lower bound rather
+than a large sample, and one contested classification would move the rate by 2.6 points.
+
+**Stage exit criterion met.** A results table with per application findings, a false
+positive rate computed by manual review of every finding, and a written summary, all in
+`corpus/RESULTS.md`, with the ledger behind it in `corpus/ledger.json`.
+
+### Along the way
+
 - **Ten applications, 21 findings, every one reviewed, 0.0% everywhere.** Access 0.0% over
   3 judged, behavioral 0.0% over 6, structural 0.0% over 12, overall 0.0% over 21, with
   four earlier reviews held aside as findings the tool no longer produces. Seven of the
@@ -509,6 +548,16 @@ every other stage does.
      cover it. `GET /api/stock` fires and `GET /api/invoices` does not, because the name
      matching relates invoices to Invoice and cannot relate stock to StockLine. The most
      damaging of the three, because medium is confident enough to be believed.
+- **Result over six applications, 19 findings, every one reviewed.** Access checks 0%
+  false positive over 3 judged, behavioral 0% over 5, **structural 36.4% over 11**,
+  overall 21.1%. Still provisional: the stage wants twenty to fifty applications.
+  **Every false positive is in the structural diff and none is in a verdict**, which held
+  across both batches and is the single most useful thing the corpus has said so far.
+- **Three correct applications produced no failed check at all.** Enforcement in a
+  middleware, in a query filter, and through a membership lookup; refusals as 404, 404,
+  and 403; bearer tokens, a session cookie, and an identity header. The access and
+  behavioral checks did not fire once on any of them, which is what a 0% rate has to mean
+  before it means anything.
 - **Three more observations, none of them false positives, all worth acting on.**
   1. On `p6-messages-dm-leak` the list access check came back **inconclusive** rather than
      guessing: "ownership of the returned rows could not be established from the rule
@@ -544,6 +593,28 @@ every other stage does.
 
 ## Notes carried forward
 
+- **S8: the corpus found three recall problems in the tool and no precision problems.**
+  They are written up in `corpus/RESULTS.md` and are the most valuable thing the stage
+  produced. A successful destructive request returning no resource fields is inconclusive
+  rather than a failure, which is right for a read and costs a finding on a delete. A
+  destructive check changes the application under the checks that follow it, and on one
+  application that turned an unenforced rule into a **pass**, because the record the later
+  check asked about had already been deleted by the earlier one. Candidate selection picked
+  a seeded instance the application does refuse while the violation sat on a different
+  instance, twice. None of these moves the false positive rate and all three are worth a
+  human's decision.
+- **S8: the strongest evidence the corpus produced is negative.** Thirteen applications
+  that do what their specs say produced no failed check at all, across four credential
+  kinds, four enforcement styles, and four refusal shapes. A 0.0% false positive rate over
+  a corpus that never exercised a correct application would mean nothing; this one did,
+  thirteen times.
+- **S8: writing the corpus found two limits in the spec language, both recorded rather than
+  worked around.** An access rule names an actor, an action, and a resource, with nowhere
+  to name which channel, so P6's "sending needs membership of that channel" is not
+  expressible and `p6-messages-strict` takes the coverage gap instead. And a spec for a
+  destructive defect has to state its remaining requirements over something the earlier
+  check did not consume, which is why `p3-notes-delete-open` states its allow rule over the
+  listing rather than over a record.
 - **S8.6: the step said to disable any check above five percent and the right answer was
   to fix it.** Structural sat at 36.4%. Disabling the family would have removed D5, the
   endpoint nobody specified, and D6, the entity nobody built, which are two of the
