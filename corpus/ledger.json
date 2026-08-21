@@ -8,7 +8,8 @@
       "severity": "low",
       "title": "fields of Invoice disagree between the spec and the target",
       "classification": "false-positive",
-      "note": "The spec marks Invoice.private_note sensitive, which means it must never appear in a response. The application correctly never returns it, and the structural diff reports that absence as a disagreement. A field the spec forbids and the app withholds cannot also be a finding."
+      "note": "The spec marks Invoice.private_note sensitive, which means it must never appear in a response. The application correctly never returns it, and the structural diff reports that absence as a disagreement. A field the spec forbids and the app withholds cannot also be a finding.",
+      "absent": true
     },
     {
       "app": "p1-invoicing-middleware",
@@ -47,7 +48,8 @@
       "severity": "low",
       "title": "fields of Note disagree between the spec and the target",
       "classification": "false-positive",
-      "note": "Note.owner_id and Note.body are both returned by GET /api/notes/{id}. The probe only reached the listing, which returns id and shared, so the fields it never saw are reported as specified and not observed. That is the crawl's coverage being reported as a fact about the application."
+      "note": "Note.owner_id and Note.body are both returned by GET /api/notes/{id}. The probe only reached the listing, which returns id and shared, so the fields it never saw are reported as specified and not observed. That is the crawl's coverage being reported as a fact about the application.",
+      "absent": true
     },
     {
       "app": "p3-notes-shared-flag",
@@ -65,7 +67,8 @@
       "severity": "low",
       "title": "fields of File disagree between the spec and the target",
       "classification": "false-positive",
-      "note": "File.contents is marked sensitive and is returned only by the detail route, which the crawl did not reach. Both of the causes already recorded at once: a field the spec forbids in a listing, and a field the probe never saw. Second application with a sensitive field and second false positive, so this is a class rather than an accident."
+      "note": "File.contents is marked sensitive and is returned only by the detail route, which the crawl did not reach. Both of the causes already recorded at once: a field the spec forbids in a listing, and a field the probe never saw. Second application with a sensitive field and second false positive, so this is a class rather than an accident.",
+      "absent": true
     },
     {
       "app": "p5-files-membership",
@@ -194,7 +197,8 @@
       "severity": "medium",
       "title": "endpoint GET /api/stock was observed and is specified nowhere",
       "classification": "false-positive",
-      "note": "REQ-002 is about listing StockLine and the config maps list to GET /api/stock, so the endpoint is specified and the tool says it is not. It fires here and not on GET /api/invoices because the entity name matching relates invoices to Invoice and cannot relate stock to StockLine. Medium severity, which makes it the most damaging of the three: it is the kind of confident wrong answer that teaches a reader to stop reading the category."
+      "note": "REQ-002 is about listing StockLine and the config maps list to GET /api/stock, so the endpoint is specified and the tool says it is not. It fires here and not on GET /api/invoices because the entity name matching relates invoices to Invoice and cannot relate stock to StockLine. Medium severity, which makes it the most damaging of the three: it is the kind of confident wrong answer that teaches a reader to stop reading the category.",
+      "absent": true
     }
   ]
 }
