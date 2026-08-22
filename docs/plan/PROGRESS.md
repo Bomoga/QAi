@@ -1,6 +1,6 @@
 ﻿# Progress
 
-Updated: 2026-08-22T00:30:00Z
+Updated: 2026-08-22T01:00:00Z
 Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
 Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
@@ -2462,10 +2462,13 @@ S9 is the last stage in 05-BUILD-ORDER.md.
   `Source:`. It is the M3.8 contract question: a suggested fix and a reference live inside
   `detail` because `CheckResult` has no field for either, and an emitter that wants to
   render them separately has to raise that.
-- **`06-TESTING.md` does not know about `fixtures/ledger-express`.** It owns the fixture
-  app requirements and now describes one of two. Left alone at S9.3 rather than edited,
-  because the task's reading budget was M4's module file and this is a second plan document.
-  Worth an editing pass by whoever next opens it.
+- **Resolved after S9: `06-TESTING.md` now describes both fixtures.** It owns the fixture
+  app requirements and described one of two, which was left alone at S9.3 because that
+  task's reading budget was M4's module file. The catalog gained a column saying which
+  server carries each defect, since D5 is on one of them; the boot requirement is measured
+  for both rather than assumed, at 0.88s and 0.84s against a three second budget; and the
+  corpus section now records that all twenty applications were probed black box, so the
+  false positive rate says nothing about a finding derived from source.
 
 - Resolved at M5.7: `--no-playwright` was removed from the M5 Definition of Done rather than replaced. It was never a vitest option, and an environment variable would have put core in the environment against rule R6. The launcher is injected by the caller and absent by default.
 
