@@ -89,6 +89,25 @@ export function denyFailureDetail(input: FindingTextInput): string {
   ].join(' ');
 }
 
+/**
+ * A denied delete that the response could not settle and the record did.
+ *
+ * The observation names both readings rather than only the response, because the response
+ * is precisely what was not sufficient here. A reader has to be able to see that the
+ * verdict rests on the record having been there and then not.
+ */
+export function destructiveFailureDetail(
+  input: FindingTextInput & { readonly instanceId: string },
+): string {
+  const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status} with no ${input.plan.resource} fields, and ${input.plan.resource} ${input.instanceId} was readable before the request and is absent after it`;
+
+  return [
+    observation,
+    referenceLine(input.plan, input.request, input.evidenceId),
+    suggestionFor(input.plan),
+  ].join(' ');
+}
+
 /** A deny rule on a list that failed: rows belonging to someone else came back. */
 export function listFailureDetail(input: FindingTextInput): string {
   const rows = (input.foreignRowIds ?? []).join(', ');

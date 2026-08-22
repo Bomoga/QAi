@@ -149,6 +149,7 @@ async function main(): Promise<void> {
   const accessResults = await runAccessChecks(access.plans as AccessCheckPlan[], {
     sessions,
     mutation: { allowed: mutatingChecksAllowed(config.config) },
+    ...(config.config.stateActor === undefined ? {} : { stateActorId: config.config.stateActor }),
   });
 
   const { results: behavioralResults, unverified } = await runBehavioralChecks(

@@ -364,6 +364,9 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   const accessResults = await runAccessChecks(access.plans as AccessCheckPlan[], {
     sessions: target.sessions,
     mutation: { allowed: mutatingChecksAllowed(config) },
+    // A denied delete that succeeds and returns nothing is settled by reading the record,
+    // never as the actor the rule says must be refused.
+    ...(config.stateActor === undefined ? {} : { stateActorId: config.stateActor }),
   });
 
   const { results: behavioralResults, unverified } = await runBehavioralChecks(

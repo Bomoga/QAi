@@ -5,6 +5,7 @@ import { selectCandidate, type CandidateRecord } from './evaluate.ts';
 import {
   allowFailureDetail,
   denyFailureDetail,
+  destructiveFailureDetail,
   listFailureDetail,
   passDetail,
   severityForAccessFailure,
@@ -26,6 +27,16 @@ import { assessAllowOutcome, assessDenyOutcome } from './verdict.ts';
 
 export interface AccessRunContext {
   readonly sessions: ReadonlyMap<string, ActorSession>;
+  /**
+   * Who persisted state is read as, when a destructive check has to confirm what it did.
+   *
+   * It cannot be the acting actor: a deny check acts as the identity the rule says must
+   * be refused, so reading the record as that actor would report a scoping rule as a
+   * state fact. Named by `TargetConfig.stateActor`, the same field M5.11 reads for the
+   * same reason. Absent means a destructive check keeps the verdict the response alone
+   * supports.
+   */
+  readonly stateActorId?: string;
   /**
    * Absent means mutating checks are not permitted. Supplied by the caller from the
    * M2 disposability gate rather than recomputed here, so there is one interlock
@@ -50,6 +61,44 @@ function candidatesOf(plan: AccessCheckPlan): CandidateRecord[] {
     id: instance.id,
     attributes: instance.attributes,
   }));
+}
+
+/**
+ * One reading of the record under test, as the configured state actor.
+ *
+ * Only for a delete, and only when there is a state actor and a read route. Everything
+ * else returns undefined and the check keeps the verdict the response alone supports,
+ * which is the conservative answer rather than a guess dressed as one.
+ */
+async function readRecord(
+  plan: AccessCheckPlan,
+  context: AccessRunContext,
+  instanceId: string | undefined,
+): Promise<{ present: boolean; evidenceId: string } | undefined> {
+  if (plan.action !== 'delete') return undefined;
+  if (plan.confirmReadTemplate === undefined || instanceId === undefined) return undefined;
+
+  const stateActorId = context.stateActorId;
+  if (stateActorId === undefined) return undefined;
+
+  const reader = context.sessions.get(stateActorId);
+  if (reader === undefined) return undefined;
+
+  const { outcome, evidenceId } = await reader.request({
+    method: 'GET',
+    path: resolvePath(plan.confirmReadTemplate, instanceId),
+  });
+
+  if (outcome.kind !== 'response') return undefined;
+
+  // Present means the reader could see the record. A refusal is not absence: the state
+  // actor being unable to read it says something about that actor, not about the record,
+  // so only a 2xx counts as present and only a 404 counts as gone.
+  const status = outcome.response.status;
+  if (status >= 200 && status < 300) return { present: true, evidenceId };
+  if (status === 404) return { present: false, evidenceId };
+
+  return undefined;
 }
 
 export async function runAccessCheck(
@@ -82,6 +131,7 @@ export async function runAccessCheck(
   }
 
   let path = plan.pathTemplate;
+  let selectedId: string | undefined;
 
   if (INSTANCE_ACTIONS.has(plan.action)) {
     const selection = selectCandidate(
@@ -111,11 +161,16 @@ export async function runAccessCheck(
       });
     }
 
-    path = resolvePath(plan.pathTemplate, selection.matched.id);
+    selectedId = selection.matched.id;
+    path = resolvePath(plan.pathTemplate, selectedId);
   }
 
+  // Read before acting, and the ordering is load bearing rather than incidental: a
+  // record can only be shown to have been destroyed by having been there first.
+  const before = await readRecord(plan, context, selectedId);
+
   const { outcome, evidenceId } = await session.request({ method: plan.method, path });
-  const evidence = [evidenceId];
+  const evidence = [evidenceId, ...(before === undefined ? [] : [before.evidenceId])];
   const request = `${plan.method} ${path}`;
   const where = `${request} as actor ${plan.actorId}`;
   const locationRef = plan.locationRef === undefined ? {} : { locationRef: plan.locationRef };
@@ -213,6 +268,56 @@ export async function runAccessCheck(
         evidence,
         ...locationRef,
       });
+    }
+
+    /**
+     * A destructive request the response cannot settle, settled by the record.
+     *
+     * Decided by the human on 2026-08-22. A 2xx carrying no resource fields is
+     * undecidable from the response alone, which is right for a read and cost a finding
+     * on a delete three times across the corpus: the record was destroyed and the tool
+     * reported that it could not tell. Present before and gone after is not a guess, it
+     * is the strongest evidence this check can hold.
+     */
+    if (before?.present === true) {
+      const after = await readRecord(plan, context, selectedId);
+
+      if (after !== undefined) {
+        evidence.push(after.evidenceId);
+
+        if (!after.present) {
+          return fail(
+            {
+              identity: plan.identity,
+              title: `${plan.resource} deleted by actor ${plan.actorId}, which the spec denies`,
+              detail: destructiveFailureDetail({
+                plan,
+                request,
+                evidenceId,
+                ...(assessment.status === undefined ? {} : { status: assessment.status }),
+                instanceId: selectedId ?? plan.resource,
+              }),
+              evidence,
+              ...locationRef,
+            },
+            severityForAccessFailure(plan),
+          );
+        }
+
+        return pass({
+          identity: plan.identity,
+          title: `${plan.resource} survived a delete by actor ${plan.actorId}`,
+          detail: passDetail({
+            plan,
+            request,
+            evidenceId,
+            ...(assessment.status === undefined ? {} : { status: assessment.status }),
+            note: `and ${plan.resource} ${selectedId ?? ''} is still readable afterwards`.trim(),
+          }),
+          evidence,
+          ...locationRef,
+        });
+      }
     }
 
     return inconclusive({
