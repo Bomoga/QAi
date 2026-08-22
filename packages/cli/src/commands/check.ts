@@ -10,6 +10,7 @@ import {
   diffSpecObservation,
   openStore,
   isLoadFailure,
+  isRefusal,
   isTransportError,
   loadSpec,
   mutatingChecksAllowed,
@@ -20,6 +21,7 @@ import {
   renderJunit,
   renderSarif,
   renderText,
+  resetFixtures,
   resolveBrowserCapability,
   runAccessChecks,
   runBehavioralChecks,
@@ -361,13 +363,53 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   );
 
   reporter.step('Running checks');
+  /**
+   * The reset the disposability gate permits, finally wired up.
+   *
+   * M3.7 built the interlock and gave the runner a `reset` to call between mutating
+   * checks, and no caller ever supplied one, so no real run has ever reset anything. The
+   * corpus paid for it: on one application a destructive access check deleted the record,
+   * and the criterion that would have caught the same defect reported that nothing could
+   * change; on another a later anonymous delete passed with a 404 because the record was
+   * already gone.
+   *
+   * A reset that fails is reported rather than swallowed. `runAccessChecks` already stops
+   * the remaining mutating checks when one fails, and between the families the honest
+   * thing is to say so out loud, because everything after it ran against a state nobody
+   * established.
+   */
+  const canMutate = mutatingChecksAllowed(config);
+  const reset = canMutate
+    ? async (): Promise<void> => {
+        const outcome = await resetFixtures(config, { cwd });
+        if (isRefusal(outcome)) throw new Error(outcome.message);
+        if (outcome.exitCode !== 0) {
+          throw new Error(`the reset command exited ${outcome.exitCode}`);
+        }
+      }
+    : undefined;
+
   const accessResults = await runAccessChecks(access.plans as AccessCheckPlan[], {
     sessions: target.sessions,
-    mutation: { allowed: mutatingChecksAllowed(config) },
+    mutation: { allowed: canMutate, ...(reset === undefined ? {} : { reset }) },
     // A denied delete that succeeds and returns nothing is settled by reading the record,
     // never as the actor the rule says must be refused.
     ...(config.stateActor === undefined ? {} : { stateActorId: config.stateActor }),
   });
+
+  // Between the families, not only within one. An access check that deleted a record
+  // changes what every criterion after it can observe.
+  if (reset !== undefined && access.plans.some((plan) => plan.mutates)) {
+    try {
+      await reset();
+    } catch (cause) {
+      reporter.warn(
+        `The reset between the access checks and the acceptance criteria did not complete, so every criterion below ran against a state this run did not establish: ${
+          cause instanceof Error ? cause.message : 'the reset command failed'
+        }`,
+      );
+    }
+  }
 
   const { results: behavioralResults, unverified } = await runBehavioralChecks(
     behavioral.plans as BehavioralPlan[],
