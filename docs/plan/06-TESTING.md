@@ -48,10 +48,19 @@ Each defect has an identifier, an expected finding, and an expected severity. Th
 | D1 | Invoice readable across organizations by id | access, deny rule AR-014-01 | high | both |
 | D2 | Invoice list endpoint returns unscoped rows | access, deny rule on `list` | high | both |
 | D3 | Mutation endpoint accepts unauthenticated requests | access, deny rule on `update` | high | both |
-| D4 | Sensitive field returned in a response that should omit it | behavioral, deterministic | medium | both |
+| D4 | Sensitive field returned in a response that should omit it | behavioral, deterministic | high | both |
 | D5 | Undeclared debug endpoint present | structural, observed not specified | medium | **`ledger` only** |
 | D6 | Specified audit entity never implemented | structural, specified not observed | low | both, by being absent from both |
 | D7 | Requirement with no checks defined | unverified, `no-checks-defined` | info | neither, it is a spec fact |
+
+**D4's expected severity moved from medium to high at Q8, on 2026-08-22.** A behavioral
+finding took its severity from one constant, `medium`, while the default failure threshold
+is `high`, so a criterion that caught a real leak reported it correctly and the run exited
+0. Four corpus applications did that. Severity now comes from the requirement's tags: a
+criterion on a requirement tagged `access-control` or `data-exposure` fails at `high`, and
+everything else stays `medium`. REQ-004 is tagged `data-exposure`, so D4 is high. The
+fixture's severity counts moved from `high 3, medium 6` to `high 8, medium 1` and no
+verdict changed.
 
 **D5 is the one defect the Express twin does not serve, and `LEDGER_DEFECT_D5` is forced off there rather than ignored.** A source adapter reads text, so a route registered behind a runtime condition is still declared in the file. With the defect switched off the twin would report an endpoint it refuses to serve, which is a finding about a variable rather than about an application. Fixing that defect means deleting the route, which an environment variable cannot model. Three tests hold the difference: the twin refuses the route and omits it from its own route index whatever the switch says, and `fixtures/ledger` still serves it, so the switch cannot quietly stop meaning anything.
 

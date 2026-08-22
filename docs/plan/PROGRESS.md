@@ -1,7 +1,9 @@
 ﻿# Progress
 
-Updated: 2026-08-22T01:00:00Z
-Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
+Updated: 2026-08-22T04:30:00Z
+Current stage: S9, buffer and demo, complete and merged. Branch
+`feat/decisions-and-recall` is in flight with the four decided questions and the corpus
+recall work.
 Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
@@ -834,6 +836,18 @@ Delta RUN-20260821-232711 to RUN-20260821-232740
   twin does not serve the debug endpoint, so the requirement that fails on the ledger for
   that reason is verified here. Nothing else moved: the same five requirements are repaired
   by the same checks.
+- **Rehearsed again on 2026-08-22, cold, after the four decisions and the recall work.**
+  The engine had changed underneath the evidence above, so the recorded run said nothing
+  about the current one. Clone 2s, install 5s, build 10s, and the six steps in 8s: init
+  exit 0, validate exit 0, check exit 1 with 15 requirements as 8 verified, 5 failed, 2
+  unverified, check exit 0 with 13 verified, and a delta naming the same five requirements
+  moving failed to verified. Eleven lines still carry `Source: src/routes.ts`.
+- **One line of that table is now stale and is left standing rather than edited.** Step 3
+  reported `high 3, medium 6` when it was first run and reports `high 8, medium 0` now.
+  Q8 moved five behavioral findings to high, and the twin serves no D5, so nothing medium
+  remains. **No verdict changed, no exit code changed, and no requirement moved between
+  buckets.** The severity figure in the S9.4 table describes the run that happened on the
+  day, which is what a record is for.
 
 ### S9 summary
 
@@ -889,6 +903,80 @@ exit 0. **83 test files, 1670 tests**, up from 82 and 1615.
 S9 is the last stage in 05-BUILD-ORDER.md.
 
 ## Notes carried forward
+
+- **The three open decisions were answered on 2026-08-22, and a fourth with them.** Q6,
+  Q7, and Q8 had each been hit more than once and are recorded as D13, D14, and D15 in
+  07-DECISIONS.md. The fourth is D16, whether a denied delete that returns nothing is a
+  failure, which was raised as a verdict rule rather than as a recall problem because
+  04-CONVENTIONS.md says never to guess at one. All four were answered as recommended.
+- **Q6 needed two fields more than the brief proposed, and that is stated rather than
+  slipped in.** The brief said counts and endpoint identities. With only those, the text
+  report still could not render its own section from a RunResult, because it prints the
+  probe mode and the probe's notes, and dropping the notes would let a stored run overstate
+  its coverage. `mode` and `notes` are carried too. The endpoint list is exactly what the
+  brief asked for: identity and `authRequired`, nothing else.
+- **Q8 moved a golden's severity counts and no verdict.** `high 3, medium 6` became
+  `high 8, medium 1`. Five behavioral findings sit on requirements tagged `access-control`
+  or `data-exposure`; the one that stays medium is D5, which is structural. D4's row in
+  06-TESTING.md's catalog moved with it, since that table is the integration test's oracle
+  and would otherwise have been wrong.
+- **Wiring the reset found a command that had never run.** M3.7 gave the access runner a
+  reset to call between mutating checks and no caller ever supplied one, so no real run
+  reset anything, and the corpus paid for it twice. Supplying it turned two integration
+  checks inconclusive, because the harness's reset command was `process.stdout.write(1)`,
+  which throws. **A command in a fixture that nothing executes is not tested by anything,
+  however plausible it looks.** It exits 0 now and still restores nothing, which is honest
+  for an in-memory target and is written where the command is.
+- **The reset between the families is new, and the one inside the access family finally
+  runs.** An access check that deleted a record changes what every criterion after it can
+  observe, which is what happened on `p3-notes-delete-open`. A reset that fails between the
+  families is reported out loud rather than swallowed, because everything after it ran
+  against a state the run did not establish.
+- **The delete confirmation found the M3.6 default-parameter trap again, in the file that
+  recorded it.** `deleteContextWith(client, undefined)` took the default and ran with a
+  state actor configured, so the test for the no-state-actor path was passing for the wrong
+  reason. The helper takes no default now. Third sighting of this trap in this repository.
+- **The instance sweep changed a real finding in the fixture, which is the point.**
+  `AR-011-01` carries no condition, so every configured instance is one the rule denies,
+  and the pass now says both were refused instead of one. An unconditional deny covering
+  only the first seeded record was the quiet half of this defect.
+- **Every golden regeneration in this branch was read line by line, three of them.** Q7
+  moved one line per file, Q6 was purely additive apart from the version, Q8 moved five
+  severities and the tally, and the punctuation fix moved the detail strings plus the
+  evidence ids the sweep's extra requests shifted. Verdict counts are unchanged throughout:
+  7/6/2 and 13/0/2 over 24 checks.
+- **The corpus was re-run against the changed tool, and the rate held.** Three of the
+  changes on this branch touch recall or a verdict rule, so a 0.0% measured against the old
+  behaviour said nothing about the new. Twenty applications, six new findings, five true
+  positives and one unclear, 0.0% over 43 judged where it was 38. Access judges nine where
+  it judged four.
+- **The aggregate moved, and it is the best evidence this branch produced.** Five of twenty
+  applications fail to enforce an access rule they specified, unchanged. S8 found two of
+  them by a failed access check, two more only through a behavioral criterion, and missed
+  one entirely. **All five now produce a failed access check and nothing is missed.** The
+  one that was missed, `p3-notes-delete-open`, is caught by reading the record either side
+  of the delete, which is the verdict rule doing exactly what it was decided for.
+- **The corpus now holds one `unclear`, its first.** On `p3-notes-shared-flag` the
+  application does what REQ-004 intends, a shared note being readable by anyone signed in,
+  and violates AR-001-01 as written, which denies that actor reading any note that is not
+  theirs. The disagreement is between two requirements of one spec rather than between the
+  spec and the application, so neither classification is honest and it is left unsettled
+  for whoever owns that spec.
+- **Reviewing it found the measurement defect again.** An `unclear` finding was excluded
+  from the rate, correctly, and from the printed line as well, so it disappeared without
+  trace. That is the S8.6 lesson about a denominator that narrows quietly, arriving in a
+  second place. It is printed now, with a test in both directions.
+- **A corpus application's own prediction stopped holding, and it was left alone.**
+  `p6-messages-dm-leak/NOTES.md` says REQ-001 passing while REQ-002 fails is the
+  interesting shape. Both fail now, because the two carry the identical rule condition and
+  the predicted shape depended on only the first instance being tried. The note describes a
+  tool that stopped at the first instance, and rewriting it would erase the evidence that
+  the behaviour changed.
+- **What is still open after this branch**, so the list does not have to be rebuilt: the
+  text report prints a finding's reference twice, once inside `detail` and once as its own
+  line, which is the M3.8 contract question about `CheckResult` having no field for a
+  reference or a suggestion. Left alone deliberately: it is a contract change, not
+  punctuation.
 
 - **Post-merge fix, branch `fix/behavioral-file-references`: a behavioral finding can cite
   a file too.** S9 fixed the access half and recorded the behavioral half as a known gap,

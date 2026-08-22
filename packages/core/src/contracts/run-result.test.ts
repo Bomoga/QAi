@@ -226,6 +226,7 @@ describe('RunResultSchema', () => {
     'target-unreachable',
     'probe-incomplete',
     'check-error',
+    'no-verdict-reached',
     'unsupported-condition',
     'model-inconclusive',
     'capability-unavailable',

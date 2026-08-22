@@ -1,5 +1,8 @@
 import type {
   CheckResultRecord,
+  Observation,
+  ObservationCounts,
+  ObservationEndpointSummary,
   RequirementResult,
   RequirementVerdict,
   RunResult,
@@ -76,6 +79,13 @@ export interface AssembleInput {
     readonly commit?: string;
   };
   readonly observationRef?: string;
+  /**
+   * The Observation the run probed, summarized onto the result. Q6, decided 2026-08-22.
+   *
+   * Optional, because a run assembled without one is legitimate. Absent means the result
+   * says nothing about what was observed, which is different from reporting zeroes.
+   */
+  readonly observation?: Observation;
   readonly checks: readonly CheckResultRecord[];
   readonly structural?: StructuralFindings;
   /** From `collectCoverageGaps`, so the three side channels are gathered once. */
@@ -133,9 +143,15 @@ function coverageOf(
  *
  * A gap the run reported wins over the generic fallback, since it names something the
  * reader can act on. A requirement that is unverified with no gap recorded had checks
- * that all came back inconclusive, which is `check-error` only when something threw; the
- * honest general case is that nothing established a verdict, and `no-checks-defined`
+ * that all came back inconclusive, which is `no-verdict-reached`, and `no-checks-defined`
  * covers the requirement that had nothing to run in the first place.
+ *
+ * **`check-error` is no longer the fallback**, resolved as Q7 on 2026-08-22. It means
+ * something threw, and it was being reported for a requirement whose checks all declined
+ * to guess, which is invariant I2 working. A run that says it errored when it did not is
+ * a tool describing itself as broken, and it happened five times before the closed set
+ * gained a member for it. A runner that really throws still records `check-error` as a
+ * gap, and that gap wins here, so the meaning it was named for is intact.
  */
 function reasonsFor(
   requirements: readonly RequirementResult[],
@@ -167,12 +183,63 @@ function reasonsFor(
       reason:
         (checkCount.get(requirement.requirementId) ?? 0) === 0
           ? 'no-checks-defined'
-          : 'check-error',
+          : 'no-verdict-reached',
       ...(requirement.reason === undefined ? {} : { detail: requirement.reason }),
     });
   }
 
   return entries;
+}
+
+/**
+ * The Observation as a run remembers it, per Q6.
+ *
+ * Sorted by identity, like every other collection here, so two runs over identical inputs
+ * produce identical bytes. The endpoint list carries the identity and `authRequired` and
+ * nothing else; the reasoning for that narrowness is on the schema.
+ */
+function summarizeObservation(observation: Observation): {
+  mode: Observation['mode'];
+  counts: ObservationCounts;
+  endpoints: ObservationEndpointSummary[];
+  notes: Observation['notes'];
+} {
+  const tally = <T extends string>(values: readonly T[], key: T): number =>
+    values.filter((value) => value === key).length;
+
+  const entityOrigins = observation.entities.map((entity) => entity.origin);
+  const entityConfidence = observation.entities.map((entity) => entity.confidence);
+  const endpointOrigins = observation.endpoints.map((endpoint) => endpoint.origin);
+  const endpointConfidence = observation.endpoints.map((endpoint) => endpoint.confidence);
+
+  return {
+    mode: observation.mode,
+    notes: observation.notes,
+    counts: {
+      entities: {
+        schema: tally(entityOrigins, 'schema'),
+        inferred: tally(entityOrigins, 'inferred'),
+        high: tally(entityConfidence, 'high'),
+        medium: tally(entityConfidence, 'medium'),
+        low: tally(entityConfidence, 'low'),
+      },
+      endpoints: {
+        source: tally(endpointOrigins, 'source'),
+        blackbox: tally(endpointOrigins, 'blackbox'),
+        high: tally(endpointConfidence, 'high'),
+        medium: tally(endpointConfidence, 'medium'),
+        low: tally(endpointConfidence, 'low'),
+      },
+    },
+    endpoints: observation.endpoints
+      .map((endpoint) => ({
+        id: endpoint.id,
+        method: endpoint.method,
+        path: endpoint.path,
+        authRequired: endpoint.authRequired,
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id)),
+  };
 }
 
 export function assembleRun(input: AssembleInput): RunResult {
@@ -231,7 +298,9 @@ export function assembleRun(input: AssembleInput): RunResult {
   );
 
   return {
-    resultVersion: input.resultVersion ?? '0.1',
+    // 0.2 since Q6 added the observation summary. Additive, so the contract's own rule
+    // bumps the minor.
+    resultVersion: input.resultVersion ?? '0.2',
     runId: input.runId,
     toolVersion: input.toolVersion,
     startedAt: input.startedAt,
@@ -246,7 +315,14 @@ export function assembleRun(input: AssembleInput): RunResult {
       ...(input.target.sourceRoot === undefined ? {} : { sourceRoot: input.target.sourceRoot }),
       ...(input.target.commit === undefined ? {} : { commit: input.target.commit }),
     },
-    ...(input.observationRef === undefined ? {} : { observation: { ref: input.observationRef } }),
+    ...(input.observationRef === undefined
+      ? {}
+      : {
+          observation: {
+            ref: input.observationRef,
+            ...(input.observation === undefined ? {} : summarizeObservation(input.observation)),
+          },
+        }),
     requirements,
     checks,
     structural: input.structural ?? EMPTY_STRUCTURAL,

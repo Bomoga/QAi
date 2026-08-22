@@ -10,6 +10,7 @@ import {
   diffSpecObservation,
   openStore,
   isLoadFailure,
+  isRefusal,
   isTransportError,
   loadSpec,
   mutatingChecksAllowed,
@@ -20,6 +21,7 @@ import {
   renderJunit,
   renderSarif,
   renderText,
+  resetFixtures,
   resolveBrowserCapability,
   runAccessChecks,
   runBehavioralChecks,
@@ -30,7 +32,6 @@ import {
   type CheckResultRecord,
   type Evidence,
   type EvidenceWriter,
-  type Observation,
   type Deps,
   type PruneReport,
   type Reporter,
@@ -236,19 +237,14 @@ function store(
   if (pruned !== undefined) reporter.info(pruned);
 }
 
-function render(
-  result: RunResult,
-  format: Settings['format']['value'],
-  observation: Observation,
-  color: boolean,
-): string {
+function render(result: RunResult, format: Settings['format']['value'], color: boolean): string {
   if (format === 'json') return renderJson(result);
   if (format === 'sarif') return renderSarif(result);
   if (format === 'junit') return renderJunit(result);
-  // The Observation goes in because RunResult carries only a reference to it, and the
-  // text report's second section is entity and endpoint counts by origin and confidence.
-  // This is the caller M7.3 added `TextOptions.observation` for.
-  return renderText(result, { observation, color });
+  // No Observation argument since Q6. The result carries a summary of its own, so the
+  // text report is a projection of a RunResult again and `qai report` renders the same
+  // section from a stored run.
+  return renderText(result, { color });
 }
 
 export async function runCheck(options: CheckOptions): Promise<number> {
@@ -367,10 +363,53 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   );
 
   reporter.step('Running checks');
+  /**
+   * The reset the disposability gate permits, finally wired up.
+   *
+   * M3.7 built the interlock and gave the runner a `reset` to call between mutating
+   * checks, and no caller ever supplied one, so no real run has ever reset anything. The
+   * corpus paid for it: on one application a destructive access check deleted the record,
+   * and the criterion that would have caught the same defect reported that nothing could
+   * change; on another a later anonymous delete passed with a 404 because the record was
+   * already gone.
+   *
+   * A reset that fails is reported rather than swallowed. `runAccessChecks` already stops
+   * the remaining mutating checks when one fails, and between the families the honest
+   * thing is to say so out loud, because everything after it ran against a state nobody
+   * established.
+   */
+  const canMutate = mutatingChecksAllowed(config);
+  const reset = canMutate
+    ? async (): Promise<void> => {
+        const outcome = await resetFixtures(config, { cwd });
+        if (isRefusal(outcome)) throw new Error(outcome.message);
+        if (outcome.exitCode !== 0) {
+          throw new Error(`the reset command exited ${outcome.exitCode}`);
+        }
+      }
+    : undefined;
+
   const accessResults = await runAccessChecks(access.plans as AccessCheckPlan[], {
     sessions: target.sessions,
-    mutation: { allowed: mutatingChecksAllowed(config) },
+    mutation: { allowed: canMutate, ...(reset === undefined ? {} : { reset }) },
+    // A denied delete that succeeds and returns nothing is settled by reading the record,
+    // never as the actor the rule says must be refused.
+    ...(config.stateActor === undefined ? {} : { stateActorId: config.stateActor }),
   });
+
+  // Between the families, not only within one. An access check that deleted a record
+  // changes what every criterion after it can observe.
+  if (reset !== undefined && access.plans.some((plan) => plan.mutates)) {
+    try {
+      await reset();
+    } catch (cause) {
+      reporter.warn(
+        `The reset between the access checks and the acceptance criteria did not complete, so every criterion below ran against a state this run did not establish: ${
+          cause instanceof Error ? cause.message : 'the reset command failed'
+        }`,
+      );
+    }
+  }
 
   const { results: behavioralResults, unverified } = await runBehavioralChecks(
     behavioral.plans as BehavioralPlan[],
@@ -393,6 +432,7 @@ export async function runCheck(options: CheckOptions): Promise<number> {
     specHash: loaded.hash,
     specFiles: loaded.files,
     observationRef: observationIdFrom(startedAt),
+    observation,
     target: {
       baseUrl,
       ...(config.target.sourceRoot === undefined ? {} : { sourceRoot: config.target.sourceRoot }),
@@ -411,7 +451,7 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   reporter.step('Recording the run');
   store(cwd, result, evidence, reporter);
 
-  const document = render(result, settings.format.value, observation, options.color === true);
+  const document = render(result, settings.format.value, options.color === true);
   const outPath = settings.out.value;
 
   if (outPath === undefined) {
