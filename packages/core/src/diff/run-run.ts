@@ -177,14 +177,15 @@ function fieldsObservedNotSpecified(run: RunResult): Map<string, Set<string>> {
  * class: a deny that fails means something forbidden is reachable, an allow that fails
  * means a feature is broken, and only the first is a loosening.
  *
- * The other half, an endpoint's `authRequired` moving away from `true`, needs the
- * Observation, and a RunResult carries only a reference to one. Recorded in the module's
- * open questions rather than guessed at.
+ * **The other half is built now, resolved as Q6 on 2026-08-22.** An endpoint whose
+ * `authRequired` moves away from `true` is the same divergence seen from the other side,
+ * and it needed the Observation, which a RunResult carried only a reference to. The
+ * summary on the result carries `authRequired` for exactly this.
  */
 function accessLoosened(older: RunResult, newer: RunResult): AccessLoosening[] {
   const before = new Map(older.checks.map((check) => [check.checkId, check] as const));
 
-  return newer.checks
+  const fromChecks = newer.checks
     .filter((check) => check.type === 'access' && check.verdict === 'fail')
     .filter((check) => check.severity === 'high')
     .filter((check) => before.get(check.checkId)?.verdict === 'pass')
@@ -193,6 +194,36 @@ function accessLoosened(older: RunResult, newer: RunResult): AccessLoosening[] {
       detail: check.detail ?? check.title,
       ...(check.requirementId === undefined ? {} : { requirementId: check.requirementId }),
       ...(check.ruleId === undefined ? {} : { ruleId: check.ruleId }),
+    }));
+
+  return [...fromChecks, ...authRequirementDropped(older, newer)];
+}
+
+/**
+ * An endpoint that required credentials and now does not.
+ *
+ * Only `true` to `false` counts. `true` to `unknown` is the probe losing sight of the
+ * fact rather than the application changing: `authRequired` stays `unknown` until a
+ * refusal without credentials is observed, so a run that simply did not establish it
+ * would otherwise report a loosening on every endpoint it stopped checking. The opposite
+ * direction is a tightening and belongs nowhere near a headline that means something
+ * forbidden became reachable.
+ *
+ * An endpoint only one run saw is left alone. It appeared or vanished, which
+ * `endpointsAdded` and `endpointsRemoved` already report, and it has no earlier state to
+ * have loosened from.
+ */
+function authRequirementDropped(older: RunResult, newer: RunResult): AccessLoosening[] {
+  const before = new Map(
+    (older.observation?.endpoints ?? []).map((endpoint) => [endpoint.id, endpoint] as const),
+  );
+
+  return (newer.observation?.endpoints ?? [])
+    .filter((endpoint) => before.get(endpoint.id)?.authRequired === true)
+    .filter((endpoint) => endpoint.authRequired === false)
+    .map((endpoint) => ({
+      endpoint: endpoint.id,
+      detail: `${endpoint.method} ${endpoint.path} required credentials in the earlier run and no longer does`,
     }));
 }
 

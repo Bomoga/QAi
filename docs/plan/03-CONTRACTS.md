@@ -120,14 +120,25 @@ The public interface. Every emitter and every future surface is a projection of 
 
 ```jsonc
 {
-  "resultVersion": "0.1",
+  "resultVersion": "0.2",
   "runId": "RUN-20260814-0931",
   "toolVersion": "0.1.0",
   "startedAt": "2026-08-14T09:31:00Z",
   "finishedAt": "2026-08-14T09:33:41Z",
   "spec": { "hash": "sha256:...", "specVersion": "0.1", "files": ["spec/invoicing.spec.yaml"] },
   "target": { "baseUrl": "http://localhost:3000", "sourceRoot": "./", "commit": "a1b2c3d" },
-  "observation": { "ref": "OBS-20260814-0931" },
+  "observation": {
+    "ref": "OBS-20260814-0931",
+    "mode": "hybrid",
+    "counts": {
+      "entities":  { "schema": 3, "inferred": 1, "high": 3, "medium": 1, "low": 0 },
+      "endpoints": { "source": 4, "blackbox": 1, "high": 4, "medium": 1, "low": 0 }
+    },
+    "endpoints": [
+      { "id": "GET /api/invoices/:id", "method": "GET", "path": "/api/invoices/:id", "authRequired": "unknown" }
+    ],
+    "notes": [{ "level": "info", "message": "GET /api/invoices/:id is declared in source, and the crawl did not reach it", "refs": [] }]
+  },
   "requirements": [
     {
       "requirementId": "REQ-014",
@@ -177,6 +188,9 @@ Rules:
 - `unverifiedReasons` uses a closed set: `no-checks-defined`, `actor-unavailable`, `target-unreachable`, `probe-incomplete`, `check-error`, `no-verdict-reached`, `unsupported-condition`, `model-inconclusive`, `capability-unavailable`. `capability-unavailable` covers an optional dependency being absent, for example Playwright not installed, and is distinct from `model-inconclusive`, which means the model ran and was uncertain.
 - **`no-verdict-reached` was added by Q7 on 2026-08-22** and means the checks ran and none of them established the fact. It is distinct from `check-error`, which means something threw. Before it existed, `assembleRun` fell back to `check-error` for a requirement whose every check came back inconclusive, so the tool reported an error on five occasions when it was declining to guess, which is invariant I2 working as intended. `detail` carries the specifics, so the sub-cases stay distinguishable without a second member.
 - `modelAssistedCheckCount` exists so the report can state plainly how much of the run was not deterministic. It is always displayed, including when zero.
+- **`observation` gained a summary of itself by Q6 on 2026-08-22, and `resultVersion` is `0.2`.** It carried `ref` alone, and three consumers needed what was behind it: the text report's second section, which had to take the Observation as a caller option and stopped being a pure projection of a RunResult; `qai report`, which has only a stored run and printed the reference instead of counts; and the half of the access loosening rule that fires when an endpoint's `authRequired` moves away from `true`, which was never built. All three work now.
+- **The endpoint list is deliberately narrow**: identity, method, path, and `authRequired`, which is the field the loosening rule turns on. No response shapes, no evidence ids, no `actorVisibility`. A RunResult is already the largest document this tool writes and both goldens are committed. `mode` and `notes` are carried too, beyond what Q6 proposed, because the section the decision names prints both, and a stored run that cannot say what the probe failed to reach overstates its own coverage.
+- Every field of `observation` but `ref` is optional. A run assembled without an Observation is valid and says nothing about what exists, which is different from reporting zeroes.
 
 ## Evidence
 

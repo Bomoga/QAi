@@ -1,6 +1,6 @@
 import { createColors } from 'picocolors';
 
-import type { CheckResultRecord, Observation, RunResult, Severity } from '../contracts/index.ts';
+import type { CheckResultRecord, RunResult, Severity } from '../contracts/index.ts';
 
 /**
  * The text projection of a RunResult, for a person reading a terminal.
@@ -31,22 +31,22 @@ import type { CheckResultRecord, Observation, RunResult, Severity } from '../con
  */
 
 /**
- * The Observation is an option rather than a field on RunResult, and that is a deviation
- * worth knowing about.
+ * **The Observation option is gone, resolved as Q6 on 2026-08-22.**
  *
- * Section 2 asks for entity and endpoint counts by origin and confidence. RunResult
- * carries `observation.ref` and nothing else, so those counts are not derivable from the
- * argument the module's Public API gives this function. Adding them to RunResult is a
- * contract change; taking the Observation the caller already holds is not, and the
- * emitter stays pure either way. With no Observation the section names the reference
- * rather than reporting counts of zero, since zero entities is a claim about the
- * application and this is an absence of data about it.
+ * Section 2 asks for entity and endpoint counts by origin and confidence, and RunResult
+ * used to carry `observation.ref` and nothing else, so those counts were not derivable
+ * from the argument the module's Public API gives this function. The workaround was to
+ * take the Observation the caller already held, which made this emitter something other
+ * than a pure projection of a RunResult and left `qai report` unable to render the
+ * section at all from a stored run. The summary is on the result now and this reads it.
+ *
+ * With no summary the section names the reference rather than reporting counts of zero,
+ * since zero entities is a claim about the application and this is an absence of data
+ * about it.
  */
 export interface TextOptions {
   /** True only when the caller has established the destination is a TTY. */
   readonly color?: boolean;
-  /** The run's Observation, when the caller has it. See the note above. */
-  readonly observation?: Observation;
 }
 
 /** Highest first. Findings are ordered by this and then by requirement id. */
@@ -57,11 +57,6 @@ type Colors = ReturnType<typeof createColors>;
 function severityRank(severity: Severity): number {
   const index = SEVERITY_ORDER.indexOf(severity);
   return index < 0 ? SEVERITY_ORDER.length : index;
-}
-
-/** `{a: 2, b: 1}` as `a 2, b 1`, in the order the caller listed the keys. */
-function tally<T extends string>(items: readonly T[], keys: readonly T[]): string {
-  return keys.map((key) => `${key} ${items.filter((item) => item === key).length}`).join(', ');
 }
 
 function headerSection(result: RunResult, colors: Colors): string[] {
@@ -79,56 +74,48 @@ function headerSection(result: RunResult, colors: Colors): string[] {
   return lines;
 }
 
-function builtSection(result: RunResult, options: TextOptions, colors: Colors): string[] {
+function builtSection(result: RunResult, colors: Colors): string[] {
   const lines = [colors.bold('What was built')];
-  const observed = options.observation;
+  const observed = result.observation;
 
   if (observed === undefined) {
+    lines.push('  No probe was recorded for this run, so nothing is claimed about what exists.');
+    return lines;
+  }
+
+  const counts = observed.counts;
+  if (counts === undefined) {
     lines.push(
-      result.observation === undefined
-        ? '  No probe was recorded for this run, so nothing is claimed about what exists.'
-        : `  Observation ${result.observation.ref} was recorded. Counts are not carried in the run result; read the observation for them.`,
+      `  Observation ${observed.ref} was recorded, and this run carries no summary of it.`,
     );
     return lines;
   }
 
-  lines.push(`  Probe mode: ${observed.mode}`);
+  if (observed.mode !== undefined) lines.push(`  Probe mode: ${observed.mode}`);
 
-  lines.push(`  ${observed.entities.length} entities`);
-  if (observed.entities.length > 0) {
+  const entities = counts.entities;
+  const entityTotal = entities.schema + entities.inferred;
+  lines.push(`  ${entityTotal} entities`);
+  if (entityTotal > 0) {
+    lines.push(`    by origin: schema ${entities.schema}, inferred ${entities.inferred}`);
     lines.push(
-      `    by origin: ${tally(
-        observed.entities.map((entity) => entity.origin),
-        ['schema', 'inferred'],
-      )}`,
-    );
-    lines.push(
-      `    by confidence: ${tally(
-        observed.entities.map((entity) => entity.confidence),
-        ['high', 'medium', 'low'],
-      )}`,
+      `    by confidence: high ${entities.high}, medium ${entities.medium}, low ${entities.low}`,
     );
   }
 
-  lines.push(`  ${observed.endpoints.length} endpoints`);
-  if (observed.endpoints.length > 0) {
+  const endpoints = counts.endpoints;
+  const endpointTotal = endpoints.source + endpoints.blackbox;
+  lines.push(`  ${endpointTotal} endpoints`);
+  if (endpointTotal > 0) {
+    lines.push(`    by origin: source ${endpoints.source}, blackbox ${endpoints.blackbox}`);
     lines.push(
-      `    by origin: ${tally(
-        observed.endpoints.map((endpoint) => endpoint.origin),
-        ['source', 'blackbox'],
-      )}`,
-    );
-    lines.push(
-      `    by confidence: ${tally(
-        observed.endpoints.map((endpoint) => endpoint.confidence),
-        ['high', 'medium', 'low'],
-      )}`,
+      `    by confidence: high ${endpoints.high}, medium ${endpoints.medium}, low ${endpoints.low}`,
     );
   }
 
   // A probe that stopped early and does not say so reads as an application with nothing
   // more in it.
-  for (const note of observed.notes) {
+  for (const note of observed.notes ?? []) {
     lines.push(`  ${note.level}: ${note.message}`);
   }
 
@@ -290,7 +277,7 @@ export function renderText(result: RunResult, opts: TextOptions): string {
 
   const sections = [
     headerSection(result, colors),
-    builtSection(result, opts, colors),
+    builtSection(result, colors),
     disagreementsSection(result, colors),
     findingsSection(result, colors),
     unverifiedSection(result, colors),

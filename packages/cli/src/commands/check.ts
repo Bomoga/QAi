@@ -30,7 +30,6 @@ import {
   type CheckResultRecord,
   type Evidence,
   type EvidenceWriter,
-  type Observation,
   type Deps,
   type PruneReport,
   type Reporter,
@@ -236,19 +235,14 @@ function store(
   if (pruned !== undefined) reporter.info(pruned);
 }
 
-function render(
-  result: RunResult,
-  format: Settings['format']['value'],
-  observation: Observation,
-  color: boolean,
-): string {
+function render(result: RunResult, format: Settings['format']['value'], color: boolean): string {
   if (format === 'json') return renderJson(result);
   if (format === 'sarif') return renderSarif(result);
   if (format === 'junit') return renderJunit(result);
-  // The Observation goes in because RunResult carries only a reference to it, and the
-  // text report's second section is entity and endpoint counts by origin and confidence.
-  // This is the caller M7.3 added `TextOptions.observation` for.
-  return renderText(result, { observation, color });
+  // No Observation argument since Q6. The result carries a summary of its own, so the
+  // text report is a projection of a RunResult again and `qai report` renders the same
+  // section from a stored run.
+  return renderText(result, { color });
 }
 
 export async function runCheck(options: CheckOptions): Promise<number> {
@@ -393,6 +387,7 @@ export async function runCheck(options: CheckOptions): Promise<number> {
     specHash: loaded.hash,
     specFiles: loaded.files,
     observationRef: observationIdFrom(startedAt),
+    observation,
     target: {
       baseUrl,
       ...(config.target.sourceRoot === undefined ? {} : { sourceRoot: config.target.sourceRoot }),
@@ -411,7 +406,7 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   reporter.step('Recording the run');
   store(cwd, result, evidence, reporter);
 
-  const document = render(result, settings.format.value, observation, options.color === true);
+  const document = render(result, settings.format.value, options.color === true);
   const outPath = settings.out.value;
 
   if (outPath === undefined) {
