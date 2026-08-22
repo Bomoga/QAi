@@ -5,6 +5,7 @@ import type {
   Spec,
   UnverifiedReason,
 } from '../../contracts/index.ts';
+import { pathIdentity, templateIdentity } from '../../probe/identity.ts';
 import type { ConditionAst } from '../../spec/condition.ts';
 import type { ResourceInstance } from '../../target/config.ts';
 import type { HttpMethod } from '../../target/request.ts';
@@ -95,6 +96,11 @@ function identityFor(rule: AccessRule, requirementId: string): CheckIdentity {
  * Resolution order from modules/M3-access-checks.md: an Observation endpoint whose
  * `responseShape.entity` matches, then a configured route, then nothing. Never a URL
  * guessed by pluralizing an entity name.
+ *
+ * **Nothing in the probe writes `responseShape.entity` today**, so the first branch is
+ * reachable only from an Observation a caller built by hand. It is the right precedence
+ * if an adapter ever names the entity an endpoint serves, and it is not where a real run
+ * gets its handler reference. `handlerRefFor` below is.
  */
 function resolveRoute(
   resource: string,
@@ -125,9 +131,41 @@ function resolveRoute(
   const configured = context.resources.find(
     (entry) => entry.name.toLowerCase() === resource.toLowerCase(),
   )?.routes[action];
-  if (configured !== undefined) return { method, path: configured };
+  if (configured !== undefined) {
+    const handlerRef = handlerRefFor(method, configured, observation);
+    return { method, path: configured, ...(handlerRef === undefined ? {} : { handlerRef }) };
+  }
 
   return undefined;
+}
+
+/**
+ * The file serving a configured route, when a source adapter read one.
+ *
+ * The config says where a resource lives and the Observation says which file serves that
+ * URL, so joining the two names the code without the probe ever being told what the spec
+ * asked for. M4 is deliberate that an Observation shaped by the spec cannot support a
+ * finding that the two disagree, and this leaves the probe exactly as spec-blind as it
+ * was.
+ *
+ * Both sides go through the erasure in `probe/identity.ts`, so a configured
+ * `/api/invoices/{id}` and an observed `/api/invoices/:id` are one route. A route the
+ * Observation does not hold, or holds only from a crawl, leaves the finding with its
+ * request reference, which is what `04-CONVENTIONS.md` asks for when there is no source.
+ */
+function handlerRefFor(
+  method: HttpMethod,
+  template: string,
+  observation: Observation | null,
+): string | undefined {
+  const wanted = templateIdentity(template);
+
+  return observation?.endpoints.find(
+    (endpoint) =>
+      endpoint.handlerRef !== undefined &&
+      endpoint.method.toUpperCase() === method &&
+      pathIdentity(endpoint.path) === wanted,
+  )?.handlerRef;
 }
 
 function instancesFor(resource: string, context: PlanningContext): readonly ResourceInstance[] {

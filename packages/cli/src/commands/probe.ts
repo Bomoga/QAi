@@ -187,8 +187,15 @@ export async function runProbe(options: ProbeOptions): Promise<number> {
   }
 
   reporter.step('Probing the target');
+  // The source root travels with the base URL. Without it the probe is black box on
+  // every run whatever the config said, and the capability report above prints a source
+  // root that nothing reads.
+  const sourceRoot = config.target.sourceRoot;
   const observation = await probe(
-    { config: { target: { baseUrl } }, sessions: target.sessions },
+    {
+      config: { target: { baseUrl, ...(sourceRoot === undefined ? {} : { sourceRoot }) } },
+      sessions: target.sessions,
+    },
     { deps, baseUrl, cwd },
   );
 

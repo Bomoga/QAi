@@ -238,6 +238,93 @@ describe('resolution prefers an observation over configuration', () => {
   });
 });
 
+/**
+ * Where a finding's file reference comes from.
+ *
+ * A source adapter records `handlerRef` on the endpoint it read, and the configured route
+ * is the authoritative mapping from a resource and an action to a URL. Joining those two
+ * is what lets a finding cite a file, and it does not require the probe to know anything
+ * about the spec, which M4 forbids.
+ *
+ * None of the observations below carries `responseShape.entity`, because nothing in the
+ * probe writes it. That is deliberate: an observation that had one would exercise the
+ * branch above instead, and these tests would say nothing about a real run.
+ */
+describe('a plan carries the handler reference for the route it will request', () => {
+  function observationOf(endpoint: Record<string, unknown>): Observation {
+    return ObservationSchema.parse({
+      observationVersion: '0.1',
+      observedAt: '2026-08-16T09:00:00Z',
+      mode: 'hybrid',
+      target: { baseUrl: 'http://localhost:3000' },
+      endpoints: [endpoint],
+    });
+  }
+
+  const SERVED = {
+    id: 'GET /api/invoices/:id',
+    method: 'GET',
+    path: '/api/invoices/:id',
+    origin: 'source',
+    confidence: 'high',
+    handlerRef: 'src/routes/invoices.ts:12',
+    authRequired: 'unknown',
+  };
+
+  it('takes it from the endpoint serving the configured route', () => {
+    // `/api/invoices/{id}` configured against `/api/invoices/:id` observed. Parameter
+    // names are erased on both sides by the same rule the merge and the diff use.
+    const { plans } = planAccessChecks(
+      specWith([DENY_READ]),
+      new Map(),
+      observationOf(SERVED),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.pathTemplate).toBe('/api/invoices/{id}');
+    expect(plans[0]?.locationRef).toBe('src/routes/invoices.ts:12');
+  });
+
+  it('leaves it absent when the observed endpoint is a different route', () => {
+    // Otherwise a finding about the invoice route would point a reader at the file that
+    // serves something else, which is worse than pointing at nothing.
+    const { plans } = planAccessChecks(
+      specWith([DENY_READ]),
+      new Map(),
+      observationOf({ ...SERVED, id: 'GET /api/users/:id', path: '/api/users/:id' }),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.pathTemplate).toBe('/api/invoices/{id}');
+    expect(plans[0]?.locationRef).toBeUndefined();
+  });
+
+  it('leaves it absent when the method differs', () => {
+    const { plans } = planAccessChecks(
+      specWith([DENY_READ]),
+      new Map(),
+      observationOf({ ...SERVED, id: 'DELETE /api/invoices/:id', method: 'DELETE' }),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.locationRef).toBeUndefined();
+  });
+
+  it('leaves it absent for a black box observation of the same route', () => {
+    // A crawl reaches the route and cannot say which file serves it. This is the state
+    // every run of this tool has been in, and the honest report of it is a request
+    // reference rather than a file one.
+    const { plans } = planAccessChecks(
+      specWith([DENY_READ]),
+      new Map(),
+      observationOf({ ...SERVED, origin: 'blackbox', confidence: 'low', handlerRef: undefined }),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.locationRef).toBeUndefined();
+  });
+});
+
 describe('path templates', () => {
   it.each([
     ['/api/invoices/{id}', '/api/invoices/INV-1001'],

@@ -1,3 +1,4 @@
+import { createServer, type Server } from 'node:http';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +8,7 @@ import {
   isConfigFailure,
   loadConfig,
   silentReporter,
+  type Observation,
   type TargetConfig,
 } from '@qai/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -43,10 +45,11 @@ function capture(): { stream: Stream; text: () => string } {
 
 const CLOSED_PORT_URL = 'http://127.0.0.1:9';
 
-function configWith(baseUrl?: string): TargetConfig {
+function configWith(baseUrl?: string, sourceRoot?: string): TargetConfig {
   const body = [
     'target:',
     ...(baseUrl === undefined ? [] : [`  baseUrl: ${baseUrl}`]),
+    ...(sourceRoot === undefined ? [] : [`  sourceRoot: ${sourceRoot}`]),
     '  disposable: false',
     'actors:',
     '  - id: owner',
@@ -59,6 +62,53 @@ function configWith(baseUrl?: string): TargetConfig {
   const loaded = loadConfig('qai.config.yaml', dir);
   if (isConfigFailure(loaded)) throw new Error(loaded.error.message);
   return loaded.config;
+}
+
+/**
+ * A source tree the Express adapter recognizes. It is read as text and never executed,
+ * which is the whole point of a source reading: the adapter takes the route table out of
+ * the call sites, so the package it names does not have to be installed here.
+ */
+const EXPRESS_SOURCE = [
+  "import express from 'express';",
+  '',
+  'const app = express();',
+  '',
+  "app.get('/api/invoices', listInvoices);",
+  '',
+  'function listInvoices(req, res) {',
+  '  res.json({ invoices: [] });',
+  '}',
+  '',
+].join('\n');
+
+/**
+ * A target on an ephemeral loopback port, answering the two paths the source above
+ * declares. The root lists its own routes, which is how a JSON-only application gives a
+ * crawl somewhere to go, and `fixtures/ledger` does the same thing for the same reason.
+ * Rule R9 holds: this is a local socket, not a network.
+ */
+async function startTarget(): Promise<{ server: Server; baseUrl: string }> {
+  const server = createServer((request, response) => {
+    response.setHeader('content-type', 'application/json');
+
+    if (request.url === '/api/invoices') {
+      response.end(JSON.stringify({ invoices: [{ id: 'INV-1' }] }));
+      return;
+    }
+
+    response.end(JSON.stringify({ routes: ['/api/invoices'] }));
+  });
+
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const address = server.address();
+  const port = address !== null && typeof address !== 'string' ? address.port : 0;
+
+  return { server, baseUrl: `http://127.0.0.1:${port}` };
+}
+
+async function stop(server: Server): Promise<void> {
+  await new Promise<void>((done) => server.close(() => done()));
 }
 
 function settings(format: Settings['format']['value'] = BUILT_IN_DEFAULTS.format): Settings {
@@ -177,5 +227,51 @@ describe('qai probe', () => {
     });
 
     expect(warnings.join(' ')).not.toContain('sensitive');
+  });
+
+  it('reads the configured source root, so an endpoint can name its handler', async () => {
+    // The command used to build the probe context from `baseUrl` alone, so a configured
+    // source root reached the capability report and nothing else. Every run was black
+    // box whatever the config said, and no finding could carry a file reference.
+    mkdirSync(join(dir, 'app'), { recursive: true });
+    writeFileSync(join(dir, 'app', 'server.js'), EXPRESS_SOURCE, 'utf8');
+
+    const target = await startTarget();
+    try {
+      const { code, out } = await runIt({
+        config: configWith(target.baseUrl, 'app'),
+        format: 'json',
+      });
+      const observation = JSON.parse(out) as Observation;
+      const listed = observation.endpoints.find((endpoint) => endpoint.id === 'GET /api/invoices');
+
+      expect(code).toBe(0);
+      expect(observation.mode).toBe('hybrid');
+      expect(listed?.origin).toBe('source');
+      // The line the route is registered on, which is what SARIF annotates.
+      expect(listed?.handlerRef).toBe('server.js:5');
+    } finally {
+      await stop(target.server);
+    }
+  });
+
+  it('is black box with no source root, and says so', async () => {
+    // The negative half. Without it the assertion above could pass against a probe that
+    // read the source whatever the configuration said, which is a different bug.
+    mkdirSync(join(dir, 'app'), { recursive: true });
+    writeFileSync(join(dir, 'app', 'server.js'), EXPRESS_SOURCE, 'utf8');
+
+    const target = await startTarget();
+    try {
+      const { out } = await runIt({ config: configWith(target.baseUrl), format: 'json' });
+      const observation = JSON.parse(out) as Observation;
+      const listed = observation.endpoints.find((endpoint) => endpoint.id === 'GET /api/invoices');
+
+      expect(observation.mode).toBe('blackbox');
+      expect(listed?.origin).toBe('blackbox');
+      expect(listed?.handlerRef).toBeUndefined();
+    } finally {
+      await stop(target.server);
+    }
   });
 });

@@ -1,8 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-21T14:20:00Z
-Current stage: S9, buffer and demo. Nothing in flight, dev is current.
-Next task: S9.3, the two clauses of the success criterion that cannot be met as written
+Updated: 2026-08-21T23:55:00Z
+Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
+Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
 unconditionally went stale on every merge, twice in one afternoon, because the branch is
@@ -598,11 +598,14 @@ and fix only what that sequence exposes. **The rehearsal was run first**, cold, 
 taken from GitHub into an empty directory with its own package store, so the tasks below
 are what it exposed rather than a guess at what it might.
 
-- [x] S9.1 correct the stage header left stale by the S8 merge (commits 2bc4fe6 and the
-  one backfilled below, which stopped it naming a branch that a merge deletes)
+- [x] S9.1 correct the stage header left stale by the S8 merge (commits 2bc4fe6 and
+  669a572, which stopped it naming a branch that a merge deletes)
 - [x] S9.2 make a clean install work (commit 0d45437)
-- [ ] S9.3 the two clauses of the success criterion that cannot be met as written
-- [ ] S9.4 rehearse the sequence again, cold, and record the real output
+- [x] S9.3 the two clauses of the success criterion that cannot be met as written
+  (source root reaches the probe at c6085f5, a finding cites the handler at d9a86cb, the
+  dependency scope at 38e9294, the demo target at a22c4c5, and the criterion itself at
+  bc4f28c)
+- [x] S9.4 rehearse the sequence again, cold, and record the real output (commit fb09c06)
 - Exit criterion: the sequence in 01-PRODUCT.md runs unassisted, end to end, in under five
   minutes, on a machine that has never seen the project.
 - **The engine already meets every functional clause.** On the rehearsal it passed steps 2
@@ -629,14 +632,260 @@ are what it exposed rather than a guess at what it might.
   `ignoredBuiltDependencies` fails the same way, and only the explicit `false` installs, in
   three seconds. The placeholder pnpm writes is where the one quoted in the M6.1 note came
   from: the setting has three states, not two.
-- **S9.3 is a decision rather than code.** Step 1 says `npx qai init`, which has never been
-  run and cannot work: the package is private, named `@qai/cli`, and `origin/main` does not
-  exist. Step 3 asks for a finding carrying a file reference, and the defective run produces
-  nine access findings with a request and a response and zero with a file reference, because
-  the fixture is black box only. Either give the demo a target with readable source, which
-  also exercises the one path twenty corpus applications never did, or correct the criterion
-  to match 04-CONVENTIONS.md, which already says a file reference is for when source is
-  available. Do not quietly reword the criterion to match what the tool does.
+- **S9.3 was recorded as a decision rather than code, and that was wrong.** Step 1 says
+  `npx qai init`, which has never been run and cannot work: the package is private, named
+  `@qai/cli`, and `origin/main` does not exist. That half is a decision. Step 3 asks for a
+  finding carrying a file reference, and the reading that the fixture being black box is
+  the only thing in the way does not survive contact with the code. **Two defects sit
+  between a readable source tree and a file reference, and a demo target with source would
+  have produced nothing without them.** Both are below, both proved by running the tool
+  rather than by reading it.
+- **S9.3 defect one: the CLI never gave the probe the configured source root.** `check` and
+  `probe` both built the probe context as `{ config: { target: { baseUrl } } }`, so
+  `target.sourceRoot` reached the capability report, reached the missing-directory warning
+  in `createTargetContext`, and reached nothing that reads source. **Every run of the
+  binary has been black box, whatever the config said**, and the report printed
+  `source  fixtures/ledger` beside it. Measured on a project whose config named a source
+  root the Express adapter recognizes: the command reported `mode: blackbox` and the note
+  "No source root is configured", while calling `probe` with that same root gives
+  `mode: hybrid` and four endpoints carrying `handlerRef`.
+- **The adapters were never the problem.** Pointed at a four route Express file the
+  adapter returns `server.js:5`, `server.js:6`, `server.js:7`, and `server.js:8`, in the
+  `path:line` form M4 says SARIF needs. The reading was correct and the caller threw it
+  away.
+- **S9.3 defect two: an access plan cannot reach a `handlerRef` even when one exists.**
+  `resolveRoute` prefers an observed endpoint whose `responseShape.entity` names the rule's
+  resource and takes its `handlerRef` from there. **Nothing in the probe ever sets
+  `responseShape.entity`.** The crawler writes `responseShape.fields` only, no source
+  adapter writes a response shape at all, and `mergeFields` can only carry an entity one
+  side already had. Three tests set the field by hand and are the only things in the
+  repository that do. Measured on the hybrid observation above, with every invoice endpoint
+  carrying a handler reference: **0 of 8 access plans carried a `locationRef`.** The
+  behavioral planner matches the same way in two places and has the same gap.
+- **Every test of a `locationRef` hands the value in by hand, and that is why nothing went
+  red.** Twelve tests across the planners, the finding text, and all three emitters mention
+  the field, and every one of them constructs the plan, the check, or the Observation that
+  carries it. The access planner had **no test of `locationRef` at all**; the behavioral one
+  has a single test that builds an Observation with `responseShape.entity` set, which no
+  probe produces. The chain was tested from the point where the value already exists, so it
+  was true at every link and dead from end to end, through S4 to S8, while every SARIF
+  result lacked a physical location. The S6 note recorded the symptom, that no check carries
+  a `locationRef`, and read it as a fact about the fixture rather than about the planner.
+- **The fix has to leave the probe spec-blind.** M4 is deliberate that an Observation
+  shaped by the spec cannot support a finding that the two disagree, so teaching the probe
+  to name spec entities is not available. The configured route is the authoritative mapping
+  from an entity and an action to a URL, and the observation maps a URL to a handler, so
+  joining those two says where the code is without the probe knowing what was specified.
+  `resolveRoute` does that join now, and the unreachable branch above it is kept, with a
+  comment saying it is unreachable, because it is the right precedence the day an adapter
+  does name the entity an endpoint serves.
+- **`templateIdentity` moved to `probe/identity.ts`, a cross-module edit into M4's file.**
+  The structural diff already had it privately, with a comment saying two answers to "is
+  this the same route" eventually disagree. The access planner is now the second caller
+  asking that question, so it lives beside `pathIdentity` and both import it. Same shape as
+  M3.2 adding `resources` to M2's file and M2.8 adding `stateActor`.
+- **Both halves proved by breaking them.** Dropping the method comparison let a DELETE
+  handler be cited for a GET route and failed exactly the test written for it; comparing
+  the written path instead of the identity failed the positive test, since a configured
+  `/api/invoices/{id}` and an observed `/api/invoices/:id` are the same route spelled twice.
+- **The demo target is `fixtures/ledger-express`, decided by the human on 2026-08-21.**
+  Three options were put up: an Express twin of the ledger, a tree of real Next.js App
+  Router handlers served by a hand-written host so nothing new is installed, or correcting
+  the criterion to match 04-CONVENTIONS.md and demonstrating no file reference at all. The
+  first was chosen, and `express` was approved as a dependency of a fixture package with
+  the product's own list left alone. 04-CONVENTIONS.md now says the approved list governs
+  `packages/` rather than `fixtures/`, since a fixture depends on whatever framework it is
+  a fixture of.
+- **The twin is a transport, not a second application.** The ledger's handlers moved to
+  `fixtures/ledger/src/handlers.ts` and both servers call them, so `app.ts` and
+  `routes.ts` hold routing and nothing else. Two copies of a seeded defect would drift,
+  and a defect that behaved differently depending on which server was running would make
+  every finding about it unreadable.
+- **The drift is guarded by a matrix rather than by intention.** `parity.test.ts` sends
+  twenty-one requests to both servers in both defect states and compares status and body.
+  It found two real divergences while being written: Express matches paths loosely, so
+  `/api/invoices/` and `/API/invoices` answered where `url.pathname === ...` refuses.
+  `strict routing` and `case sensitive routing` fix it and both cases are in the matrix.
+  Proved by breaking it: removing the two settings fails four cases, and answering a
+  missing credential with 404 instead of 401 fails two.
+- **D5 is the one thing the twin does not implement, and the switch is forced off rather
+  than ignored.** A source adapter reads text, so a route registered behind a runtime
+  condition is still declared in the file, and with the defect off the twin would report
+  an endpoint it refuses to serve. Fixing that defect means deleting a line, which an
+  environment variable cannot model. The ledger keeps D5 for the checks and the goldens
+  built on it, and three tests hold the difference in both directions.
+- **Measured against the twin, the criterion is met.** Defective: exit 1, 15 requirements
+  as 8 verified, 5 failed, 2 unverified, and three high access findings each ending
+  `Source: src/routes.ts:82`, `:89`, and `:99` with an evidence id. Repaired: exit 0, 13
+  verified, 0 failed. The delta reports five requirements moving failed to verified. The
+  counts differ from the ledger's 7/6/2 because the twin does not serve D5.
+- **The probe reports what it could not reach, which is the hybrid mode working.** Three
+  endpoints are `high` confidence because source and crawl agree, and three are `medium`
+  and carry a note saying they are declared in source and the crawl did not reach them.
+  That is true: the route index names `/api/invoices/{id}`, which answers 404, so nothing
+  links the instance routes. It is the first time in this project that a run has had two
+  sides to disagree.
+- **Clause 1 settled rather than raised, because publishing is a stop and that decides
+  it.** The six steps read `npx qai`, which cannot work and never has. The only invocation
+  that exists is `node packages/cli/bin/qai.js`, publishing is release work nobody has
+  scoped, and creating a registry package is explicitly not an agent's call. So the
+  criterion now writes `qai` and says once, above the list, what `qai` is until there is a
+  package to install. The published form returns to the document the day there is one, and
+  no other clause moves when it does.
+- **The README told a reader to run `npx qai init`, and the repository is public.** That is
+  step 1 of the definition of success, printed on the front page of a public repository,
+  naming a command that does not resolve. Corrected in the same commit, along with the
+  naming table in 00-INDEX.md. Worth recording as a class: the criterion said `npx` and
+  three other places quietly agreed with it, so a wrong sentence had propagated into the
+  one document a stranger reads first.
+- **The behavioral planner has the same defect and is deliberately not fixed here.**
+  `routeTemplateFor` and `handlerRefFor` in `checks/behavioral/plan.ts` both match on
+  `responseShape.entity`, so no behavioral finding can carry a file reference either.
+  04-CONVENTIONS.md asks every finding to end with a file reference when source is
+  available, so this is a real gap, and the S9 instruction is to fix only what the demo
+  sequence exposes. The sequence names an access finding. Recorded here rather than fixed,
+  and it wants the same join.
+
+### S9.4, the cold rehearsal
+
+Clone from GitHub into an empty directory with its own pnpm store, install, build, and run
+the six steps from a project directory holding a spec and a config. Nothing on this machine
+could make it pass: `--store-dir` points at a store created by this run.
+
+| Step | Result | Seconds |
+| --- | --- | --- |
+| clone `fix/source-file-references` | ok | 2 |
+| `pnpm install --frozen-lockfile` | **exit 0**, express included, no toolchain | 9 |
+| `pnpm build` | exit 0 | 13 |
+| 1. `qai init` | exit 0, wrote the config, a starter spec, and the gitignore entry | 1 |
+| 2. `qai validate` | exit 0, 15 requirements, 8 access rules, 16 criteria, 1 warning | 2 |
+| 3. `qai check`, defective | **exit 1**, 15 requirements as 8 verified, 5 failed, 2 unverified; high 3, medium 5 | 2 |
+| 4 and 5. fix, `qai check` again | **exit 0**, 13 verified, 0 failed | 2 |
+| 6. `qai diff` | exit 0, five requirements moving failed to verified | 1 |
+| **Total** | | **about 32 seconds** |
+
+**Step 3 met the clause that could not be met before.** Three access findings, each naming
+the actor, the request, the response, the evidence, and the file:
+
+```
+Findings
+  [HIGH] REQ-001 AR-001-01 (access, CHK-95b4ecf038a8)
+    Invoice readable by actor outsider, which the spec denies
+    GET /api/invoices/INV-1001 as actor outsider returned 200 with Invoice fields id,
+    notes, org_id, total_cents Source: src/routes.ts:89. Evidence: EV-000005. Suggestion:
+    in the GET /api/invoices/{id} handler, check the rule condition
+    Invoice.org_id != actor.org_id before returning the record, and respond 404 rather
+    than 403 so the response does not confirm that the record exists.
+    Source: src/routes.ts:89
+    Evidence: EV-000005
+```
+
+**The observation had two sides for the first time.**
+
+```
+What was built
+  Probe mode: hybrid
+  6 endpoints
+    by origin: source 6, blackbox 0
+    by confidence: high 3, medium 3, low 0
+  info: GET /api/invoices/:id is declared in source, and the crawl did not reach it.
+        It may be unlinked, or outside the crawl budget.
+```
+
+Three endpoints are high because source and crawl agree and three are medium with the
+disagreement named, which is M4.7's confidence table doing what it was written for. The
+note is true rather than a hedge: the route index names `/api/invoices/{id}`, which answers
+404, so nothing links the instance routes for a crawl to follow.
+
+**Step 6, verbatim:**
+
+```
+Delta RUN-20260821-232711 to RUN-20260821-232740
+
+  Access loosened (0)
+    nothing that was refused before is reachable now
+
+  Regressed (0)
+  Fixed (5)
+    REQ-001  failed -> verified  CHK-95b4ecf038a8, CHK-a4713a310544
+    REQ-002  failed -> verified  CHK-1a75f0146a58, CHK-9fc7eb33e3b1
+    REQ-003  failed -> verified  CHK-a5623a1259e2, CHK-c7e96357fdb0
+    REQ-004  failed -> verified  CHK-b88b2154ac37
+    REQ-013  failed -> verified  CHK-4f28a7fa107c
+  Still failing (0)
+```
+
+- **The install is 9 seconds with express in it, against 3 before and 30 failing before
+  that.** S9.2's fix holds with a new dependency added: express is pure JavaScript with no
+  install script, so nothing asks for a toolchain. This is the measurement the dependency
+  approval was conditional on.
+- **`qai init` had never been run inside the demo before.** The earlier rehearsal started
+  at step 2 with a project directory somebody had already prepared, because step 1 said
+  `npx qai`. It writes the config, the starter spec, and the gitignore entry, and the
+  demo then does what the criterion describes: replaces the starter spec with the
+  hand-written one and points the config at the application.
+- **Deleting the starter spec is part of the flow and worth knowing.** The default glob is
+  `spec/*.spec.yaml`, so leaving `spec/app.spec.yaml` beside the real spec merges two
+  specs and both declare REQ-001, which the loader correctly refuses as a conflicting
+  redefinition. A user editing the starter in place never sees this; a user adding a
+  second file does.
+- **The counts differ from the ledger's 7/6/2 and the difference is entirely D5.** The
+  twin does not serve the debug endpoint, so the requirement that fails on the ledger for
+  that reason is verified here. Nothing else moved: the same five requirements are repaired
+  by the same checks.
+
+### S9 summary
+
+**The stage exit criterion is met, cold, and the output is above rather than asserted.**
+The sequence in 01-PRODUCT.md runs unassisted from a clone taken into an empty directory
+with its own package store: about thirty two seconds end to end against a five minute
+budget, with every step's real exit code recorded.
+
+**S9's instruction was to fix only what the rehearsal exposed, and it exposed four
+things.** Two were packaging and wording, already landed as PRs #17 and #18 before this
+session. Two were defects nobody knew about, and both were found by trying to satisfy a
+clause rather than by reading code:
+
+1. **The CLI never gave the probe the configured source root.** `check` and `probe` built
+   the probe context from the base URL alone, so every run of the binary since M8 has been
+   black box whatever the config said, while the capability report printed the source root
+   beside it.
+2. **An access plan could not reach a handler reference even when the probe had one.**
+   `resolveRoute` matched an observed endpoint on `responseShape.entity`, and nothing in
+   the probe writes that field. Zero of eight plans carried a `locationRef` against an
+   observation whose every invoice endpoint had a `handlerRef`.
+
+**Together those two are why no SARIF result has ever had a physical location.** The S6
+note recorded the symptom and read it as a fact about the fixture; it was a fact about the
+planner, and the fixture was hiding it. Every one of the twelve tests that mention
+`locationRef` supplies the value by hand, so the chain was true at every link and dead from
+end to end for five stages.
+
+**The demo now has a target with source, and it is one application rather than two.**
+`fixtures/ledger-express` serves the ledger's API on Express so an adapter has a route
+table to read. The handlers moved to `fixtures/ledger/src/handlers.ts` and both servers
+call them, and a twenty-one request parity matrix across both defect states is what holds
+them together. `express` is the first third-party runtime dependency here, approved for
+fixtures only, and the cold install is 9 seconds with it.
+
+**What the criterion says changed in one place and did not change in another.** Step 1's
+`npx qai` has never been runnable and now says what the demo types, with the published form
+recorded as the thing that returns when there is a package to name. Step 3's file reference
+was left exactly as written: weakening it to "when source is available" was the available
+shortcut and it was rejected, because the convention says that about black box targets
+rather than about the tool's discretion.
+
+**What this stage did not do.** The behavioral planner has the identical `responseShape`
+defect and no behavioral finding can carry a file reference; the sequence names an access
+finding, so it is recorded rather than fixed. The three decisions in
+`13 - three decisions waiting on a human.md` are untouched, as are the three recall
+problems in `corpus/RESULTS.md`. `06-TESTING.md` still describes one fixture.
+
+**Verification at the stage boundary**, from a cold `dist`, in the order `ci.yml` runs
+them: `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, all
+exit 0. **83 test files, 1670 tests**, up from 82 and 1615.
+
+S9 is the last stage in 05-BUILD-ORDER.md.
 
 ## Notes carried forward
 
@@ -2168,6 +2417,23 @@ are what it exposed rather than a guess at what it might.
 - The `no-restricted-imports` rule key is shared by the model boundary and the package direction rules, so every eslint scope restates every group that applies to it. A later block replaces the rule outright rather than merging.
 
 ## Known issues, not blocking
+
+- **An access finding's detail runs its observation into its reference with no full stop.**
+  `denyFailureDetail` joins the parts with a space and the observation does not end in one,
+  so a reader gets "returned 200 with Invoice fields id, notes, org_id, total_cents Source:
+  src/routes.ts:89." Pre-existing and true of the `Request:` form every corpus finding
+  already had; S9.3 only made it visible, since the `Source:` branch had never run. Not
+  fixed at S9, because the demo sequence does not expose it and the joiner appears in both
+  M7.7 goldens.
+- **The text report prints the reference twice**, once inside `detail` and once as its own
+  line. This is the M7.7 observation about `Request:` and `Evidence:`, arriving again with
+  `Source:`. It is the M3.8 contract question: a suggested fix and a reference live inside
+  `detail` because `CheckResult` has no field for either, and an emitter that wants to
+  render them separately has to raise that.
+- **`06-TESTING.md` does not know about `fixtures/ledger-express`.** It owns the fixture
+  app requirements and now describes one of two. Left alone at S9.3 rather than edited,
+  because the task's reading budget was M4's module file and this is a second plan document.
+  Worth an editing pass by whoever next opens it.
 
 - Resolved at M5.7: `--no-playwright` was removed from the M5 Definition of Done rather than replaced. It was never a vitest option, and an environment variable would have put core in the environment against rule R6. The launcher is injected by the caller and absent by default.
 

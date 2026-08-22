@@ -111,6 +111,20 @@ export function identityKey(method: string, path: string): string {
   return `${method.toUpperCase()} ${pathIdentity(path)}`;
 }
 
+/**
+ * A configured route template as a path identity.
+ *
+ * Templates are written `/api/invoices/{id}` and both a source adapter and a crawl derive
+ * `/api/invoices/:id`, so a template goes through brace erasure first and then through
+ * the same parameter erasure everything else uses. It lives here beside `pathIdentity`
+ * because two callers now ask whether a configured route and an observed one are the same
+ * route, the structural diff and the access planner, and two answers to that eventually
+ * disagree.
+ */
+export function templateIdentity(template: string): string {
+  return pathIdentity(template.replace(/\{[^}/]+\}/gu, DERIVED_PARAMETER));
+}
+
 /** Rewrites an endpoint onto its normalized path and id, leaving everything else. */
 export function normalizeEndpoint(endpoint: ObservedEndpoint): ObservedEndpoint {
   const path = normalizePath(endpoint.path);
