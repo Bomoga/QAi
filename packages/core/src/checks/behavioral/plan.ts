@@ -3,7 +3,7 @@ import type { RequestSpec } from '../../target/request.ts';
 import { handlerRefFor, resolvePath, type PlanningContext } from '../access/plan.ts';
 import { isSupported, parseThen, type Assertion } from './assertions.ts';
 import {
-  BEHAVIORAL_SEVERITY,
+  behavioralSeverityFor,
   type BehavioralPlan,
   type RecordRead,
   type ReferenceRequest,
@@ -327,7 +327,7 @@ export function planBehavioralChecks(
           action: when.action,
         },
         mutates: when.mutates,
-        severityOnFail: BEHAVIORAL_SEVERITY,
+        severityOnFail: behavioralSeverityFor(requirement.tags),
         requirementId: requirement.id,
         criterionId,
         actorId: when.actorId,

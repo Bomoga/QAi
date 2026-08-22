@@ -124,7 +124,7 @@
       ],
       "requirementId": "REQ-013",
       "ruleId": "AC-013-01",
-      "severity": "medium",
+      "severity": "high",
       "title": "Acceptance criterion AC-013-01",
       "type": "behavioral",
       "verdict": "fail"
@@ -224,7 +224,7 @@
       ],
       "requirementId": "REQ-002",
       "ruleId": "AC-002-01",
-      "severity": "medium",
+      "severity": "high",
       "title": "Acceptance criterion AC-002-01",
       "type": "behavioral",
       "verdict": "fail"
@@ -238,7 +238,7 @@
       ],
       "requirementId": "REQ-001",
       "ruleId": "AC-001-01",
-      "severity": "medium",
+      "severity": "high",
       "title": "Acceptance criterion AC-001-01",
       "type": "behavioral",
       "verdict": "fail"
@@ -254,7 +254,7 @@
       ],
       "requirementId": "REQ-003",
       "ruleId": "AC-003-01",
-      "severity": "medium",
+      "severity": "high",
       "title": "Acceptance criterion AC-003-01",
       "type": "behavioral",
       "verdict": "fail"
@@ -282,7 +282,7 @@
       ],
       "requirementId": "REQ-004",
       "ruleId": "AC-004-01",
-      "severity": "medium",
+      "severity": "high",
       "title": "Acceptance criterion AC-004-01",
       "type": "behavioral",
       "verdict": "fail"
@@ -604,10 +604,10 @@
     },
     "coverage": 0.8666666666666667,
     "findingsBySeverity": {
-      "high": 3,
+      "high": 8,
       "info": 0,
       "low": 0,
-      "medium": 6
+      "medium": 1
     },
     "modelAssistedCheckCount": 1,
     "requirements": {

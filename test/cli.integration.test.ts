@@ -103,7 +103,11 @@ describe('check against the fixture, in both configurations', () => {
 
       expect(out).toContain('15 total, 7 verified, 6 failed, 2 unverified');
       expect(out).toContain('24 total, 13 pass, 9 fail, 2 inconclusive');
-      expect(out).toContain('high 3, medium 6, low 0, info 0');
+      // Q8 moved five of these from medium to high: the requirements they belong to are
+      // tagged access-control or data-exposure, and a behavioral finding on one of those
+      // is an exposure rather than a broken feature. The one that stays medium is D5, the
+      // undeclared debug endpoint, which is structural. Verdict counts are untouched.
+      expect(out).toContain('high 8, medium 1, low 0, info 0');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

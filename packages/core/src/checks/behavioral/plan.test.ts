@@ -90,6 +90,7 @@ const CONTEXT: PlanningContext = {
 
 function specWith(
   criteria: { when: string; then: string; mode?: 'deterministic' | 'fuzzy' }[],
+  tags: string[] = [],
 ): Spec {
   return {
     specVersion: '0.1',
@@ -102,7 +103,7 @@ function specWith(
         statement: 'A requirement',
         entities: [],
         fields: [],
-        tags: [],
+        tags,
         accessRules: [],
         acceptanceCriteria: criteria.map((criterion, index) => ({
           id: `AC-012-0${index + 1}`,
@@ -511,5 +512,49 @@ describe('planning a persisted state read', () => {
     const { plans } = planBehavioralChecks(spec, null, withAuditRoutes);
 
     expect(plans[0]?.stateReads).toBeUndefined();
+  });
+});
+
+/**
+ * Q8, decided by the human on 2026-08-22.
+ *
+ * A behavioral finding was `medium` from a constant while the default failure threshold
+ * is `high`, so a criterion that caught a real data leak reported it correctly and the
+ * run exited 0. Four corpus applications did exactly that. Severity now comes from what
+ * the requirement says it is about, which the spec author already writes down, rather
+ * than from one value for every criterion in every spec.
+ */
+describe('what a failing criterion is worth', () => {
+  function severityOf(tags: string[]): string | undefined {
+    const spec = specWith([{ when: 'actor owner reads Invoice', then: 'status is 200' }], tags);
+    return planBehavioralChecks(spec, null, CONTEXT).plans[0]?.severityOnFail;
+  }
+
+  it('is high when the requirement is about access control', () => {
+    expect(severityOf(['access-control'])).toBe('high');
+  });
+
+  it('is high when the requirement is about data exposure', () => {
+    expect(severityOf(['data-exposure'])).toBe('high');
+  });
+
+  it('is high when one tag of several qualifies', () => {
+    expect(severityOf(['performance', 'data-exposure'])).toBe('high');
+  });
+
+  it('reads a tag case insensitively, since a spec is hand written', () => {
+    expect(severityOf(['Access-Control'])).toBe('high');
+  });
+
+  it('stays medium for a requirement that is about something else', () => {
+    // The negative half, and the one that keeps this from being "everything is high",
+    // which is invariant I2's warning about a noisy default in another form.
+    expect(severityOf(['usability'])).toBe('medium');
+  });
+
+  it('stays medium for an untagged requirement', () => {
+    // A spec that says nothing about what a requirement is about gets the conservative
+    // answer, not the loud one.
+    expect(severityOf([])).toBe('medium');
   });
 });
