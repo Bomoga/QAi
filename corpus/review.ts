@@ -60,9 +60,22 @@ function percent(rate: number | undefined): string {
   return rate === undefined ? 'no rate yet' : `${(rate * 100).toFixed(1)}%`;
 }
 
-function describeRate(label: string, rate: Rate): string {
+/**
+ * One line of the rate table, including what the rate does not cover.
+ *
+ * **Unclear is printed, not merely excluded.** A finding nobody could settle is correctly
+ * left out of the fraction, and leaving it out of the output as well would hide the one
+ * thing a reader most needs to know before believing the number. That is the same defect
+ * the S8.6 note recorded about reviews the latest run no longer produces: a rate that
+ * quietly narrows its own denominator is the most flattering thing this file could do.
+ */
+export function describeRate(label: string, rate: Rate): string {
   const flag = rate.aboveThreshold ? '  OVER THRESHOLD' : '';
-  const partial = rate.complete ? '' : `, ${rate.unreviewed} unreviewed`;
+  const aside = [
+    ...(rate.complete ? [] : [`${rate.unreviewed} unreviewed`]),
+    ...(rate.unclear > 0 ? [`${rate.unclear} unclear`] : []),
+  ];
+  const partial = aside.length === 0 ? '' : `, ${aside.join(', ')}`;
   return `  ${label.padEnd(24)} ${percent(rate.rate).padStart(11)}  (${rate.falsePositives} of ${rate.judged} judged${partial})${flag}`;
 }
 

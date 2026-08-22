@@ -5,10 +5,95 @@ with every finding reviewed by hand and classified. This is the number the proje
 be able to defend, and the limits on it are part of the result rather than a footnote
 under it.
 
-Run `20260821130520`. Reproduce with `pnpm build`, then `node --experimental-strip-types
-corpus/run.ts`, then `node --experimental-strip-types corpus/review.ts`. The classifications
+Run `20260821130520`, re-run as `20260822041919` after the recall fixes; the re-run is the
+section immediately below and everything after it is the original. Reproduce with
+`pnpm build`, then `node --experimental-strip-types corpus/run.ts`, then
+`node --experimental-strip-types corpus/review.ts`. The classifications
 live in `corpus/ledger.json` and are keyed by the finding's content hash, so re-running the
 corpus only asks about findings that are genuinely new.
+
+## Re-run on 2026-08-22, after the recall fixes
+
+Everything below this section is the S8 run and is left as the record of it. This section
+is a second run of the same twenty applications against a tool that had changed, and the
+reason for re-running is that the changes were made to recall and to a verdict rule.
+**A rate measured against the old behaviour says nothing about the new behaviour**, and
+invariant I2 puts the burden on the change rather than on the reader.
+
+What changed between the two runs: a denied delete is settled by reading the record rather
+than by the response alone; a non-mutating deny rule is tried against every instance it
+denies rather than the first; a reset now actually runs, where no caller had ever supplied
+one; and a behavioral finding on a requirement tagged `access-control` or `data-exposure`
+is `high` rather than `medium`.
+
+|             | False positive rate | Judged | Unclear |
+| ----------- | ------------------- | ------ | ------- |
+| access      | 0.0%                | 9      | 1       |
+| behavioral  | 0.0%                | 12     | 0       |
+| structural  | 0.0%                | 22     | 0       |
+| **overall** | **0.0%**            | **43** | **1**   |
+
+**Six findings are new, five are true positives, and one could not be settled.** The rate
+holds at 0.0% and the access family more than doubled what it judges, from four findings
+to nine.
+
+**The application the S8 run missed entirely is caught.** `p3-notes-delete-open` lets
+anybody signed in delete anybody's note, and S8 reported nothing about it. It now fails:
+
+```
+DELETE /api/notes/N-1 as actor stranger returned 200 with no Note fields, and Note N-1
+was readable before the request and is absent after it. Request: DELETE /api/notes/N-1.
+Evidence: EV-00000b.
+```
+
+That is the verdict rule change doing exactly what it was decided for. The response was a
+200 carrying nothing, which is undecidable on its own; the record is what settled it.
+
+**The aggregate moved, and this is the headline.** S8 reported that five of twenty
+applications failed to enforce an access rule they specified, and that the access family
+found two of them, a behavioral criterion found two more while every access check passed,
+and one was missed. **All five now produce a failed access check**, and nothing is found
+only by a behavioral criterion.
+
+|                                                      | S8  | Re-run |
+| ---------------------------------------------------- | --- | ------ |
+| Applications failing to enforce a stated access rule | 5   | 5      |
+| Reported by a failed access check                    | 2   | **5**  |
+| Reported only by a behavioral criterion              | 2   | 0      |
+| Missed entirely                                      | 1   | **0**  |
+
+**Two of the new findings come from the instance sweep, and both were invisible before for
+the same reason.** `p3-notes-shared-flag` refuses `NOTE-1` correctly and hands `NOTE-2` to
+an anonymous caller, and `p6-messages-dm-leak` refuses `MSG-1` correctly and hands `MSG-3`,
+a direct message, to any signed in caller. In both cases the first configured instance is
+the one the application gets right, which is precisely the shape S8 described and could not
+catch.
+
+**One finding is `unclear`, and it is the only one in the corpus.** On
+`p3-notes-shared-flag`, actor `other` reads `NOTE-2`, which belongs to somebody else and is
+marked shared. REQ-004 says a shared note is readable by anyone signed in, so the
+application is doing what its spec intends. AR-001-01 denies that actor reading any note
+whose owner is not them, with no exception for shared, so the rule as written is violated
+and the report is accurate about it. **The disagreement is between two requirements of the
+same spec rather than between the spec and the application.** Calling it a true positive
+would claim the application is broken; calling it a false positive would claim the tool
+misread a rule it read correctly. It is left unclear on purpose and it is a question for
+whoever owns that spec.
+
+**`unclear` is now printed in the rate table rather than only excluded from it.** It was
+being left out of the fraction, correctly, and out of the output as well, which is the same
+defect S8.6 recorded about reviews the latest run no longer produces: a rate that quietly
+narrows its own denominator is the most flattering thing this file could do.
+
+**One expectation in a corpus application's notes no longer holds, and it is worth
+recording rather than adjusting.** `p6-messages-dm-leak/NOTES.md` predicts REQ-001 passing
+while REQ-002 fails, "because it says the team rule works and the direct message rule was
+never written". Both fail now. The two requirements carry the identical rule condition,
+because an access rule has nowhere to name which channel, and the predicted shape depended
+on only one instance being tried. The note is left as written; the prediction was about a
+tool that stopped at the first instance.
+
+---
 
 ## The false positive rate
 
