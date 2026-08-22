@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Observation, Spec } from '../../contracts/index.ts';
+import { ObservationSchema, type Observation, type Spec } from '../../contracts/index.ts';
 import type { PlanningContext } from '../access/plan.ts';
 import { planBehavioralChecks } from './plan.ts';
 import { isRequest, parseWhen } from './when.ts';
@@ -209,6 +209,124 @@ describe('planning criteria', () => {
 
     expect(plans[0]?.request.path).toBe('/invoices/INV-1001');
     expect(plans[0]?.locationRef).toBe('src/routes/invoices.ts:12');
+  });
+});
+
+/**
+ * Where a behavioral finding's file reference comes from.
+ *
+ * The observation above carries `responseShape.entity`, which is what makes the observed
+ * path win over the configured one. **Nothing in the probe writes that field**, so none of
+ * the observations below has one: an observation with an entity on it would exercise a
+ * branch a real run never reaches, and these tests would say nothing about one.
+ *
+ * What remains is the join the access planner makes. The configured route says where the
+ * resource lives, the Observation says which file serves that URL, and both sides go
+ * through the same parameter erasure, so `/api/invoices/{id}` and `/api/invoices/:id` are
+ * one route.
+ */
+describe('a criterion carries the handler reference for the route it will request', () => {
+  function observationOf(endpoints: readonly Record<string, unknown>[]): Observation {
+    return ObservationSchema.parse({
+      observationVersion: '0.1',
+      observedAt: '2026-01-01T00:00:00.000Z',
+      mode: 'hybrid',
+      target: {},
+      endpoints,
+    });
+  }
+
+  const READ_ROUTE = {
+    id: 'GET /api/invoices/:id',
+    method: 'GET',
+    path: '/api/invoices/:id',
+    origin: 'source',
+    confidence: 'high',
+    handlerRef: 'src/routes.ts:89',
+    authRequired: 'unknown',
+  };
+
+  const UPDATE_ROUTE = {
+    id: 'PATCH /api/invoices/:id',
+    method: 'PATCH',
+    path: '/api/invoices/:id',
+    origin: 'source',
+    confidence: 'high',
+    handlerRef: 'src/routes.ts:99',
+    authRequired: 'unknown',
+  };
+
+  it('takes it from the endpoint serving the configured route', () => {
+    const spec = specWith([{ when: 'actor owner reads Invoice', then: 'status is 200' }]);
+    const { plans } = planBehavioralChecks(spec, observationOf([READ_ROUTE]), CONTEXT);
+
+    expect(plans[0]?.request.path).toBe('/api/invoices/INV-1001');
+    expect(plans[0]?.locationRef).toBe('src/routes.ts:89');
+  });
+
+  it('takes the one matching the method, not the first for the path', () => {
+    // A read and an update share a path and are two handlers. Citing whichever came first
+    // would point a reader at the wrong one half the time.
+    const spec = specWith([
+      { when: 'actor owner updates Invoice INV-1001', then: 'status is 200' },
+    ]);
+    const { plans } = planBehavioralChecks(
+      spec,
+      observationOf([READ_ROUTE, UPDATE_ROUTE]),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.request.method).toBe('PATCH');
+    expect(plans[0]?.locationRef).toBe('src/routes.ts:99');
+  });
+
+  it('takes it for a literal path, which belongs to no entity', () => {
+    // `actor anonymous requests /health` resolves no resource, so the route is the path
+    // itself and the join still has something to match on.
+    const spec = specWith([{ when: 'actor anonymous requests /health', then: 'status is 200' }]);
+    const { plans } = planBehavioralChecks(
+      spec,
+      observationOf([
+        {
+          id: 'GET /health',
+          method: 'GET',
+          path: '/health',
+          origin: 'source',
+          confidence: 'high',
+          handlerRef: 'src/routes.ts:80',
+          authRequired: 'unknown',
+        },
+      ]),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.locationRef).toBe('src/routes.ts:80');
+  });
+
+  it('leaves it absent when the observed endpoint is a different route', () => {
+    const spec = specWith([{ when: 'actor owner reads Invoice', then: 'status is 200' }]);
+    const { plans } = planBehavioralChecks(
+      spec,
+      observationOf([{ ...READ_ROUTE, id: 'GET /api/users/:id', path: '/api/users/:id' }]),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.locationRef).toBeUndefined();
+  });
+
+  it('leaves it absent for a black box observation of the same route', () => {
+    // A crawl reaches the route and cannot say which file serves it, so the finding keeps
+    // its request reference. That is what 04-CONVENTIONS.md asks for.
+    const spec = specWith([{ when: 'actor owner reads Invoice', then: 'status is 200' }]);
+    const { plans } = planBehavioralChecks(
+      spec,
+      observationOf([
+        { ...READ_ROUTE, origin: 'blackbox', confidence: 'low', handlerRef: undefined },
+      ]),
+      CONTEXT,
+    );
+
+    expect(plans[0]?.locationRef).toBeUndefined();
   });
 });
 

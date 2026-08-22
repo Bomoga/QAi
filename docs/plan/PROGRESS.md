@@ -1,7 +1,8 @@
 ﻿# Progress
 
-Updated: 2026-08-21T23:55:00Z
-Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
+Updated: 2026-08-22T00:15:00Z
+Current stage: S9, buffer and demo, complete and merged. Branch
+`fix/behavioral-file-references` is in flight with a post-merge fix.
 Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
@@ -744,7 +745,8 @@ are what it exposed rather than a guess at what it might.
   04-CONVENTIONS.md asks every finding to end with a file reference when source is
   available, so this is a real gap, and the S9 instruction is to fix only what the demo
   sequence exposes. The sequence names an access finding. Recorded here rather than fixed,
-  and it wants the same join.
+  and it wants the same join. **Fixed immediately after the stage on the human's
+  instruction; see the post-merge note under Notes carried forward.**
 
 ### S9.4, the cold rehearsal
 
@@ -888,6 +890,37 @@ exit 0. **83 test files, 1670 tests**, up from 82 and 1615.
 S9 is the last stage in 05-BUILD-ORDER.md.
 
 ## Notes carried forward
+
+- **Post-merge fix, branch `fix/behavioral-file-references`: a behavioral finding can cite
+  a file too.** S9 fixed the access half and recorded the behavioral half as a known gap,
+  because the demo sequence names an access finding. The human asked for the other half
+  immediately after the merge. `handlerRefFor` in `checks/behavioral/plan.ts` matched an
+  endpoint on `responseShape.entity`, which nothing in the probe writes, and it compared
+  neither the method nor the path, so even a hand-built Observation would have handed a
+  criterion about a read the handler for a delete.
+- **The join is shared rather than copied.** `handlerRefFor` is exported from
+  `checks/access/plan.ts` and both planners call it. Two answers to "which file serves this
+  route" would eventually disagree, which is the argument that moved `templateIdentity`
+  into `probe/identity.ts` a day earlier. It sits beside `resolvePath`, which the
+  behavioral planner already imported from that file, so no new import direction was
+  created. Proved shared by breaking it: dropping the method comparison in the access file
+  failed one test in each planner.
+- **The behavioral planner joins on the route template, not the resolved path.** The
+  template is `/api/invoices/{id}` and the request is `/api/invoices/INV-1001`. Erasing
+  parameters from the template is exact; erasing them from the resolved path relies on the
+  instance id looking like an identifier, and an id that does not would silently stop
+  matching.
+- **Measured against `fixtures/ledger-express`, this is what it bought.** Every SARIF
+  result now carries a physical location pointing at the real handler rather than at the
+  spec file: access 3 of 3 and behavioral 5 of 5, where behavioral was 0 of 5 before. The
+  five structural results still point at the spec file, correctly, since a finding about an
+  entity nobody built has no handler to name. That fallback was chosen by the human at S6
+  when GitHub refused the document, and it is now what it was meant to be, the answer for a
+  finding with no source rather than the answer for every finding.
+- **`routeTemplateFor` keeps its unreachable branch, with a comment, exactly as the access
+  planner does.** It is the right precedence the day an adapter names the entity an
+  endpoint serves, and deleting a designed path in a module is a wider decision than this
+  fix.
 
 - **S8: the corpus found three recall problems in the tool and no precision problems.**
   They are written up in `corpus/RESULTS.md` and are the most valuable thing the stage

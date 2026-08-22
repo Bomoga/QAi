@@ -152,8 +152,12 @@ function resolveRoute(
  * `/api/invoices/{id}` and an observed `/api/invoices/:id` are one route. A route the
  * Observation does not hold, or holds only from a crawl, leaves the finding with its
  * request reference, which is what `04-CONVENTIONS.md` asks for when there is no source.
+ *
+ * Exported because the behavioral planner asks the same question about the route its
+ * criterion will request, and two answers to "which file serves this" would eventually
+ * disagree. It sits beside `resolvePath`, which that planner already imports from here.
  */
-function handlerRefFor(
+export function handlerRefFor(
   method: HttpMethod,
   template: string,
   observation: Observation | null,
