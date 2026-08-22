@@ -1,7 +1,9 @@
 ﻿# Progress
 
-Updated: 2026-08-22T01:00:00Z
-Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
+Updated: 2026-08-22T04:30:00Z
+Current stage: S9, buffer and demo, complete and merged. Branch
+`feat/decisions-and-recall` is in flight with the four decided questions and the corpus
+recall work.
 Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
@@ -889,6 +891,53 @@ exit 0. **83 test files, 1670 tests**, up from 82 and 1615.
 S9 is the last stage in 05-BUILD-ORDER.md.
 
 ## Notes carried forward
+
+- **The three open decisions were answered on 2026-08-22, and a fourth with them.** Q6,
+  Q7, and Q8 had each been hit more than once and are recorded as D13, D14, and D15 in
+  07-DECISIONS.md. The fourth is D16, whether a denied delete that returns nothing is a
+  failure, which was raised as a verdict rule rather than as a recall problem because
+  04-CONVENTIONS.md says never to guess at one. All four were answered as recommended.
+- **Q6 needed two fields more than the brief proposed, and that is stated rather than
+  slipped in.** The brief said counts and endpoint identities. With only those, the text
+  report still could not render its own section from a RunResult, because it prints the
+  probe mode and the probe's notes, and dropping the notes would let a stored run overstate
+  its coverage. `mode` and `notes` are carried too. The endpoint list is exactly what the
+  brief asked for: identity and `authRequired`, nothing else.
+- **Q8 moved a golden's severity counts and no verdict.** `high 3, medium 6` became
+  `high 8, medium 1`. Five behavioral findings sit on requirements tagged `access-control`
+  or `data-exposure`; the one that stays medium is D5, which is structural. D4's row in
+  06-TESTING.md's catalog moved with it, since that table is the integration test's oracle
+  and would otherwise have been wrong.
+- **Wiring the reset found a command that had never run.** M3.7 gave the access runner a
+  reset to call between mutating checks and no caller ever supplied one, so no real run
+  reset anything, and the corpus paid for it twice. Supplying it turned two integration
+  checks inconclusive, because the harness's reset command was `process.stdout.write(1)`,
+  which throws. **A command in a fixture that nothing executes is not tested by anything,
+  however plausible it looks.** It exits 0 now and still restores nothing, which is honest
+  for an in-memory target and is written where the command is.
+- **The reset between the families is new, and the one inside the access family finally
+  runs.** An access check that deleted a record changes what every criterion after it can
+  observe, which is what happened on `p3-notes-delete-open`. A reset that fails between the
+  families is reported out loud rather than swallowed, because everything after it ran
+  against a state the run did not establish.
+- **The delete confirmation found the M3.6 default-parameter trap again, in the file that
+  recorded it.** `deleteContextWith(client, undefined)` took the default and ran with a
+  state actor configured, so the test for the no-state-actor path was passing for the wrong
+  reason. The helper takes no default now. Third sighting of this trap in this repository.
+- **The instance sweep changed a real finding in the fixture, which is the point.**
+  `AR-011-01` carries no condition, so every configured instance is one the rule denies,
+  and the pass now says both were refused instead of one. An unconditional deny covering
+  only the first seeded record was the quiet half of this defect.
+- **Every golden regeneration in this branch was read line by line, three of them.** Q7
+  moved one line per file, Q6 was purely additive apart from the version, Q8 moved five
+  severities and the tally, and the punctuation fix moved the detail strings plus the
+  evidence ids the sweep's extra requests shifted. Verdict counts are unchanged throughout:
+  7/6/2 and 13/0/2 over 24 checks.
+- **What is still open after this branch**, so the list does not have to be rebuilt: the
+  text report prints a finding's reference twice, once inside `detail` and once as its own
+  line, which is the M3.8 contract question about `CheckResult` having no field for a
+  reference or a suggestion. Left alone deliberately: it is a contract change, not
+  punctuation.
 
 - **Post-merge fix, branch `fix/behavioral-file-references`: a behavioral finding can cite
   a file too.** S9 fixed the access half and recorded the behavioral half as a known gap,
