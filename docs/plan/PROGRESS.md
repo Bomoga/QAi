@@ -1,8 +1,7 @@
 ﻿# Progress
 
-Updated: 2026-08-22T00:15:00Z
-Current stage: S9, buffer and demo, complete and merged. Branch
-`fix/behavioral-file-references` is in flight with a post-merge fix.
+Updated: 2026-08-22T00:30:00Z
+Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
 Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
