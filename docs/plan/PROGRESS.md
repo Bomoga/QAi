@@ -1,8 +1,7 @@
 ﻿# Progress
 
-Updated: 2026-08-21T23:40:00Z
-Current stage: S9, buffer and demo, complete. Branch `fix/source-file-references` is in
-flight, awaiting review.
+Updated: 2026-08-21T23:55:00Z
+Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
 Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
