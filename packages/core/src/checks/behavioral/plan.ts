@@ -1,6 +1,6 @@
 import type { Observation, Spec, UnverifiedReason } from '../../contracts/index.ts';
 import type { RequestSpec } from '../../target/request.ts';
-import { resolvePath, type PlanningContext } from '../access/plan.ts';
+import { handlerRefFor, resolvePath, type PlanningContext } from '../access/plan.ts';
 import { isSupported, parseThen, type Assertion } from './assertions.ts';
 import {
   BEHAVIORAL_SEVERITY,
@@ -43,7 +43,15 @@ export interface BehavioralPlanResult {
   readonly unplannable: readonly UnplannableCriterion[];
 }
 
-/** Resolution order, matching access rules: an observed endpoint, then config, then nothing. */
+/**
+ * Resolution order, matching access rules: an observed endpoint, then config, then nothing.
+ *
+ * **Nothing in the probe writes `responseShape.entity`**, so the observed branch is
+ * reachable only from an Observation a caller built by hand, and a real run resolves every
+ * route from configuration. It is the right precedence the day an adapter names the entity
+ * an endpoint serves. The handler reference does not come from here; see the call to
+ * `handlerRefFor` below, which joins the resolved route to the endpoint serving it.
+ */
 function routeTemplateFor(
   entity: string,
   action: Exclude<WhenAction, 'path'>,
@@ -223,14 +231,6 @@ function endpointSweepFor(
   return sweep;
 }
 
-function handlerRefFor(request: WhenRequest, observation: Observation | null): string | undefined {
-  if (request.entity === undefined) return undefined;
-
-  return observation?.endpoints.find(
-    (endpoint) => endpoint.responseShape?.entity?.toLowerCase() === request.entity?.toLowerCase(),
-  )?.handlerRef;
-}
-
 function instanceFor(request: WhenRequest, context: PlanningContext): string | undefined {
   if (request.instanceId !== undefined) return request.instanceId;
 
@@ -307,7 +307,10 @@ export function planBehavioralChecks(
 
       const path = needsInstance ? resolvePath(template, instanceId ?? '') : template;
       const method = METHOD_FOR_WHEN[when.action];
-      const handlerRef = handlerRefFor(when, observation);
+      // The route the criterion will request, joined to the endpoint serving it. The
+      // template rather than the resolved path, so an instance id that does not look like
+      // one is still erased on both sides.
+      const handlerRef = handlerRefFor(method, template, observation);
       const stateReads = stateReadsFor(assertions, observation, context);
       const recordReads = recordReadsFor(assertions, when, instanceId, observation, context);
       const referenceRequests = referenceRequestsFor(assertions, observation, context);
