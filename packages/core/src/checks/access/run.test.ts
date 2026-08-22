@@ -478,3 +478,78 @@ describe('a denied delete that returns no fields', () => {
     expect(result.detail).toContain('Invoice fields');
   });
 });
+
+/**
+ * Every seeded instance the rule denies, not just the first.
+ *
+ * The corpus found this twice: candidate selection picked an instance the application
+ * does refuse while the violation sat on a different one, so the access family saw
+ * nothing and a behavioral criterion caught the defect instead. An application that
+ * enforces on one record and leaks another is exactly the shape of a scoping bug, and a
+ * check that stops at the first refusal cannot see it.
+ */
+const TWO_FOREIGN: PlanningContext = {
+  actorIds: new Set(['owner', 'outsider']),
+  resources: [
+    {
+      name: 'Invoice',
+      routes: { read: '/api/invoices/{id}' },
+      instances: [
+        { id: 'INV-1001', attributes: { org_id: 'org-1' } },
+        { id: 'INV-1002', attributes: { org_id: 'org-1' } },
+      ],
+    },
+  ],
+};
+
+function denyReadPlan(context: PlanningContext): AccessCheckPlan {
+  const plans = planAccessChecks(SPEC, conditions(), null, context).plans;
+  const plan = plans.find((entry) => entry.ruleId === 'AR-001-01');
+  if (plan === undefined) throw new Error('expected the deny rule to plan');
+  return plan;
+}
+
+describe('a deny read across every instance the rule denies', () => {
+  it('fails on the second instance when the first is correctly refused', async () => {
+    const answering = clientAnswering((path) =>
+      path.endsWith('INV-1002') ? ok(INVOICE_1001) : refused(404),
+    );
+
+    const result = await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('INV-1002');
+    expect(answering.paths).toHaveLength(2);
+  });
+
+  it('passes only when every one of them is refused, and says how many', async () => {
+    const answering = clientAnswering(() => refused(404));
+
+    const result = await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(result.verdict).toBe('pass');
+    expect(result.detail).toContain('2');
+    expect(answering.paths).toHaveLength(2);
+  });
+
+  it('stops at the first failure rather than sweeping the rest', async () => {
+    // The finding is made. Continuing would issue requests that cannot change the
+    // verdict, and against a mutating rule it would act more times than it had to.
+    const answering = clientAnswering(() => ok(INVOICE_1001));
+
+    await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(answering.paths).toHaveLength(1);
+  });
+
+  it('reports inconclusive if one reading was undecidable and none failed', async () => {
+    // A refusal on one and a 500 on the other does not establish that the rule holds.
+    const answering = clientAnswering((path) =>
+      path.endsWith('INV-1002') ? ok('', 500) : refused(404),
+    );
+
+    const result = await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(result.verdict).toBe('inconclusive');
+  });
+});

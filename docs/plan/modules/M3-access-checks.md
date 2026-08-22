@@ -74,6 +74,23 @@ is M5.11's rather than this table's.
 
 **Instance identification.** Deny checks need a real record owned by someone else. Fixtures seed these. If no foreign instance can be identified, the check is `inconclusive` with reason `probe-incomplete`, because testing access control against a record that does not exist proves nothing.
 
+**Every instance the rule denies, not just the first. Corrected 2026-08-22 after the corpus
+run.** Selection used to stop at the first configured instance the condition held for, and
+the corpus found what that costs twice: an application enforced the rule on the instance
+the tool picked and leaked a different one, so the access family reported a pass and a
+behavioral criterion caught the defect instead. Enforcing on one record and not another is
+the shape of a scoping bug, and it is invisible to a check that stops at the first refusal.
+
+A non-mutating deny rule is now tried against every matching instance. The first failure
+ends the sweep, since the finding is made and further requests cannot change the verdict.
+A pass requires every instance to have been refused and states how many that was, so a
+reader can see the scope of the claim. Any instance that came back undecided, with none
+failing, makes the check inconclusive.
+
+**Mutating rules are not swept**, and the reason is not squeamishness: a delete tried
+against four records destroys four records, and the reset between checks runs between
+them rather than inside one. One instance, as before.
+
 **Evidence.** Every access check captures the full request and response pair, per invariant I3 and rule R7. The finding's `detail` names the actor, the method, the path, the status, and the fields observed in the body. It never uses a vulnerability class name.
 
 **Determinism.** All access checks are non-mutating in the MVP except `create`, `update`, and `delete` rules, which run last, serially, inside the fixture boundary, and only when the disposability gate from M2 permits.

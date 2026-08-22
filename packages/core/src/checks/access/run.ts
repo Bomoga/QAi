@@ -101,9 +101,72 @@ async function readRecord(
   return undefined;
 }
 
+/**
+ * A deny rule tried against every instance it denies, rather than against one.
+ *
+ * The corpus found the reason twice: an application enforced the rule on the instance the
+ * tool picked and leaked a different one, so the access family reported a pass and a
+ * behavioral criterion caught the defect instead. Enforcing on one record and not another
+ * is the shape of a scoping bug and is invisible to a check that stops at the first
+ * refusal.
+ *
+ * The first failure ends the sweep. The finding is already made, and continuing would
+ * issue requests that cannot change the verdict. A pass requires every instance to have
+ * been refused and says how many that was, so a reader can see the scope of the claim.
+ *
+ * **Mutating rules are not swept.** A delete tried against four records destroys four
+ * records, and the reset in `runAccessChecks` runs between checks rather than inside one.
+ * One instance, as before.
+ */
 export async function runAccessCheck(
   plan: AccessCheckPlan,
   context: AccessRunContext,
+): Promise<CheckResult> {
+  const session = context.sessions.get(plan.actorId);
+
+  if (
+    session === undefined ||
+    plan.rule.effect !== 'deny' ||
+    plan.mutates ||
+    !INSTANCE_ACTIONS.has(plan.action)
+  ) {
+    return attemptAccessCheck(plan, context);
+  }
+
+  const selection = selectCandidate(
+    candidatesOf(plan),
+    plan.condition,
+    plan.resource,
+    session.attributes,
+  );
+
+  const instances = selection.all ?? [];
+  if (instances.length < 2) return attemptAccessCheck(plan, context);
+
+  const attempts: CheckResult[] = [];
+
+  for (const instance of instances) {
+    const result = await attemptAccessCheck(plan, context, instance.id);
+    attempts.push(result);
+    if (result.verdict === 'fail') return result;
+  }
+
+  const undecided = attempts.find((result) => result.verdict === 'inconclusive');
+  if (undecided !== undefined) return undecided;
+
+  const last = attempts[attempts.length - 1] as CheckResult;
+  return {
+    ...last,
+    detail:
+      `${last.detail ?? ''} Every one of the ${instances.length} configured ${plan.resource} instance(s) the rule denies was refused.`.trim(),
+    evidence: attempts.flatMap((result) => result.evidence),
+  };
+}
+
+async function attemptAccessCheck(
+  plan: AccessCheckPlan,
+  context: AccessRunContext,
+  forcedInstanceId?: string,
 ): Promise<CheckResult> {
   /**
    * Invariant I7, checked before anything is sent. A mutating check against a target
@@ -161,7 +224,7 @@ export async function runAccessCheck(
       });
     }
 
-    selectedId = selection.matched.id;
+    selectedId = forcedInstanceId ?? selection.matched.id;
     path = resolvePath(plan.pathTemplate, selectedId);
   }
 
