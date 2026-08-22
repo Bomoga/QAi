@@ -174,7 +174,8 @@ Rules:
 
 - `coverage` is requirements with at least one non-inconclusive check divided by total requirements. It is not a pass rate and must never be labeled as one.
 - A requirement is `verified` only if it has at least one check and all its checks passed. Any fail makes it `failed`. Checks that are all inconclusive, or no checks at all, make it `unverified`.
-- `unverifiedReasons` uses a closed set: `no-checks-defined`, `actor-unavailable`, `target-unreachable`, `probe-incomplete`, `check-error`, `unsupported-condition`, `model-inconclusive`, `capability-unavailable`. The last covers an optional dependency being absent, for example Playwright not installed, and is distinct from `model-inconclusive`, which means the model ran and was uncertain.
+- `unverifiedReasons` uses a closed set: `no-checks-defined`, `actor-unavailable`, `target-unreachable`, `probe-incomplete`, `check-error`, `no-verdict-reached`, `unsupported-condition`, `model-inconclusive`, `capability-unavailable`. `capability-unavailable` covers an optional dependency being absent, for example Playwright not installed, and is distinct from `model-inconclusive`, which means the model ran and was uncertain.
+- **`no-verdict-reached` was added by Q7 on 2026-08-22** and means the checks ran and none of them established the fact. It is distinct from `check-error`, which means something threw. Before it existed, `assembleRun` fell back to `check-error` for a requirement whose every check came back inconclusive, so the tool reported an error on five occasions when it was declining to guess, which is invariant I2 working as intended. `detail` carries the specifics, so the sub-cases stay distinguishable without a second member.
 - `modelAssistedCheckCount` exists so the report can state plainly how much of the run was not deterministic. It is always displayed, including when zero.
 
 ## Evidence

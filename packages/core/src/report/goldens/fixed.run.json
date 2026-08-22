@@ -566,7 +566,7 @@
   "unverifiedReasons": [
     {
       "detail": "1 check(s) ran and none reached a verdict",
-      "reason": "check-error",
+      "reason": "no-verdict-reached",
       "requirementId": "REQ-006"
     },
     {

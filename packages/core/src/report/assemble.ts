@@ -133,9 +133,15 @@ function coverageOf(
  *
  * A gap the run reported wins over the generic fallback, since it names something the
  * reader can act on. A requirement that is unverified with no gap recorded had checks
- * that all came back inconclusive, which is `check-error` only when something threw; the
- * honest general case is that nothing established a verdict, and `no-checks-defined`
+ * that all came back inconclusive, which is `no-verdict-reached`, and `no-checks-defined`
  * covers the requirement that had nothing to run in the first place.
+ *
+ * **`check-error` is no longer the fallback**, resolved as Q7 on 2026-08-22. It means
+ * something threw, and it was being reported for a requirement whose checks all declined
+ * to guess, which is invariant I2 working. A run that says it errored when it did not is
+ * a tool describing itself as broken, and it happened five times before the closed set
+ * gained a member for it. A runner that really throws still records `check-error` as a
+ * gap, and that gap wins here, so the meaning it was named for is intact.
  */
 function reasonsFor(
   requirements: readonly RequirementResult[],
@@ -167,7 +173,7 @@ function reasonsFor(
       reason:
         (checkCount.get(requirement.requirementId) ?? 0) === 0
           ? 'no-checks-defined'
-          : 'check-error',
+          : 'no-verdict-reached',
       ...(requirement.reason === undefined ? {} : { detail: requirement.reason }),
     });
   }

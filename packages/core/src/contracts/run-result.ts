@@ -42,6 +42,16 @@ export const UnverifiedReasonSchema = z.enum([
   'target-unreachable',
   'probe-incomplete',
   'check-error',
+  /**
+   * The checks ran and none of them reached a verdict. Q7, decided 2026-08-22.
+   *
+   * Distinct from `check-error`, which means something threw. A requirement whose every
+   * check came back inconclusive is the tool declining to guess, which invariant I2 asks
+   * for, and reporting it as an error described correct behaviour as a failure. Seen five
+   * times before the set gained a member for it. `detail` carries the specifics, so the
+   * cases stay distinguishable without a second member.
+   */
+  'no-verdict-reached',
   'unsupported-condition',
   'model-inconclusive',
   'capability-unavailable',
