@@ -8,6 +8,7 @@ import type { HttpClient, RequestOutcome } from '../../target/request.ts';
 import { createActorSessions } from '../../target/session.ts';
 import { parseCondition, type ConditionAst } from '../../spec/condition.ts';
 import {
+  denyFailureDetail,
   FORBIDDEN_FINDING_TERMS,
   referenceLine,
   severityForAccessFailure,
@@ -252,5 +253,36 @@ describe('a list finding', () => {
     expect(result.detail).toContain('2 row(s)');
     expect(result.detail).toContain('INV-1001');
     expect(result.detail).toContain('Suggestion:');
+  });
+});
+
+describe('a finding reads as sentences', () => {
+  it('closes the observation before the reference begins', () => {
+    // It used to read "... with Invoice fields id, notes Request: GET /api/invoices/1",
+    // two statements run together, on every access finding the corpus recorded.
+    const plan = plans()[0] as AccessCheckPlan;
+    const detail = denyFailureDetail({
+      plan,
+      request: 'GET /api/invoices/INV-1001',
+      status: 200,
+      evidenceId: 'EV-000001',
+      observedFields: ['id', 'notes'],
+    });
+
+    expect(detail).toContain('notes. Request:');
+    expect(detail).not.toContain('notes Request:');
+  });
+
+  it('does the same when the reference is a file', () => {
+    const plan = { ...(plans()[0] as AccessCheckPlan), locationRef: 'src/routes.ts:12' };
+    const detail = denyFailureDetail({
+      plan,
+      request: 'GET /api/invoices/INV-1001',
+      status: 200,
+      evidenceId: 'EV-000001',
+      observedFields: ['id'],
+    });
+
+    expect(detail).toContain('id. Source: src/routes.ts:12.');
   });
 });
