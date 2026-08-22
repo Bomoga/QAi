@@ -836,6 +836,18 @@ Delta RUN-20260821-232711 to RUN-20260821-232740
   twin does not serve the debug endpoint, so the requirement that fails on the ledger for
   that reason is verified here. Nothing else moved: the same five requirements are repaired
   by the same checks.
+- **Rehearsed again on 2026-08-22, cold, after the four decisions and the recall work.**
+  The engine had changed underneath the evidence above, so the recorded run said nothing
+  about the current one. Clone 2s, install 5s, build 10s, and the six steps in 8s: init
+  exit 0, validate exit 0, check exit 1 with 15 requirements as 8 verified, 5 failed, 2
+  unverified, check exit 0 with 13 verified, and a delta naming the same five requirements
+  moving failed to verified. Eleven lines still carry `Source: src/routes.ts`.
+- **One line of that table is now stale and is left standing rather than edited.** Step 3
+  reported `high 3, medium 6` when it was first run and reports `high 8, medium 0` now.
+  Q8 moved five behavioral findings to high, and the twin serves no D5, so nothing medium
+  remains. **No verdict changed, no exit code changed, and no requirement moved between
+  buckets.** The severity figure in the S9.4 table describes the run that happened on the
+  day, which is what a record is for.
 
 ### S9 summary
 
