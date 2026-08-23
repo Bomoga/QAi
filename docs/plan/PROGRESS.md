@@ -1,9 +1,7 @@
 ﻿# Progress
 
-Updated: 2026-08-22T04:30:00Z
-Current stage: S9, buffer and demo, complete and merged. Branch
-`feat/decisions-and-recall` is in flight with the four decided questions and the corpus
-recall work.
+Updated: 2026-08-22T19:00:00Z
+Current stage: S9, buffer and demo, complete and merged. Nothing in flight, dev is current.
 Next task: none. S9 is the last stage in 05-BUILD-ORDER.md.
 
 This header names a branch only while one is in flight. Naming the working branch
