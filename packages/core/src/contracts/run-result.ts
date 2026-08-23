@@ -178,8 +178,35 @@ export const CheckResultSchema = z
     deterministic: z.boolean(),
     severity: SeveritySchema,
     title: z.string().min(1),
+    /**
+     * What was observed, and nothing else.
+     *
+     * **It used to carry the reference and the suggested fix as well**, because there was
+     * no field for either, and every emitter then printed the reference twice: once inside
+     * this string and once from `locationRef` and `evidence`. M3.8 recorded that as the
+     * contract question to raise and M7.7 saw it again from the report's side. Answered
+     * 2026-08-23: the three are separate facts and are separate fields.
+     */
     detail: z.string().min(1).optional(),
+    /**
+     * The request the check issued, `GET /api/invoices/INV-1001`.
+     *
+     * A finding ends with a file reference when source is available and a request
+     * reference when it is not, per `04-CONVENTIONS.md`. `locationRef` is the first half
+     * and this is the second. Both may be present: knowing which file serves a route does
+     * not tell a reader which record was asked for.
+     */
+    requestRef: z.string().min(1).optional(),
     locationRef: z.string().min(1).optional(),
+    /**
+     * A fix phrased as something a user could paste into a coding agent, without the
+     * `Suggestion:` prefix, which is the emitter's to add.
+     *
+     * Always a suggestion and never an instruction: this tool knows what the spec said and
+     * what the target did, and nothing about what the code should look like. A passing
+     * check carries none, since a suggestion attached to a pass reads as a finding.
+     */
+    suggestion: z.string().min(1).optional(),
     evidence: z.array(EvidenceIdSchema).default([]),
   })
   .strict();

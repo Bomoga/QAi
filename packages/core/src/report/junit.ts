@@ -72,7 +72,9 @@ function failureText(check: CheckResultRecord): string {
   const parts: string[] = [];
   if (check.detail !== undefined) parts.push(check.detail);
   if (check.locationRef !== undefined) parts.push(`Source: ${check.locationRef}`);
+  if (check.requestRef !== undefined) parts.push(`Request: ${check.requestRef}`);
   if (check.evidence.length > 0) parts.push(`Evidence: ${check.evidence.join(', ')}`);
+  if (check.suggestion !== undefined) parts.push(`Suggestion: ${check.suggestion}`);
   if (!check.deterministic) parts.push('Model assisted');
   return parts.join('\n');
 }

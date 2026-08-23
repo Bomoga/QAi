@@ -32,6 +32,13 @@ export function severityForAccessFailure(plan: AccessCheckPlan): Severity {
   return plan.rule.effect === 'deny' ? 'high' : 'medium';
 }
 
+/** An observation, where to look, and what to do about it. Three fields, not one string. */
+export interface FindingParts {
+  readonly detail: string;
+  readonly requestRef: string;
+  readonly suggestion: string;
+}
+
 export interface FindingTextInput {
   readonly plan: AccessCheckPlan;
   /** The request as issued, for example `GET /api/invoices/INV-1001`. */
@@ -46,19 +53,14 @@ export interface FindingTextInput {
 }
 
 /**
- * The closing reference. Source when a probe supplied a handler, the request otherwise,
- * and the evidence id either way so a reader can find what was recorded.
- */
-export function referenceLine(plan: AccessCheckPlan, request: string, evidenceId: string): string {
-  const where =
-    plan.locationRef === undefined ? `Request: ${request}` : `Source: ${plan.locationRef}`;
-  return `${where}. Evidence: ${evidenceId}.`;
-}
-
-/**
- * A fix a user could paste into a coding agent. Always prefixed as a suggestion, since
- * the tool knows what the spec said and what the target did, and nothing about what the
- * code should look like.
+ * A fix a user could paste into a coding agent.
+ *
+ * **Unlabelled since 2026-08-23**, when `suggestion` became a field. It used to carry its
+ * own `Suggestion:` prefix, which was the only way to guarantee the label that
+ * `04-CONVENTIONS.md` requires when the text was going to be concatenated into `detail`.
+ * A field does not need to smuggle its own label, and an emitter rendering it under a
+ * heading would have printed the word twice. The rule stays structural rather than
+ * remembered: `suggestion-label.test.ts` asserts that every emitter labels it.
  */
 export function suggestionFor(plan: AccessCheckPlan): string {
   const ownership =
@@ -67,41 +69,48 @@ export function suggestionFor(plan: AccessCheckPlan): string {
       : `the rule condition ${plan.rule.condition}`;
 
   if (plan.rule.effect === 'allow') {
-    return `Suggestion: allow ${plan.method} ${plan.pathTemplate} for a caller matching ${ownership}, which ${plan.rule.actor} satisfies.`;
+    return `allow ${plan.method} ${plan.pathTemplate} for a caller matching ${ownership}, which ${plan.rule.actor} satisfies.`;
   }
 
   if (plan.action === 'list') {
-    return `Suggestion: scope the ${plan.method} ${plan.pathTemplate} handler so it returns only rows matching ${ownership}, filtering in the query rather than after fetching.`;
+    return `scope the ${plan.method} ${plan.pathTemplate} handler so it returns only rows matching ${ownership}, filtering in the query rather than after fetching.`;
   }
 
-  return `Suggestion: in the ${plan.method} ${plan.pathTemplate} handler, check ${ownership} before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.`;
+  return `in the ${plan.method} ${plan.pathTemplate} handler, check ${ownership} before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.`;
 }
 
 /**
- * The three parts of a finding, as sentences rather than as a run-on.
+ * The three parts of a finding, as three fields rather than as one string.
  *
- * The observation carries no terminator of its own, so joining it straight onto the
- * reference produced "returned 200 with Invoice fields id, notes Request: GET ...". Every
- * access finding the corpus recorded reads that way. The parts are separate statements and
- * are punctuated as such.
+ * **They used to be joined into `detail`**, because `CheckResult` had no field for a
+ * reference or a suggestion, and every emitter then printed the reference twice: once
+ * inside the sentence and once from `locationRef` and `evidence`. M3.8 recorded that as
+ * the contract question to raise and M7.7 saw the same duplication from the report's side.
+ * Answered 2026-08-23: an observation, a reference, and a suggestion are three facts, and
+ * an emitter that wants to lay them out differently should not have to parse a sentence to
+ * do it.
+ *
+ * `detail` keeps its full stop, because it is a sentence and the next thing a reader sees
+ * may be another one.
  */
 function compose(
   observation: string,
   plan: AccessCheckPlan,
   request: string,
-  evidenceId: string,
-): string {
-  return [`${observation}.`, referenceLine(plan, request, evidenceId), suggestionFor(plan)].join(
-    ' ',
-  );
+): { detail: string; requestRef: string; suggestion: string } {
+  return {
+    detail: `${observation}.`,
+    requestRef: request,
+    suggestion: suggestionFor(plan),
+  };
 }
 
 /** A deny rule that failed: the record came back to an actor the spec refuses. */
-export function denyFailureDetail(input: FindingTextInput): string {
+export function denyFailureDetail(input: FindingTextInput): FindingParts {
   const fields = (input.observedFields ?? []).join(', ');
   const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status} with ${input.plan.resource} fields ${fields}`;
 
-  return compose(observation, input.plan, input.request, input.evidenceId);
+  return compose(observation, input.plan, input.request);
 }
 
 /**
@@ -113,25 +122,25 @@ export function denyFailureDetail(input: FindingTextInput): string {
  */
 export function destructiveFailureDetail(
   input: FindingTextInput & { readonly instanceId: string },
-): string {
+): FindingParts {
   const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status} with no ${input.plan.resource} fields, and ${input.plan.resource} ${input.instanceId} was readable before the request and is absent after it`;
 
-  return compose(observation, input.plan, input.request, input.evidenceId);
+  return compose(observation, input.plan, input.request);
 }
 
 /** A deny rule on a list that failed: rows belonging to someone else came back. */
-export function listFailureDetail(input: FindingTextInput): string {
+export function listFailureDetail(input: FindingTextInput): FindingParts {
   const rows = (input.foreignRowIds ?? []).join(', ');
   const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status} with ${input.totalRows} row(s), ${input.foreignRowIds?.length ?? 0} of which the rule denies: ${rows}`;
 
-  return compose(observation, input.plan, input.request, input.evidenceId);
+  return compose(observation, input.plan, input.request);
 }
 
 /** An allow rule that failed: a caller the spec permits was refused. */
-export function allowFailureDetail(input: FindingTextInput): string {
+export function allowFailureDetail(input: FindingTextInput): FindingParts {
   const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status}, and the spec allows this actor to perform it`;
 
-  return compose(observation, input.plan, input.request, input.evidenceId);
+  return compose(observation, input.plan, input.request);
 }
 
 /**

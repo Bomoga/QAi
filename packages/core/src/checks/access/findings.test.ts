@@ -10,7 +10,6 @@ import { parseCondition, type ConditionAst } from '../../spec/condition.ts';
 import {
   denyFailureDetail,
   FORBIDDEN_FINDING_TERMS,
-  referenceLine,
   severityForAccessFailure,
   suggestionFor,
 } from './findings.ts';
@@ -172,26 +171,49 @@ describe('a finding states the observation', () => {
   });
 });
 
-describe('a finding ends with a reference', () => {
-  it('cites the request when no source is available', async () => {
+/**
+ * Rewritten 2026-08-23, when the reference and the suggestion became fields.
+ *
+ * These used to read the reference out of `detail`, because that is where it lived. The
+ * assertions are the same claims about the same facts, made against the fields that now
+ * carry them, and the emitters are what put a label in front of each. `referenceLine` is
+ * gone: it existed to join the three parts into one sentence, and nothing joins them now.
+ */
+describe('a finding says where to look', () => {
+  it('carries the request it issued, whether or not there is source', async () => {
     const result = await runAccessCheck(
       plans()[0] as AccessCheckPlan,
       contextWith(answering(ok(LEAKED))),
     );
 
-    expect(result.detail).toContain('Request: GET /api/invoices/INV-1001');
-    expect(result.detail).toContain('Evidence: EV-000001');
+    expect(result.requestRef).toBe('GET /api/invoices/INV-1001');
+    expect(result.evidence).toContain('EV-000001');
   });
 
-  it('cites the source when a probe supplied a handler', () => {
+  it('keeps the reference out of the observation, which used to hold both', async () => {
+    // The defect the field exists to remove. `detail` is what was seen and nothing else,
+    // so an emitter can lay the parts out without parsing a sentence.
+    const result = await runAccessCheck(
+      plans()[0] as AccessCheckPlan,
+      contextWith(answering(ok(LEAKED))),
+    );
+
+    expect(result.detail).not.toContain('Request:');
+    expect(result.detail).not.toContain('Evidence:');
+    expect(result.detail).not.toContain('Suggestion:');
+  });
+
+  it('carries both references when a probe supplied a handler', async () => {
+    // Knowing which file serves a route does not say which record was asked for, so a
+    // finding with source carries the request as well.
     const plan = {
       ...(plans()[0] as AccessCheckPlan),
       locationRef: 'app/api/invoices/[id]/route.ts:12',
     };
-    const line = referenceLine(plan, 'GET /api/invoices/INV-1001', 'EV-000001');
+    const result = await runAccessCheck(plan, contextWith(answering(ok(LEAKED))));
 
-    expect(line).toContain('Source: app/api/invoices/[id]/route.ts:12');
-    expect(line).not.toContain('Request:');
+    expect(result.locationRef).toBe('app/api/invoices/[id]/route.ts:12');
+    expect(result.requestRef).toBe('GET /api/invoices/INV-1001');
   });
 
   it('carries the source into locationRef on the result', async () => {
@@ -203,12 +225,17 @@ describe('a finding ends with a reference', () => {
 });
 
 describe('a suggested fix', () => {
-  it('is labeled as a suggestion', async () => {
+  it('is a field of its own, which the emitters label', async () => {
+    // It used to arrive prefixed `Suggestion:` inside `detail`, which was the only way to
+    // guarantee the label once the text was concatenated. The label is the emitter's now
+    // and `report/suggestion-label.test.ts` holds all three to it.
     const result = await runAccessCheck(
       plans()[0] as AccessCheckPlan,
       contextWith(answering(ok(LEAKED))),
     );
-    expect(result.detail).toContain('Suggestion:');
+
+    expect(result.suggestion).toContain('check the rule condition');
+    expect(result.suggestion).not.toContain('Suggestion:');
   });
 
   it('names the handler and the condition, so it can be pasted into a coding agent', () => {
@@ -236,7 +263,7 @@ describe('a suggested fix', () => {
     );
 
     expect(result.verdict).toBe('pass');
-    expect(result.detail).not.toContain('Suggestion:');
+    expect(result.suggestion).toBeUndefined();
   });
 });
 
@@ -252,16 +279,22 @@ describe('a list finding', () => {
     expect(result.verdict).toBe('fail');
     expect(result.detail).toContain('2 row(s)');
     expect(result.detail).toContain('INV-1001');
-    expect(result.detail).toContain('Suggestion:');
+    expect(result.suggestion).toContain('filtering in the query');
   });
 });
 
+/**
+ * The observation is a sentence and closes itself.
+ *
+ * Written when the three parts were joined into one string and the observation ran into
+ * the reference. They are separate fields now, so the run-on cannot recur in the same way,
+ * and what is still worth pinning is that `detail` reads as a finished statement: an
+ * emitter puts the next part on its own line and a fragment would read as truncation.
+ */
 describe('a finding reads as sentences', () => {
-  it('closes the observation before the reference begins', () => {
-    // It used to read "... with Invoice fields id, notes Request: GET /api/invoices/1",
-    // two statements run together, on every access finding the corpus recorded.
+  it('closes the observation, so what follows it starts cleanly', () => {
     const plan = plans()[0] as AccessCheckPlan;
-    const detail = denyFailureDetail({
+    const parts = denyFailureDetail({
       plan,
       request: 'GET /api/invoices/INV-1001',
       status: 200,
@@ -269,13 +302,13 @@ describe('a finding reads as sentences', () => {
       observedFields: ['id', 'notes'],
     });
 
-    expect(detail).toContain('notes. Request:');
-    expect(detail).not.toContain('notes Request:');
+    expect(parts.detail.endsWith('.')).toBe(true);
+    expect(parts.detail).toContain('id, notes.');
   });
 
-  it('does the same when the reference is a file', () => {
+  it('keeps each part to itself', () => {
     const plan = { ...(plans()[0] as AccessCheckPlan), locationRef: 'src/routes.ts:12' };
-    const detail = denyFailureDetail({
+    const parts = denyFailureDetail({
       plan,
       request: 'GET /api/invoices/INV-1001',
       status: 200,
@@ -283,6 +316,8 @@ describe('a finding reads as sentences', () => {
       observedFields: ['id'],
     });
 
-    expect(detail).toContain('id. Source: src/routes.ts:12.');
+    expect(parts.requestRef).toBe('GET /api/invoices/INV-1001');
+    expect(parts.detail).not.toContain('src/routes.ts:12');
+    expect(parts.suggestion).not.toContain('Suggestion:');
   });
 });

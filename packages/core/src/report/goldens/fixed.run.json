@@ -533,7 +533,7 @@
       "verdict": "verified"
     }
   ],
-  "resultVersion": "0.2",
+  "resultVersion": "0.3",
   "runId": "RUN-golden-fixed",
   "spec": {
     "files": [
