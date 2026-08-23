@@ -320,3 +320,236 @@ describe('the allow assessment', () => {
     expect(assessAllowOutcome(outcome, ['id']).verdict).toBe('inconclusive');
   });
 });
+
+/**
+ * A denied delete that succeeds and returns nothing.
+ *
+ * Decided by the human on 2026-08-22, after the corpus missed a real deletion three
+ * times. A 2xx carrying no resource fields is undecidable from the response alone, which
+ * is right for a read and cost a finding on a delete: `DELETE /api/notes/N-1 as actor
+ * stranger returned 200 with no recognizable fields` was the tool declining to guess
+ * while the record was being destroyed.
+ *
+ * The response is not the evidence. The record is. It is read as the configured state
+ * actor before the action and again after, and only present-then-absent is a failure.
+ */
+const DELETE_SPEC: Spec = SpecSchema.parse({
+  specVersion: '0.1',
+  name: 'Ledger',
+  entities: [{ name: 'Invoice', fields: [{ name: 'id', type: 'string' }] }],
+  requirements: [
+    {
+      id: 'REQ-020',
+      statement: 'Only the owning organization may delete an invoice',
+      accessRules: [
+        {
+          id: 'AR-020-01',
+          actor: 'outsider',
+          action: 'delete',
+          resource: 'Invoice',
+          condition: 'Invoice.org_id != actor.org_id',
+          effect: 'deny',
+        },
+      ],
+    },
+  ],
+});
+
+const DELETE_CONTEXT: PlanningContext = {
+  actorIds: new Set(['owner', 'outsider']),
+  resources: [
+    {
+      name: 'Invoice',
+      routes: { read: '/api/invoices/{id}', delete: '/api/invoices/{id}' },
+      instances: [{ id: 'INV-1001', attributes: { org_id: 'org-1' } }],
+    },
+  ],
+};
+
+/** Answers a read from a mutable store, so a delete between the two reads is visible. */
+function deletableStore(deleteStatus: number, deleteBody = '') {
+  let present = true;
+  const paths: string[] = [];
+
+  const client: HttpClient = {
+    send: (spec) => {
+      paths.push(`${spec.method} ${spec.path}`);
+      if (spec.method === 'DELETE') {
+        present = false;
+        return Promise.resolve(ok(deleteBody, deleteStatus));
+      }
+      return Promise.resolve(present ? ok(INVOICE_1001) : refused(404));
+    },
+  };
+
+  return { client, paths, keep: () => (present = true) };
+}
+
+function deletePlans(): AccessCheckPlan[] {
+  return [...planAccessChecks(DELETE_SPEC, conditions(), null, DELETE_CONTEXT).plans];
+}
+
+/**
+ * No default for `stateActorId`. A default parameter swallows an explicitly passed
+ * `undefined`, which is the M3.6 trap, and it caught this file too: the no-state-actor
+ * test was silently running with `owner` and passing for the wrong reason.
+ */
+function deleteContextWith(client: HttpClient, stateActorId: string | undefined) {
+  return {
+    sessions: createActorSessions(ACTORS, {
+      client,
+      rules: rulesFor(DELETE_SPEC),
+      deps: fixedDeps(),
+    }),
+    mutation: { allowed: true },
+    ...(stateActorId === undefined ? {} : { stateActorId }),
+  };
+}
+
+describe('a denied delete that returns no fields', () => {
+  it('fails when the record was readable before and is gone after', async () => {
+    const store = deletableStore(200);
+    const plan = deletePlans()[0] as AccessCheckPlan;
+
+    const result = await runAccessCheck(plan, deleteContextWith(store.client, 'owner'));
+
+    expect(result.verdict).toBe('fail');
+    expect(result.severity).toBe('high');
+    expect(result.detail).toContain('readable before');
+    expect(result.detail).toContain('absent after');
+    // The action and both readings, so the claim carries what it rests on.
+    expect(result.evidence.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('passes when the record is still there afterwards', async () => {
+    // A 204 from an endpoint that refused without saying so. The record survived, so
+    // nothing was destroyed and the rule held.
+    const store = deletableStore(204);
+    const plan = deletePlans()[0] as AccessCheckPlan;
+    const context = deleteContextWith(
+      {
+        send: (spec) => {
+          store.paths.push(`${spec.method} ${spec.path}`);
+          if (spec.method === 'DELETE') return Promise.resolve(ok('', 204));
+          return Promise.resolve(ok(INVOICE_1001));
+        },
+      },
+      'owner',
+    );
+
+    const result = await runAccessCheck(plan, context);
+
+    expect(result.verdict).toBe('pass');
+  });
+
+  it('stays inconclusive with no state actor configured', async () => {
+    // Reading the record as the acting actor would report a scoping rule as a state
+    // fact, and this actor is the one the rule says must be refused.
+    const store = deletableStore(200);
+    const plan = deletePlans()[0] as AccessCheckPlan;
+
+    const result = await runAccessCheck(plan, deleteContextWith(store.client, undefined));
+
+    expect(result.verdict).toBe('inconclusive');
+  });
+
+  it('stays inconclusive when the record could not be read before the action', async () => {
+    // Absent before and absent after says nothing: there was nothing to destroy.
+    const plan = deletePlans()[0] as AccessCheckPlan;
+    const context = deleteContextWith(
+      { send: (spec) => Promise.resolve(spec.method === 'DELETE' ? ok('', 200) : refused(404)) },
+      'owner',
+    );
+
+    const result = await runAccessCheck(plan, context);
+
+    expect(result.verdict).toBe('inconclusive');
+  });
+
+  it('still fails on fields in the body without needing the readings', async () => {
+    // The existing row of the table is untouched: a 2xx handing back the record is a
+    // failure on the response alone.
+    const plan = deletePlans()[0] as AccessCheckPlan;
+    const context = deleteContextWith({ send: () => Promise.resolve(ok(INVOICE_1001)) }, 'owner');
+
+    const result = await runAccessCheck(plan, context);
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('Invoice fields');
+  });
+});
+
+/**
+ * Every seeded instance the rule denies, not just the first.
+ *
+ * The corpus found this twice: candidate selection picked an instance the application
+ * does refuse while the violation sat on a different one, so the access family saw
+ * nothing and a behavioral criterion caught the defect instead. An application that
+ * enforces on one record and leaks another is exactly the shape of a scoping bug, and a
+ * check that stops at the first refusal cannot see it.
+ */
+const TWO_FOREIGN: PlanningContext = {
+  actorIds: new Set(['owner', 'outsider']),
+  resources: [
+    {
+      name: 'Invoice',
+      routes: { read: '/api/invoices/{id}' },
+      instances: [
+        { id: 'INV-1001', attributes: { org_id: 'org-1' } },
+        { id: 'INV-1002', attributes: { org_id: 'org-1' } },
+      ],
+    },
+  ],
+};
+
+function denyReadPlan(context: PlanningContext): AccessCheckPlan {
+  const plans = planAccessChecks(SPEC, conditions(), null, context).plans;
+  const plan = plans.find((entry) => entry.ruleId === 'AR-001-01');
+  if (plan === undefined) throw new Error('expected the deny rule to plan');
+  return plan;
+}
+
+describe('a deny read across every instance the rule denies', () => {
+  it('fails on the second instance when the first is correctly refused', async () => {
+    const answering = clientAnswering((path) =>
+      path.endsWith('INV-1002') ? ok(INVOICE_1001) : refused(404),
+    );
+
+    const result = await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(result.verdict).toBe('fail');
+    expect(result.detail).toContain('INV-1002');
+    expect(answering.paths).toHaveLength(2);
+  });
+
+  it('passes only when every one of them is refused, and says how many', async () => {
+    const answering = clientAnswering(() => refused(404));
+
+    const result = await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(result.verdict).toBe('pass');
+    expect(result.detail).toContain('2');
+    expect(answering.paths).toHaveLength(2);
+  });
+
+  it('stops at the first failure rather than sweeping the rest', async () => {
+    // The finding is made. Continuing would issue requests that cannot change the
+    // verdict, and against a mutating rule it would act more times than it had to.
+    const answering = clientAnswering(() => ok(INVOICE_1001));
+
+    await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(answering.paths).toHaveLength(1);
+  });
+
+  it('reports inconclusive if one reading was undecidable and none failed', async () => {
+    // A refusal on one and a 500 on the other does not establish that the rule holds.
+    const answering = clientAnswering((path) =>
+      path.endsWith('INV-1002') ? ok('', 500) : refused(404),
+    );
+
+    const result = await runAccessCheck(denyReadPlan(TWO_FOREIGN), contextWith(answering.client));
+
+    expect(result.verdict).toBe('inconclusive');
+  });
+});

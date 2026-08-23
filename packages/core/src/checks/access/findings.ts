@@ -77,16 +77,46 @@ export function suggestionFor(plan: AccessCheckPlan): string {
   return `Suggestion: in the ${plan.method} ${plan.pathTemplate} handler, check ${ownership} before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.`;
 }
 
+/**
+ * The three parts of a finding, as sentences rather than as a run-on.
+ *
+ * The observation carries no terminator of its own, so joining it straight onto the
+ * reference produced "returned 200 with Invoice fields id, notes Request: GET ...". Every
+ * access finding the corpus recorded reads that way. The parts are separate statements and
+ * are punctuated as such.
+ */
+function compose(
+  observation: string,
+  plan: AccessCheckPlan,
+  request: string,
+  evidenceId: string,
+): string {
+  return [`${observation}.`, referenceLine(plan, request, evidenceId), suggestionFor(plan)].join(
+    ' ',
+  );
+}
+
 /** A deny rule that failed: the record came back to an actor the spec refuses. */
 export function denyFailureDetail(input: FindingTextInput): string {
   const fields = (input.observedFields ?? []).join(', ');
   const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status} with ${input.plan.resource} fields ${fields}`;
 
-  return [
-    observation,
-    referenceLine(input.plan, input.request, input.evidenceId),
-    suggestionFor(input.plan),
-  ].join(' ');
+  return compose(observation, input.plan, input.request, input.evidenceId);
+}
+
+/**
+ * A denied delete that the response could not settle and the record did.
+ *
+ * The observation names both readings rather than only the response, because the response
+ * is precisely what was not sufficient here. A reader has to be able to see that the
+ * verdict rests on the record having been there and then not.
+ */
+export function destructiveFailureDetail(
+  input: FindingTextInput & { readonly instanceId: string },
+): string {
+  const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status} with no ${input.plan.resource} fields, and ${input.plan.resource} ${input.instanceId} was readable before the request and is absent after it`;
+
+  return compose(observation, input.plan, input.request, input.evidenceId);
 }
 
 /** A deny rule on a list that failed: rows belonging to someone else came back. */
@@ -94,22 +124,14 @@ export function listFailureDetail(input: FindingTextInput): string {
   const rows = (input.foreignRowIds ?? []).join(', ');
   const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status} with ${input.totalRows} row(s), ${input.foreignRowIds?.length ?? 0} of which the rule denies: ${rows}`;
 
-  return [
-    observation,
-    referenceLine(input.plan, input.request, input.evidenceId),
-    suggestionFor(input.plan),
-  ].join(' ');
+  return compose(observation, input.plan, input.request, input.evidenceId);
 }
 
 /** An allow rule that failed: a caller the spec permits was refused. */
 export function allowFailureDetail(input: FindingTextInput): string {
   const observation = `${input.request} as actor ${input.plan.actorId} returned ${input.status}, and the spec allows this actor to perform it`;
 
-  return [
-    observation,
-    referenceLine(input.plan, input.request, input.evidenceId),
-    suggestionFor(input.plan),
-  ].join(' ');
+  return compose(observation, input.plan, input.request, input.evidenceId);
 }
 
 /**

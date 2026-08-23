@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { EvidenceIdSchema, InstantSchema } from './evidence.ts';
+import { AuthRequiredSchema, ObservationNoteSchema, ProbeModeSchema } from './observation.ts';
 import { AccessRuleIdSchema, AcceptanceCriterionIdSchema, RequirementIdSchema } from './spec.ts';
 
 /**
@@ -42,6 +43,16 @@ export const UnverifiedReasonSchema = z.enum([
   'target-unreachable',
   'probe-incomplete',
   'check-error',
+  /**
+   * The checks ran and none of them reached a verdict. Q7, decided 2026-08-22.
+   *
+   * Distinct from `check-error`, which means something threw. A requirement whose every
+   * check came back inconclusive is the tool declining to guess, which invariant I2 asks
+   * for, and reporting it as an error described correct behaviour as a failure. Seen five
+   * times before the set gained a member for it. `detail` carries the specifics, so the
+   * cases stay distinguishable without a second member.
+   */
+  'no-verdict-reached',
   'unsupported-condition',
   'model-inconclusive',
   'capability-unavailable',
@@ -63,7 +74,85 @@ export const TargetRefSchema = z
   })
   .strict();
 
-export const ObservationRefSchema = z.object({ ref: z.string().min(1) }).strict();
+/**
+ * A count of one collection by origin and by confidence.
+ *
+ * Origins differ between entities and endpoints, `schema` and `inferred` against `source`
+ * and `blackbox`, so the two are counted under their own keys rather than through a shared
+ * shape that would carry two zeroes for whichever pair does not apply.
+ */
+export const ObservationCountsSchema = z
+  .object({
+    entities: z
+      .object({
+        schema: z.number().int().nonnegative(),
+        inferred: z.number().int().nonnegative(),
+        high: z.number().int().nonnegative(),
+        medium: z.number().int().nonnegative(),
+        low: z.number().int().nonnegative(),
+      })
+      .strict(),
+    endpoints: z
+      .object({
+        source: z.number().int().nonnegative(),
+        blackbox: z.number().int().nonnegative(),
+        high: z.number().int().nonnegative(),
+        medium: z.number().int().nonnegative(),
+        low: z.number().int().nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
+
+/**
+ * An endpoint as a run remembers it: its identity and whether credentials are required.
+ *
+ * Deliberately not the whole `ObservedEndpoint`. No response shapes, no evidence ids, no
+ * `actorVisibility`. A RunResult is already the largest document this tool writes and both
+ * goldens are committed, so this carries only what the three consumers named in Q6 need:
+ * the identity, and `authRequired`, because that is the field the access loosening rule in
+ * M6.5 turns on.
+ */
+export const ObservationEndpointSummarySchema = z
+  .object({
+    id: z.string().min(1),
+    method: z.string().min(1),
+    path: z.string().min(1),
+    authRequired: AuthRequiredSchema,
+  })
+  .strict();
+
+/**
+ * What a run remembers about its own Observation. Q6, decided 2026-08-22.
+ *
+ * `ref` alone was the whole of this until then, and three separate consumers needed what
+ * was behind it: `renderText` section 2, which had to take the Observation as a caller
+ * option and stop being a pure projection of a RunResult; `qai report`, which has only a
+ * stored run and printed the reference instead of counts; and the half of M6.5's access
+ * loosening rule that fires when an endpoint's `authRequired` moves away from `true`,
+ * which was never built.
+ *
+ * Every field but `ref` is optional, so a run assembled without an Observation is still a
+ * valid RunResult and says nothing about the application rather than reporting zeroes,
+ * which would be a claim.
+ *
+ * **`mode` and `notes` widen the shape Q6 proposed, and the widening is deliberate.** The
+ * brief said counts and endpoint identities, and with only those the text report still
+ * could not render its own section from a RunResult: it prints the probe mode, and it
+ * prints the probe's notes, which are the probe saying what it could not reach. Dropping
+ * the notes would make a stored run overstate its own coverage, which is the thing
+ * invariant I4 exists to prevent. Both are small, and the endpoint list is what the brief
+ * was guarding against on size.
+ */
+export const ObservationRefSchema = z
+  .object({
+    ref: z.string().min(1),
+    mode: ProbeModeSchema.optional(),
+    counts: ObservationCountsSchema.optional(),
+    endpoints: z.array(ObservationEndpointSummarySchema).optional(),
+    notes: z.array(ObservationNoteSchema).optional(),
+  })
+  .strict();
 
 export const RequirementResultSchema = z
   .object({
@@ -209,4 +298,6 @@ export type RequirementResult = z.infer<typeof RequirementResultSchema>;
 export type CheckResultRecord = z.infer<typeof CheckResultSchema>;
 export type StructuralFindings = z.infer<typeof StructuralFindingsSchema>;
 export type Summary = z.infer<typeof SummarySchema>;
+export type ObservationCounts = z.infer<typeof ObservationCountsSchema>;
+export type ObservationEndpointSummary = z.infer<typeof ObservationEndpointSummarySchema>;
 export type RunResult = z.infer<typeof RunResultSchema>;

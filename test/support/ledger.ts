@@ -83,7 +83,18 @@ export function writeConfig(dir: string, baseUrl: string): void {
       'target:',
       `  baseUrl: ${baseUrl}`,
       '  disposable: true',
-      `  resetCommand: 'node -e "process.stdout.write(1)"'`,
+      /**
+       * A reset that exits 0 and restores nothing, which is the honest state of this
+       * fixture: the ledger holds its data in memory and a restart is its only real
+       * reset, so nothing outside the process can put a record back.
+       *
+       * It used to read `process.stdout.write(1)`, which throws, and nobody noticed
+       * because no caller ever supplied a reset function to the runner. Wiring one up
+       * turned two mutating checks inconclusive and that is how this was found. Worth
+       * keeping in mind: a command in a fixture that nothing executes is not tested by
+       * anything, however plausible it looks.
+       */
+      `  resetCommand: 'node -e "process.exit(0)"'`,
       'actors:',
       '  - id: owner',
       '    auth: { kind: bearer, tokenEnv: LEDGER_OWNER_TOKEN }',

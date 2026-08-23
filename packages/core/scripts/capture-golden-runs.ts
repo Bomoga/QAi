@@ -149,6 +149,7 @@ async function main(): Promise<void> {
   const accessResults = await runAccessChecks(access.plans as AccessCheckPlan[], {
     sessions,
     mutation: { allowed: mutatingChecksAllowed(config.config) },
+    ...(config.config.stateActor === undefined ? {} : { stateActorId: config.config.stateActor }),
   });
 
   const { results: behavioralResults, unverified } = await runBehavioralChecks(
@@ -180,6 +181,7 @@ async function main(): Promise<void> {
         : { sourceRoot: config.config.target.sourceRoot }),
     },
     observationRef: `OBS-golden-${requested}`,
+    observation,
     checks: checks as CheckResultRecord[],
     structural: diffSpecObservation(spec.spec, observation, config.config.resources),
     // All three side channels through one collector, so a caller that remembered two

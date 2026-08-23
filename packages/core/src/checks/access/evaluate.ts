@@ -124,6 +124,17 @@ export interface CandidateRecord {
 
 export interface CandidateSelection {
   readonly matched?: CandidateRecord;
+  /**
+   * Every instance the condition holds for, in configured order, with `matched` as the
+   * first of them.
+   *
+   * A deny check acts on all of them rather than on one. The corpus found the reason
+   * twice: an application enforced the rule on the instance the tool picked and leaked a
+   * different one, so the access family saw nothing and a behavioral criterion caught the
+   * defect instead. Enforcing on one record and not another is the shape of a scoping bug,
+   * and it is invisible to a check that stops at the first refusal.
+   */
+  readonly all?: readonly CandidateRecord[];
   /** Present when nothing matched, naming why so the check can report it. */
   readonly reason?: 'no-candidates' | 'none-matched' | 'undecidable';
 }
@@ -144,13 +155,15 @@ export function selectCandidate(
 ): CandidateSelection {
   if (candidates.length === 0) return { reason: 'no-candidates' };
 
-  // With no condition, any seeded record is as good as another.
+  // With no condition, every seeded record is one the rule denies. An unconditional deny
+  // says the actor may not do this at all, so there is no instance it does not cover.
   if (ast === undefined) {
     const first = candidates[0];
-    return first === undefined ? { reason: 'no-candidates' } : { matched: first };
+    return first === undefined ? { reason: 'no-candidates' } : { matched: first, all: candidates };
   }
 
   let sawUnknown = false;
+  const matched: CandidateRecord[] = [];
 
   for (const candidate of candidates) {
     const truth = evaluateCondition(ast, {
@@ -159,9 +172,12 @@ export function selectCandidate(
       entity,
     });
 
-    if (truth === 'true') return { matched: candidate };
+    if (truth === 'true') matched.push(candidate);
     if (truth === 'unknown') sawUnknown = true;
   }
+
+  const first = matched[0];
+  if (first !== undefined) return { matched: first, all: matched };
 
   return { reason: sawUnknown ? 'undecidable' : 'none-matched' };
 }

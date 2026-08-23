@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { describeRate } from '../review.ts';
+
 import type { RunResult } from '../../packages/core/src/index.ts';
 import {
   EMPTY_LEDGER,
@@ -385,5 +387,27 @@ describe('the false positive rate', () => {
     expect(rates.overall.rate).toBeUndefined();
     expect(rates.byType).toStrictEqual([]);
     expect(rates.overThreshold).toStrictEqual([]);
+  });
+});
+
+describe('the rate line says what the rate does not cover', () => {
+  it('names an unclear finding rather than only dropping it from the fraction', () => {
+    // A finding nobody could settle is correctly outside the fraction. Leaving it out of
+    // the line as well hides the one thing a reader needs before believing the number,
+    // which is the S8.6 defect about a denominator that narrows quietly.
+    const rates = falsePositiveRates(
+      ledgerOf(
+        entry({ findingId: 'a', classification: 'true-positive' }),
+        entry({ findingId: 'b', classification: 'unclear' }),
+      ),
+    );
+
+    expect(describeRate('overall', rates.overall)).toContain('1 unclear');
+  });
+
+  it('says nothing about unclear when there is none', () => {
+    const rates = falsePositiveRates(ledgerOf(entry({ classification: 'true-positive' })));
+
+    expect(describeRate('overall', rates.overall)).not.toContain('unclear');
   });
 });

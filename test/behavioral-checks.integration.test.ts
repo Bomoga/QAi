@@ -189,11 +189,14 @@ function byCriterion(run: Run): Map<string, CheckResult> {
 }
 
 describe('D4, a sensitive field returned where it should be omitted', () => {
-  it('fails at medium severity, naming the field and carrying evidence', async () => {
+  it('fails at high severity, naming the field and carrying evidence', async () => {
+    // High rather than medium since Q8. REQ-004 is tagged `data-exposure`, and D4 is a
+    // sensitive field appearing in a response that should omit it, which is the case the
+    // decision exists for: it used to report correctly and exit 0.
     const result = byCriterion(await runAgainst(ALL_DEFECTS_ON)).get('AC-004-01');
 
     expect(result?.verdict).toBe('fail');
-    expect(result?.severity).toBe('medium');
+    expect(result?.severity).toBe('high');
     expect(result?.evidence).toHaveLength(1);
     expect(result?.detail).toContain('notes');
     expect(result?.detail).toContain('GET /api/invoices');

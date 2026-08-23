@@ -44,11 +44,52 @@ export function runAccessCheck(plan: AccessCheckPlan, ctx: TargetContext): Promi
 
 The 2xx-with-empty-body case is deliberately inconclusive rather than pass. An endpoint returning 200 with nothing may be correctly refusing or may be leaking under a different shape, and guessing here is exactly the false positive that costs a user.
 
+**One exception, decided 2026-08-22 after the corpus run: a denied `delete`.** The corpus
+missed a real deletion three times, on two applications, because the row above is right
+for a read and wrong for a destroy: `DELETE /api/notes/N-1 as actor stranger returned 200
+with no recognizable fields` was the tool declining to guess while the record was being
+destroyed. For a `delete` the response is not the evidence and the record is.
+
+| Observed | Record before | Record after | Verdict |
+|---|---|---|---|
+| 2xx with no resource fields | readable | absent | **fail**, high |
+| 2xx with no resource fields | readable | still readable | pass |
+| 2xx with no resource fields | not readable, or no state actor, or no read route | n/a | inconclusive, as before |
+
+Three rules keep this from being a way to guess. The record is read as the configured
+`stateActor` and never as the acting actor, for the reason M5.11 gives: a deny check acts
+as the identity the rule says must be refused, so reading as that actor would report a
+scoping rule as a state fact. Only a 2xx counts as present and only a 404 counts as gone,
+since the state actor being unable to read something says more about that actor than about
+the record. And the reading happens before the action as well as after, because a record
+can only be shown to have been destroyed by having been there first.
+
+Only `delete` is covered. An `update` that returns 2xx with no fields is a different
+question, whether the record changed rather than whether it survived, and that comparison
+is M5.11's rather than this table's.
+
 **List actions, pending Q5.** For `action: list`, the assertion is the absence of foreign rows, not an empty response. Resolve ownership by the field named in the rule's condition. If no row is identifiable as foreign, the verdict is `inconclusive` with reason recorded, never `pass`.
 
 **Resource targeting.** A rule names a resource, not a URL. Resolution order: an endpoint in the Observation whose `responseShape.entity` matches, then a configured route override, then `inconclusive` with reason `unsupported-condition`. Never guess a URL by pluralizing an entity name and hoping.
 
 **Instance identification.** Deny checks need a real record owned by someone else. Fixtures seed these. If no foreign instance can be identified, the check is `inconclusive` with reason `probe-incomplete`, because testing access control against a record that does not exist proves nothing.
+
+**Every instance the rule denies, not just the first. Corrected 2026-08-22 after the corpus
+run.** Selection used to stop at the first configured instance the condition held for, and
+the corpus found what that costs twice: an application enforced the rule on the instance
+the tool picked and leaked a different one, so the access family reported a pass and a
+behavioral criterion caught the defect instead. Enforcing on one record and not another is
+the shape of a scoping bug, and it is invisible to a check that stops at the first refusal.
+
+A non-mutating deny rule is now tried against every matching instance. The first failure
+ends the sweep, since the finding is made and further requests cannot change the verdict.
+A pass requires every instance to have been refused and states how many that was, so a
+reader can see the scope of the claim. Any instance that came back undecided, with none
+failing, makes the check inconclusive.
+
+**Mutating rules are not swept**, and the reason is not squeamishness: a delete tried
+against four records destroys four records, and the reset between checks runs between
+them rather than inside one. One instance, as before.
 
 **Evidence.** Every access check captures the full request and response pair, per invariant I3 and rule R7. The finding's `detail` names the actor, the method, the path, the status, and the fields observed in the body. It never uses a vulnerability class name.
 

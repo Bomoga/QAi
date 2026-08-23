@@ -125,3 +125,30 @@ export interface BehavioralContext {
 
 /** Behavioral findings are medium by default: a broken feature, not an exposure. */
 export const BEHAVIORAL_SEVERITY = 'medium' as const;
+
+/**
+ * Requirement tags that make a failing criterion `high`. Q8, decided 2026-08-22.
+ *
+ * Behavioral findings were `medium` from the constant above while the default failure
+ * threshold is `high`, so a criterion that caught a real data leak reported it correctly
+ * and the run exited 0. Four corpus applications did exactly that: each piece was
+ * defensible and the combination told CI an application was fine while the report on
+ * screen said anyone could read anyone's private messages.
+ *
+ * Severity now comes from what the requirement says it is about. The alternative was
+ * lowering the default threshold to `medium`, which makes every weak criterion break a
+ * build and invites users to raise it back, gaining nothing; invariant I2 is about
+ * exactly that. The tag vocabulary already exists in every spec written for this project,
+ * and a spec author is better placed than a constant to say whether a requirement is
+ * about exposure.
+ *
+ * Matched case insensitively, because a spec is hand written. An untagged requirement, or
+ * one tagged for something else, keeps `medium`: a spec that says nothing about what a
+ * requirement is about gets the conservative answer rather than the loud one.
+ */
+export const HIGH_SEVERITY_TAGS: readonly string[] = ['access-control', 'data-exposure'];
+
+export function behavioralSeverityFor(tags: readonly string[]): 'high' | 'medium' {
+  const lowered = tags.map((tag) => tag.toLowerCase());
+  return HIGH_SEVERITY_TAGS.some((tag) => lowered.includes(tag)) ? 'high' : BEHAVIORAL_SEVERITY;
+}

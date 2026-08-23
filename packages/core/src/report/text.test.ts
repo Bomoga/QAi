@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { FORBIDDEN_FINDING_TERMS } from '../checks/access/findings.ts';
-import type { Observation, RunResult } from '../contracts/index.ts';
+import type { RunResult } from '../contracts/index.ts';
 import { renderText } from './text.ts';
 
 /**
@@ -75,41 +75,27 @@ function run(overrides: Partial<RunResult> = {}): RunResult {
   } as RunResult;
 }
 
-function observation(overrides: Partial<Observation> = {}): Observation {
+/** The observation summary a run carries, in the shape Q6 put on the contract. */
+function summary(): NonNullable<RunResult['observation']> {
   return {
-    observationVersion: '0.1',
-    observedAt: '2026-08-18T00:00:05Z',
+    ref: 'OBS-20260818-0001',
     mode: 'hybrid',
-    target: { baseUrl: 'http://127.0.0.1:3000' },
-    entities: [
-      { name: 'Invoice', origin: 'schema', confidence: 'high', fields: [], evidence: [] },
-      { name: 'Ledger', origin: 'inferred', confidence: 'low', fields: [], evidence: [] },
-    ],
+    counts: {
+      entities: { schema: 1, inferred: 1, high: 1, medium: 0, low: 1 },
+      endpoints: { source: 1, blackbox: 1, high: 1, medium: 0, low: 1 },
+    },
     endpoints: [
+      { id: 'GET /api/invoices', method: 'GET', path: '/api/invoices', authRequired: 'unknown' },
+      { id: 'GET /health', method: 'GET', path: '/health', authRequired: false },
+    ],
+    notes: [
       {
-        id: 'GET /api/invoices',
-        method: 'GET',
-        path: '/api/invoices',
-        origin: 'source',
-        confidence: 'high',
-        authRequired: 'unknown',
-        actorVisibility: {},
-        evidence: [],
-      },
-      {
-        id: 'GET /health',
-        method: 'GET',
-        path: '/health',
-        origin: 'blackbox',
-        confidence: 'low',
-        authRequired: 'unknown',
-        actorVisibility: {},
-        evidence: [],
+        level: 'info',
+        message: 'GET /api/invoices/:id is declared in source, and the crawl did not reach it.',
+        refs: [],
       },
     ],
-    notes: [],
-    ...overrides,
-  } as Observation;
+  };
 }
 
 describe('rendering a run as text', () => {
@@ -133,8 +119,10 @@ describe('rendering a run as text', () => {
     expect(header).toContain('a1b2c3d');
   });
 
-  it('counts entities and endpoints by origin and by confidence when an observation is given', () => {
-    const built = sectionOf(renderText(run(), { observation: observation() }), 'What was built');
+  it('counts entities and endpoints by origin and by confidence from the result', () => {
+    // Q6: the summary is on the RunResult, so this is a projection of one argument
+    // rather than of the run plus an Observation the caller happened to hold.
+    const built = sectionOf(renderText(run({ observation: summary() }), {}), 'What was built');
 
     expect(built).toContain('2 entities');
     expect(built).toContain('2 endpoints');
@@ -146,10 +134,19 @@ describe('rendering a run as text', () => {
     expect(built).toContain('low 1');
   });
 
-  it('names the observation reference rather than inventing counts when none was given', () => {
-    // RunResult carries only a reference to the observation. Reporting zero entities
-    // would be a claim about the application; reporting nothing at all would hide that
-    // a probe ran.
+  it('reports the probe mode and the probe notes, which say what was not reached', () => {
+    // A probe that stopped early and does not say so reads as an application with
+    // nothing more in it. Carrying the notes on the result is what lets `qai report`
+    // say it too.
+    const built = sectionOf(renderText(run({ observation: summary() }), {}), 'What was built');
+
+    expect(built).toContain('Probe mode: hybrid');
+    expect(built).toContain('the crawl did not reach it');
+  });
+
+  it('names the observation reference rather than inventing counts when no summary was carried', () => {
+    // Reporting zero entities would be a claim about the application; reporting nothing
+    // at all would hide that a probe ran.
     const built = sectionOf(
       renderText(run({ observation: { ref: 'OBS-20260818-0001' } }), {}),
       'What was built',
@@ -400,9 +397,7 @@ describe('rendering a run as text', () => {
   });
 
   it('ends with a newline and contains no em dash', () => {
-    const rendered = renderText(run({ observation: { ref: 'OBS-1' } }), {
-      observation: observation(),
-    });
+    const rendered = renderText(run({ observation: summary() }), {});
 
     expect(rendered.endsWith('\n')).toBe(true);
     expect(rendered).not.toContain('—');

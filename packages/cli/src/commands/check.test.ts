@@ -1,5 +1,5 @@
 import { createServer, type Server } from 'node:http';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -393,5 +393,112 @@ describe('the run id', () => {
 
     expect(observationIdFrom(instant)).toBe('OBS-20260818-180338');
     expect(observationIdFrom(instant).slice(4)).toBe(runIdFrom(instant).slice(4));
+  });
+});
+
+/**
+ * The reset the disposability gate permits, observed rather than assumed.
+ *
+ * M3.7 gave the access runner a reset to call between mutating checks and no caller ever
+ * supplied one, so no real run reset anything. The corpus paid for it twice: a
+ * destructive check changed the application under the checks that followed, and on one
+ * application a later anonymous delete passed with a 404 because the record was already
+ * gone.
+ *
+ * The command here appends a line to a file, so the test counts real invocations rather
+ * than trusting a spy on a function the command runner might not call.
+ */
+const MUTATING_SPEC = `specVersion: '0.1'
+name: 'Invoices'
+actors:
+  - id: outsider
+    description: 'A member of another organization'
+entities:
+  - name: Invoice
+    fields:
+      - name: id
+        type: string
+requirements:
+  - id: REQ-001
+    statement: 'An invoice may not be deleted from outside its organization'
+    entities: [Invoice]
+    accessRules:
+      - id: AR-001-01
+        actor: outsider
+        action: delete
+        resource: Invoice
+        effect: deny
+`;
+
+/**
+ * A reset command that appends to a file, so the test counts real invocations.
+ *
+ * Written as a script rather than as `node -e`, because a one-liner carrying a path and
+ * nested quotes through YAML and a shell is the escaping trap this repository keeps
+ * paying for.
+ */
+function writeResetScript(markerPath: string): string {
+  const scriptPath = join(dir, 'reset.cjs');
+  const target = JSON.stringify(markerPath);
+  writeFileSync(scriptPath, `require("fs").appendFileSync(${target}, "x");\n`, 'utf8');
+  return scriptPath;
+}
+
+function disposableConfig(baseUrl: string, markerPath: string, disposable = true): TargetConfig {
+  const script = writeResetScript(markerPath).replaceAll('\\', '/');
+  const body = [
+    'target:',
+    `  baseUrl: ${baseUrl}`,
+    `  disposable: ${disposable}`,
+    `  resetCommand: node "${script}"`,
+    'actors:',
+    '  - id: outsider',
+    '    auth:',
+    '      kind: none',
+    'resources:',
+    '  - name: Invoice',
+    '    routes:',
+    '      read: /api/invoices/{id}',
+    '      delete: /api/invoices/{id}',
+    '    instances:',
+    '      - id: INV-1',
+    '',
+  ].join('\n');
+
+  writeFileSync(join(dir, 'qai.config.yaml'), body, 'utf8');
+  const loaded = loadConfig('qai.config.yaml', dir);
+  if (isConfigFailure(loaded)) throw new Error(loaded.error.message);
+  return loaded.config;
+}
+
+describe('resetting a disposable target between checks', () => {
+  it('runs the configured reset command, which no run has ever done', async () => {
+    writeFileSync(join(dir, 'spec', 'invoices.spec.yaml'), MUTATING_SPEC, 'utf8');
+    const marker = join(dir, 'reset-count.txt');
+
+    const target = await startTarget();
+    try {
+      await check({ config: disposableConfig(target.baseUrl, marker) });
+
+      expect(existsSync(marker)).toBe(true);
+    } finally {
+      await stop(target.server);
+    }
+  });
+
+  it('does not reset a target that is not disposable', async () => {
+    // Invariant I7. Nothing may run against a target nobody said could be restored, and
+    // the reset command is itself something that runs.
+    writeFileSync(join(dir, 'spec', 'invoices.spec.yaml'), MUTATING_SPEC, 'utf8');
+    const marker = join(dir, 'reset-count.txt');
+
+    const target = await startTarget();
+    try {
+      await check({ config: disposableConfig(target.baseUrl, marker, false) });
+
+      expect(existsSync(marker)).toBe(false);
+    } finally {
+      await stop(target.server);
+    }
   });
 });

@@ -124,6 +124,39 @@ describe('assembling a run', () => {
     ]);
   });
 
+  it('says no verdict was reached when checks ran and none did, rather than check-error', () => {
+    // Q7, decided 2026-08-22. Every check being inconclusive is the tool declining to
+    // guess, which invariant I2 asks for, and `check-error` reads to a user as though
+    // something threw. Five sightings before the set gained a member for it.
+    const run = assemble(
+      [check({ requirementId: 'REQ-001', verdict: 'inconclusive' })],
+      ['REQ-001'],
+    );
+
+    expect(run.requirements[0]?.verdict).toBe('unverified');
+    expect(run.unverifiedReasons[0]?.reason).toBe('no-verdict-reached');
+  });
+
+  it('keeps check-error for a check that actually threw', () => {
+    // The negative half. `check-error` has to keep meaning what it was named for, or the
+    // new member has simply renamed the old confusion.
+    const run = assemble(
+      [check({ requirementId: 'REQ-001', verdict: 'inconclusive' })],
+      ['REQ-001'],
+      [
+        {
+          requirementId: 'REQ-001',
+          id: 'AR-001-01',
+          kind: 'access' as const,
+          reason: 'check-error' as const,
+          detail: 'the runner threw',
+        },
+      ] as never,
+    );
+
+    expect(run.unverifiedReasons[0]?.reason).toBe('check-error');
+  });
+
   it('prefers a recorded gap reason over the generic one, since it names a fix', () => {
     const run = assemble([], ['REQ-011'], [
       {

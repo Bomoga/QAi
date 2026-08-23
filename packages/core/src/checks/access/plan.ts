@@ -55,6 +55,12 @@ export interface AccessCheckPlan extends CheckPlan {
   readonly resourceFields: readonly string[];
   /** `app/api/invoices/[id]/route.ts:12` when a probe supplied one. */
   readonly locationRef?: string;
+  /**
+   * Where the record can be read back, for a destructive check that has to confirm what
+   * it did. Resolved here so the runner knows nothing about configuration, the same way
+   * M5.9 resolves a criterion's state reads at planning time.
+   */
+  readonly confirmReadTemplate?: string;
 }
 
 export interface UnplannableRule {
@@ -214,6 +220,12 @@ export function planAccessChecks(
       }
 
       const candidates = instancesFor(rule.resource, context);
+      // Only a delete needs it. A 2xx from one is undecidable from the response alone,
+      // and the record is what settles it.
+      const confirmRead =
+        rule.action === 'delete'
+          ? resolveRoute(rule.resource, 'read', observation, context)?.path
+          : undefined;
       const condition = rule.id === undefined ? undefined : conditions.get(rule.id);
       const resourceFields =
         spec.entities
@@ -241,6 +253,7 @@ export function planAccessChecks(
         candidates,
         resourceFields,
         ...(route.handlerRef === undefined ? {} : { locationRef: route.handlerRef }),
+        ...(confirmRead === undefined ? {} : { confirmReadTemplate: confirmRead }),
       });
     }
   }

@@ -280,3 +280,81 @@ describe('the delta as a whole', () => {
     ]);
   });
 });
+
+/**
+ * The half of the access loosening rule that needs the Observation.
+ *
+ * M6.5 could only build the deny rule half, because a RunResult carried a reference to
+ * its Observation and nothing else. Q6 put a summary on the result, including
+ * `authRequired` on every endpoint, which is the one field this rule turns on.
+ */
+function runWithEndpoints(
+  runId: string,
+  endpoints: readonly (readonly [string, boolean | 'unknown'])[],
+): RunResult {
+  return {
+    ...run(runId, []),
+    observation: {
+      ref: `OBS-${runId}`,
+      endpoints: endpoints.map(([id, authRequired]) => {
+        const [method = 'GET', path = '/'] = id.split(' ');
+        return { id, method, path, authRequired };
+      }),
+    },
+  } as RunResult;
+}
+
+describe('an endpoint that stopped requiring credentials', () => {
+  it('is reported as access loosening', () => {
+    const delta = diffRuns(
+      runWithEndpoints('RUN-a', [['GET /api/invoices', true]]),
+      runWithEndpoints('RUN-b', [['GET /api/invoices', false]]),
+    );
+
+    expect(delta.structural.accessLoosened).toHaveLength(1);
+    expect(delta.structural.accessLoosened[0]?.endpoint).toBe('GET /api/invoices');
+    expect(delta.structural.accessLoosened[0]?.detail).toContain('no longer');
+  });
+
+  it('is not reported when credentials started being required', () => {
+    // The opposite direction is a tightening. Reporting it as a loosening would teach a
+    // reader to distrust every real one.
+    const delta = diffRuns(
+      runWithEndpoints('RUN-a', [['GET /api/invoices', false]]),
+      runWithEndpoints('RUN-b', [['GET /api/invoices', true]]),
+    );
+
+    expect(delta.structural.accessLoosened).toHaveLength(0);
+  });
+
+  it('is not reported when the newer run simply does not know', () => {
+    // `authRequired` is `unknown` until a refusal without credentials is observed, so
+    // true to unknown is the probe losing sight of the fact, not the application
+    // changing. Reporting it would fire on every run that stopped checking.
+    const delta = diffRuns(
+      runWithEndpoints('RUN-a', [['GET /api/invoices', true]]),
+      runWithEndpoints('RUN-b', [['GET /api/invoices', 'unknown']]),
+    );
+
+    expect(delta.structural.accessLoosened).toHaveLength(0);
+  });
+
+  it('is not reported for an endpoint only one run saw', () => {
+    // An endpoint that appeared is `endpointsAdded`, and it has no earlier state to
+    // have loosened from.
+    const delta = diffRuns(
+      runWithEndpoints('RUN-a', []),
+      runWithEndpoints('RUN-b', [['GET /api/invoices', false]]),
+    );
+
+    expect(delta.structural.accessLoosened).toHaveLength(0);
+  });
+
+  it('says nothing when neither run carries an endpoint summary', () => {
+    // Every run before Q6 is in this state, and a delta over two of them has to keep
+    // reporting the deny rule half rather than failing to read a field that is absent.
+    const delta = diffRuns(run('RUN-a', []), run('RUN-b', []));
+
+    expect(delta.structural.accessLoosened).toHaveLength(0);
+  });
+});
