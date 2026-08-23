@@ -69,24 +69,65 @@ export function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/gu, '');
 }
 
+/** `status`, `address`, `analysis`: an s that is not a plural. */
+const KEEPS_TRAILING_S = /(?:us|ss|is)$/u;
+
 /**
  * Enough plural handling for model names. Not a linguistics library.
  *
  * Words ending in `us`, `ss`, or `is` keep their last letter, so `status` does not
- * become `statu` and `address` does not become `addres`. Both sides of a comparison go
- * through this, so a wrong answer here costs a match rather than inventing one.
+ * become `statu` and `address` does not become `addres`.
+ *
+ * **It returns one answer where English sometimes has two**, which is what `nameForms`
+ * below exists to absorb: `buses` and `expenses` both end in `ses` and only one of them
+ * loses two letters. Callers should compare through `namesMatch` rather than through this
+ * directly.
  */
 export function singular(word: string): string {
-  if (/(?:us|ss|is)$/u.test(word)) return word;
+  if (KEEPS_TRAILING_S.test(word)) return word;
   if (word.length > 3 && word.endsWith('ies')) return `${word.slice(0, -3)}y`;
   if (word.length > 3 && /(?:s|x|z|ch|sh)es$/u.test(word)) return word.slice(0, -2);
   if (word.length > 1 && word.endsWith('s')) return word.slice(0, -1);
   return word;
 }
 
-/** Case-insensitive, separator-insensitive, and tolerant of singular against plural. */
+/**
+ * Every form a written name might be the plural of.
+ *
+ * `singular` has to choose one answer and English does not always have one: `buses` is
+ * `bus` plus `es` and `expenses` is `expense` plus `s`, both end in `ses`, and no rule
+ * separates them. Choosing wrongly cost a real match, so both readings are kept and a name
+ * matches when the two share any form.
+ *
+ * The `us`, `ss`, `is` guard still applies to the plain strip, or `status` would offer
+ * `statu` and the rule M4.8 wrote would be undone by the one meant to help it.
+ */
+function nameForms(word: string): Set<string> {
+  const normalized = normalizeName(word);
+  const forms = new Set([normalized, singular(normalized)]);
+
+  if (!KEEPS_TRAILING_S.test(normalized) && normalized.length > 1 && normalized.endsWith('s')) {
+    forms.add(normalized.slice(0, -1));
+  }
+
+  return forms;
+}
+
+/**
+ * Case-insensitive, separator-insensitive, and tolerant of singular against plural.
+ *
+ * **Widened 2026-08-23, by the corpus finding it.** The first application whose entity was
+ * a noun ending in `se` reported `/api/expenses/:id/approve` as an endpoint nothing
+ * specified, because `expenses` read as `expens` and matched no entity. Every noun the
+ * corpus used before that happened to dodge the rule.
+ *
+ * Being too permissive here silences a real finding and being too strict invents one, so
+ * the direction matters: this compares two small candidate sets rather than matching
+ * loosely, and `Expense` still does not match `Expenditure`.
+ */
 export function namesMatch(left: string, right: string): boolean {
-  return singular(normalizeName(left)) === singular(normalizeName(right));
+  const candidates = nameForms(right);
+  return [...nameForms(left)].some((form) => candidates.has(form));
 }
 
 /**
