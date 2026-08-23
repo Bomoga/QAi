@@ -1,9 +1,9 @@
 ﻿# M8: CLI and CI Action
 
-**Status:** complete except `report`, which is blocked on M6
+**Status:** complete
 **Owns:** `packages/cli/`, `packages/action/`
 **Depends on:** M1, M2, M3, M4, M5, M7
-**Optionally consumes:** M6, required only by the `diff` subcommand
+**Optionally consumes:** M6, required by the `diff` and `report` subcommands
 **Depended on by:** nothing
 **Read alongside:** `03-CONTRACTS.md` exit codes, `04-CONVENTIONS.md`
 
@@ -95,15 +95,14 @@ pnpm --filter @qai/cli exec qai check --config fixtures/ledger/qai.config.yaml -
   add the workflow file under a different credential. Nothing was dropped from the branch
   to work around it, since the workflow is the part the criterion needs.
 
-- **M8.6 is half done: `probe` is implemented and `report <runId>` is blocked.** The
-  command re-renders a stored run, and nothing stores one. `packages/core/src/store/`
-  does not exist, M6 owns run persistence, and this module's header says M6 is
-  "required only by the `diff` subcommand", which is not true of `report` either. Three
-  ways out, none taken here because the layout is M6's to choose: implement `report`
-  after M6 in S7 alongside `diff`; have M8 write `.qai/runs/<runId>.json` from `check`
-  and read it back, which invents a persistence layout M6 would then have to adopt or
-  migrate; or change the command to take a path rather than a run id, which is a change
-  to the command surface and needs approval. Recorded rather than guessed.
+- **M8.6 was half done at the time, and is not any more. Closed 2026-08-23.** `probe` was
+  implemented and `report <runId>` was blocked: the command re-renders a stored run and
+  nothing stored one, because `packages/core/src/store/` did not exist and M6 owns run
+  persistence. Three ways out were recorded and none was taken here, because the layout
+  was M6's to choose. **The first of them is what happened**: M6 landed at S7 and `report`
+  was implemented alongside `diff`, against the store rather than against a layout this
+  module invented. The header's "required only by the `diff` subcommand" was the other
+  half of the same inaccuracy and now names both commands.
 
 - **The Definition of Done names a config path that does not exist.** It runs
   `qai check --config fixtures/ledger/qai.config.yaml`, and this repository's target

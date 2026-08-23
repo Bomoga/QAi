@@ -93,7 +93,7 @@ pnpm --filter @qai/core exec tsx scripts/validate-fixture-spec.ts
 
 ## Open questions
 
-- Q4 from `07-DECISIONS.md`: the exact condition subset. Proposal above; implement it and flag anything the fixture spec cannot express.
+- **Q4 resolved as D20 on 2026-08-23**, answered by use at M1.8: the proposed subset expressed every access rule the fixture spec needed and nothing wanted disjunction, ordering comparison, or negation.
   **Answered by use at M1.8.** The proposed grammar expressed every access rule in `fixtures/ledger/spec/ledger.spec.yaml`, four conditions across eight rules. Nothing needed disjunction, ordering comparison, or negation of a whole condition. Rules carrying no condition are unconditional denials where a condition would say nothing. Q4 can be marked resolved in `07-DECISIONS.md` by a human.
 
 ### Raised during implementation, needs a human decision

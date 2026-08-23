@@ -105,6 +105,6 @@ does not depend on how the package's `test` script is defined.
 
 ## Open questions
 
-- Q1: adapter list at MVP. Proposal above.
+- **Q1 resolved as D17 on 2026-08-23.** Next.js App Router, Express, and Prisma, all read textually. A fourth framework is additive and still needs approval.
 - **Resolved 2026-08-16, M4.4 dependency.** The implementation notes said to prefer `@prisma/internals`, which is not on the approved runtime dependency list in `04-CONVENTIONS.md`. Three options were put up: approve it as a runtime dependency, approve it as a lazily imported optional one, or correct the plan to read the schema textually. The decision was to read it textually and add nothing. The implementation note above has been corrected to match.
 - Raised at M4.4, not blocking: the adapter reports `model` and `view` blocks as entities and ignores `enum` and composite `type` blocks. A composite type is embedded in a response but is not a top level entity, so a spec that declares one would see it as specified and not observed. No fixture exercises that today.

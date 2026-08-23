@@ -93,19 +93,63 @@ is a failure. Everything else keeps the existing inconclusive.
 **Volatility:** low. **Blast radius:** M3's verdict table, `AccessRunContext`, and the
 finding text. `update` is deliberately not covered.
 
+**D17. Source adapters at MVP are Next.js App Router, Express, and Prisma. Q1, implemented as proposed.**
+Read textually with globs and regex rather than through an AST, because the patterns in
+generated code are regular and the alternative was a dependency. `@prisma/internals` was
+put up for the schema and refused on 2026-08-16 in favour of reading `schema.prisma` the
+same way the route adapters read source.
+**Volatility:** low. Adding a fourth framework is additive and needs approval, per M4's Do Not.
+**Blast radius:** `packages/core/src/probe/source/` only.
+
+**D18. Actor credentials are named environment variables, never literals in config. Q2, implemented as proposed.**
+`tokenEnv` and `valueEnv` are constrained to look like variable names, and a literal secret
+in a config is rejected at load with a message that names the fix rather than reporting an
+unrecognized key. An actor whose variable is unset is dropped rather than given a blank
+credential, since a blank one produces a 401 that reads as a finding.
+**Volatility:** frozen. **Blast radius:** M2's config schema and every fixture config.
+
+**D19. A target declares its own reset command, and mutating checks are refused without one. Q3, implemented as proposed.**
+The disposability gate requires both `disposable: true` and a `resetCommand`, and it is not
+overridable by a flag: an interlock somebody in a hurry can reach past is not an interlock.
+**Corrected 2026-08-22**: the runner had taken a reset since M3.7 and no caller ever supplied
+one, so no real run reset anything. The CLI supplies it now and also runs one between the
+access family and the behavioral family.
+**Volatility:** low. **Blast radius:** M2's fixtures module, the access runner, and `check`.
+
+**D20. The condition grammar is equality, inequality, membership, and conjunction. Q4, answered by use at M1.8.**
+The proposed subset expressed every access rule the fixture spec needed, four conditions
+across eight rules, and nothing wanted disjunction, ordering comparison, or negation. A rule
+carrying no condition is an unconditional denial, which is a real shape rather than a gap.
+**Volatility:** medium. Widening it is additive; a rule outside it is a load error rather than
+a silent skip, so the failure mode of being too narrow is visible.
+**Blast radius:** `spec/condition.ts` and the evaluator.
+
+**D21. A deny rule on `list` asserts the absence of foreign rows, not an empty response. Q5, implemented as proposed.**
+Rows must be present and identifiable for a pass. An empty list is inconclusive, because an
+endpoint scoping correctly and a dataset that happens to be empty are indistinguishable from
+outside, and a row whose ownership cannot be judged also blocks a pass.
+**Volatility:** low. **Blast radius:** `checks/access/list.ts` and the list half of the verdict table.
+
 ---
 
 ## Open questions, unresolved
 
 These are known gaps. An agent encountering one stops and reports rather than deciding.
 
-| Id | Question | Blocks | Needed by |
-|---|---|---|---|
-| Q1 | Which frameworks do source adapters support at MVP? Proposal: Next.js route handlers, Express routers, Prisma schema. | M4 | Week 4 |
-| Q2 | How are actor credentials supplied? Proposal: config file references environment variables, never literal secrets. | M2 | Week 2 |
-| Q3 | How is fixture state reset between mutating checks? Proposal: target declares a reset command; refuse mutating checks if absent. | M2, M5 | Week 2 |
-| Q4 | What is the condition grammar's exact supported subset? Proposal: equality, inequality, membership, and conjunction over `actor.*` and `<Entity>.*`. | M1 | Week 2 |
-| Q5 | Does a `list` action deny rule assert zero rows, or absence of foreign rows? Proposal: absence of foreign rows, since empty lists are ambiguous. | M3 | Week 3 |
+**None. Cleared 2026-08-23.**
+
+Q1 through Q5 sat in this table until then and every one of them had shipped as proposed,
+some of them stages earlier: Q4 was answered by use at M1.8, Q5's own module file said
+"Q5 can be marked resolved by a human", and M2 recorded Q2 and Q3 as "implemented as
+written". They are D17 to D21 above. Q6, Q7, and Q8 were raised later, decided on
+2026-08-22, and are D13 to D15.
+
+**Worth saying why this mattered rather than just fixing it.** This table is what an agent
+reads to decide whether to stop, and a question listed as open when it was settled is an
+instruction to stop for no reason. It overstated what was undecided by five entries for
+most of the project. The rule that would have caught it: whoever implements a proposal
+strikes the question in the same PR, the way a contract change is required to update
+`03-CONTRACTS.md` in the same PR.
 
 **Q6, Q7, and Q8 were resolved on 2026-08-22 and are recorded above as D13, D14, and D15.**
 They were written up in full before being put to a human, each having been hit more than

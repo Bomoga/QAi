@@ -125,9 +125,9 @@ is the explicit equivalent.
 
 ## Open questions
 
-- Q2: credential supply mechanism. Proposal implemented above.
+- **Q2 resolved as D19's neighbour, D18, on 2026-08-23.** Credentials are named environment variables and never literals, implemented as proposed.
   **Implemented as proposed.** Config names environment variables, values live in memory only. `tokenEnv` and `valueEnv` are shape-constrained so a pasted value fails validation, and a literal under a key like `token` is rejected before schema validation with a message naming the variable to set instead. Q2 can be marked resolved by a human.
-- Q3: reset strategy. Proposal is a target-declared command. If the target cannot provide one, mutating checks stay off and are reported as `unverified`.
+- **Q3 resolved as D19 on 2026-08-23.** A target declares its own reset command and mutating checks are refused without one. Corrected 2026-08-22: the runner had accepted a reset since M3.7 and no caller supplied one, so no real run reset anything until `check` was wired up.
   **Implemented as proposed**, with one addition: a `resetCommand` is required even to seed, not only to run mutating checks. Seeding a target that cannot be restored leaves someone with a dirty database and no way back. Confirm that addition.
 
 ### Raised during implementation, needs a human decision
