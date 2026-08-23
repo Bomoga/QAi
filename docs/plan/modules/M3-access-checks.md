@@ -135,7 +135,7 @@ is the explicit equivalent.
 
 ## Open questions
 
-- Q5: list semantics. Proposal implemented above.
+- **Q5 resolved as D21 on 2026-08-23**, implemented as proposed.
   **Implemented as proposed.** A deny rule on `list` asserts the absence of foreign rows. Rows must be present and identifiable for a pass; an empty list is inconclusive, and a row whose ownership cannot be judged also blocks a pass. Q5 can be marked resolved by a human.
 
 ### Raised during implementation, needs a human decision
