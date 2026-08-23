@@ -934,9 +934,16 @@ S9 is the last stage in 05-BUILD-ORDER.md.
   rounds of exactly that to notice. `tsconfig.json` is checked in for the same family of
   reason: Next writes one when it is missing, and a fixture that edits itself on first run
   behaves differently in CI than it does locally.
-- **What it costs, stated because it is the heaviest thing in the suite.** `next`, `react`,
-  and `react-dom` as dependencies of one fixture, and about nine seconds on the test suite,
-  which went from 17 to 26.
+- **What it costs, measured rather than estimated, because the install is part of the
+  definition of success.** Cold clone from GitHub into an empty directory with its own
+  store: **install exit 0 in 26 seconds**, where it was 9 before Next, and build 17 seconds
+  where it was 10. The test suite went from 17 seconds to 26. The demo sequence still runs:
+  check against the Express twin exits 1 with 15 requirements as 8 verified, 5 failed, 2
+  unverified, unchanged.
+- **Twenty six seconds against a five minute budget is the number to watch rather than to
+  worry about.** It is the largest single jump the install has taken and it is still an
+  order of magnitude inside the criterion. Worth stating plainly: the next dependency of
+  this size is the one that needs an argument.
 
 - **The corpus varies what the source says as of 2026-08-23, and that axis had never
   varied.** Twenty of twenty applications were hand-written `node:http` servers, so no
