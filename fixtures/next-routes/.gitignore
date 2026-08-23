@@ -1,0 +1,8 @@
+# Next's build output, regenerated on every boot and reviewed by nobody.
+.next/
+
+# Next writes this on boot and rewrites it whenever its own types move, so a checked in
+# copy makes the working tree dirty every time the conformance test runs. Nothing here
+# needs it: the route files use `Request` and `Response` from lib DOM, and `pnpm --filter
+# next-routes typecheck` passes without it.
+next-env.d.ts

@@ -69,7 +69,22 @@ function restrict(groups) {
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', '.qai/**'],
+    /**
+     * Generated output nobody reviews.
+     *
+     * `.next/` and `next-env.d.ts` are both written by Next on boot, so the conformance
+     * test recreates them every time it runs. They are gitignored, and eslint does not
+     * read `.gitignore`, so they have to be named here as well or a passing test leaves a
+     * failing lint behind it.
+     */
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      '**/.next/**',
+      '**/next-env.d.ts',
+      '.qai/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

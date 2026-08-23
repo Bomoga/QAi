@@ -902,6 +902,42 @@ S9 is the last stage in 05-BUILD-ORDER.md.
 
 ## Notes carried forward
 
+- **The Next adapter is measured against Next as of 2026-08-23, and it was not before.**
+  It derives a URL from a directory structure, and its unit tests asserted those
+  derivations against synthetic trees, which asserts that the adapter agrees with what its
+  author believed about Next. The belief and the implementation came from the same place,
+  so a wrong belief passed. `fixtures/next-routes` is a real App Router tree and
+  `adapter-conformance.test.ts` runs the adapter over it, boots Next, and requests every
+  URL the adapter claims. A wrong derivation answers 404, which is the one answer meaning
+  Next routed nothing.
+- **The route group is the case that justifies the fixture.** `app/(internal)/health` has
+  to serve `/health` and not `/internal/health`, and every assertion that reads directory
+  names agrees with the adapter by construction, because they read the same names. Proved
+  by breaking it: removing the rule fails two cases, one of them the conformance request.
+- **It is a fixture and not a corpus application, deliberately.** The claim is that a
+  derivation matches a framework, which is a property to assert once rather than a rate to
+  measure across applications. A Next application under `corpus/apps/` would make every
+  corpus run pay a framework boot to re-measure a fixed property, and the runner starts an
+  application with `node --experimental-strip-types app/index.ts`, which is not how Next
+  starts.
+- **Adding Next broke the clean install, which is the S9.2 failure exactly.** `sharp`
+  arrives with Next for image optimization and its build script is not run, so
+  `pnpm install` exited 1 with `ERR_PNPM_IGNORED_BUILDS`. Declared `false` beside
+  `better-sqlite3` for the same reasons: it ships prebuilds, an API only application never
+  resizes an image, and a machine without a toolchain is the machine the definition of
+  success names. pnpm rewrote the file with its placeholder on the way through, which the
+  S9.2 note predicted it does.
+- **Next writes `.next/` and `next-env.d.ts` on boot**, so the conformance test recreates
+  both every time it runs. Both are gitignored, and neither eslint nor prettier reads
+  `.gitignore`, so both are named in `eslint.config.js` and `.prettierignore` as well. A
+  passing test that leaves a failing lint behind it is worse than no test, and it took two
+  rounds of exactly that to notice. `tsconfig.json` is checked in for the same family of
+  reason: Next writes one when it is missing, and a fixture that edits itself on first run
+  behaves differently in CI than it does locally.
+- **What it costs, stated because it is the heaviest thing in the suite.** `next`, `react`,
+  and `react-dom` as dependencies of one fixture, and about nine seconds on the test suite,
+  which went from 17 to 26.
+
 - **The corpus varies what the source says as of 2026-08-23, and that axis had never
   varied.** Twenty of twenty applications were hand-written `node:http` servers, so no
   source adapter had ever run against one: every observation was black box, every entity

@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
+    "allowJs": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    // The conformance test imports core by relative path with an explicit .ts extension,
+    // which is how every relative import in this repository is written. This config does
+    // not extend tsconfig.base.json because Next needs bundler resolution and a JSX
+    // setting that the base deliberately does not have.
+    "allowImportingTsExtensions": true,
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": ["app/**/*.ts", "test/**/*.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

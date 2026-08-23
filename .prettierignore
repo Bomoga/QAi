@@ -16,3 +16,9 @@ schema/
 # onto one line, so letting it rewrite them would fail the round trip test against a
 # change nobody made. Same reason as `schema/` above.
 packages/core/src/report/goldens/
+
+# Written by Next on boot, so the conformance test recreates both every time it runs.
+# Formatting a file the framework owns means a passing test leaves a failing check behind.
+.next/
+**/.next/
+**/next-env.d.ts
