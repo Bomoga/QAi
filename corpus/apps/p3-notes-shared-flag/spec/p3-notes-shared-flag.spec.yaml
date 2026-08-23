@@ -24,17 +24,22 @@ entities:
         type: string
 
 requirements:
+  # Corrected 2026-08-23 by the spec owner. The statement and the rule disagreed with
+  # REQ-004, which says a shared note is readable by anyone signed in, and the rule was
+  # the half that was wrong: it denied every note somebody else owns, with no exception
+  # for a shared one. The application was doing what REQ-004 intends and still violated
+  # this rule as written, which is how a corpus finding ended up unclassifiable.
   - id: REQ-001
-    statement: 'A note belongs to one person and nobody else can read it'
+    statement: 'A note that is not shared belongs to one person and nobody else can read it'
     entities: [Note]
-    fields: [Note.owner_id]
+    fields: [Note.owner_id, Note.shared]
     tags: [access-control]
     accessRules:
       - id: AR-001-01
         actor: other
         action: read
         resource: Note
-        condition: 'Note.owner_id != actor.user_id'
+        condition: "Note.owner_id != actor.user_id and Note.shared == 'false'"
         effect: deny
     acceptanceCriteria:
       - id: AC-001-01

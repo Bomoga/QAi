@@ -69,16 +69,41 @@ a direct message, to any signed in caller. In both cases the first configured in
 the one the application gets right, which is precisely the shape S8 described and could not
 catch.
 
-**One finding is `unclear`, and it is the only one in the corpus.** On
-`p3-notes-shared-flag`, actor `other` reads `NOTE-2`, which belongs to somebody else and is
+**One finding was `unclear`, and the spec owner has since settled it.** On
+`p3-notes-shared-flag`, actor `other` read `NOTE-2`, which belongs to somebody else and is
 marked shared. REQ-004 says a shared note is readable by anyone signed in, so the
-application is doing what its spec intends. AR-001-01 denies that actor reading any note
-whose owner is not them, with no exception for shared, so the rule as written is violated
-and the report is accurate about it. **The disagreement is between two requirements of the
-same spec rather than between the spec and the application.** Calling it a true positive
-would claim the application is broken; calling it a false positive would claim the tool
-misread a rule it read correctly. It is left unclear on purpose and it is a question for
-whoever owns that spec.
+application was doing what its spec intends. AR-001-01 denied that actor reading any note
+whose owner is not them, with no exception for shared, so the rule as written was violated
+and the report was accurate about it. The disagreement was between two requirements of one
+spec rather than between the spec and the application, which is why neither classification
+was honest.
+
+**Resolved 2026-08-23: REQ-004 is correct and AR-001-01 was under-specified.** The rule now
+reads `Note.owner_id != actor.user_id and Note.shared == 'false'`, and the instances carry
+the `shared` attribute it needs, since a condition can only read what an instance declares.
+`NOTE-2` is no longer a record the rule denies, so it is no longer a candidate, and the
+finding is gone. It stays in the ledger marked `absent`.
+
+**This is a spec fix and not a check being disabled, and the difference is checkable
+rather than a matter of trust.** The application's own `NOTES.md` says what a run should
+find, "the anonymous read of NOTE-2", and adds that the owner checks coming back clean is
+what says the tool is not simply flagging everything. Both are now true:
+
+|                                           | Before       | After                                                      |
+| ----------------------------------------- | ------------ | ---------------------------------------------------------- |
+| REQ-001, the owner rule, on a shared note | failed       | **passes**, tested against `NOTE-1` and refused with 403   |
+| REQ-004, the anonymous read of `NOTE-2`   | failed       | **still fails**, on both the access rule and the criterion |
+| Overall false positive rate               | 0.0% over 43 | 0.0% over 43                                               |
+
+The real defect is still caught, at high on both sides. What went away is a report about a
+rule that did not say what its author meant.
+
+**The condition grammar refused to guess on the way through, which is worth recording.**
+The corrected rule was first written `Note.shared == false` and the parser rejected it:
+`bare identifier "false", expected actor.<field> or <Entity>.<field>`. That is D20 working
+as decided, since `Invoice.org_id == admin` is far more likely a mistyped reference than a
+literal. The quoted form parses, and it matches the attribute type, because configuration
+can only hold strings.
 
 **`unclear` is now printed in the rate table rather than only excluded from it.** It was
 being left out of the fraction, correctly, and out of the output as well, which is the same

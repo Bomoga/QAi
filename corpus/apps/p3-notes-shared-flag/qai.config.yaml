@@ -38,12 +38,18 @@ resources:
       update: /api/notes/{id}
       delete: /api/notes/{id}
     instances:
+      # `shared` is here because REQ-001's rule reads it. A condition can only see the
+      # attributes an instance declares, so a rule naming a field no instance carries is
+      # undecidable and the check comes back inconclusive rather than wrong.
       - id: NOTE-1
         attributes:
           owner_id: dana
+          shared: 'false'
       - id: NOTE-2
         attributes:
           owner_id: dana
+          shared: 'true'
       - id: NOTE-3
         attributes:
           owner_id: erin
+          shared: 'false'

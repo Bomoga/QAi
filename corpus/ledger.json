@@ -92,7 +92,7 @@
       "type": "access",
       "severity": "high",
       "title": "Note readable by actor anonymous, which the spec denies",
-      "detail": "GET /api/notes/NOTE-2 as actor anonymous returned 200 with Note fields body, id, owner_id, shared. Request: GET /api/notes/NOTE-2. Evidence: EV-000007. Suggestion: in the GET /api/notes/{id} handler, check the caller identity before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
+      "detail": "GET /api/notes/NOTE-2 as actor anonymous returned 200 with Note fields body, id, owner_id, shared. Request: GET /api/notes/NOTE-2. Evidence: EV-000006. Suggestion: in the GET /api/notes/{id} handler, check the caller identity before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
       "requirementId": "REQ-004",
       "ruleId": "AR-004-01",
       "classification": "true-positive",
@@ -108,7 +108,8 @@
       "requirementId": "REQ-001",
       "ruleId": "AR-001-01",
       "classification": "unclear",
-      "note": "The application is behaving as its own spec intends and still violates a rule that spec states. Erin read NOTE-2, which is dana's and is marked shared. REQ-004 says a shared note is readable by anyone signed in, and erin is signed in, so NOTES.md would call this correct. AR-001-01 denies erin reading any note whose owner is not erin, with no exception for shared, so the rule as written is violated and the report is accurate about it. The disagreement is between REQ-001 and REQ-004 rather than between the spec and the application, and deciding which one is wrong is the spec author's call, not the reviewer's. Left unclear deliberately: calling it a true positive would claim the application is broken, and calling it a false positive would claim the tool misread a rule it read correctly."
+      "note": "The application is behaving as its own spec intends and still violates a rule that spec states. Erin read NOTE-2, which is dana's and is marked shared. REQ-004 says a shared note is readable by anyone signed in, and erin is signed in, so NOTES.md would call this correct. AR-001-01 denies erin reading any note whose owner is not erin, with no exception for shared, so the rule as written is violated and the report is accurate about it. The disagreement is between REQ-001 and REQ-004 rather than between the spec and the application, and deciding which one is wrong is the spec author's call, not the reviewer's. Left unclear deliberately: calling it a true positive would claim the application is broken, and calling it a false positive would claim the tool misread a rule it read correctly.",
+      "absent": true
     },
     {
       "app": "p3-notes-shared-flag",
