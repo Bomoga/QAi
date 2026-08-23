@@ -1,6 +1,14 @@
 packages:
   - 'packages/*'
   - 'fixtures/*'
+  # One package for the whole corpus, not one per application.
+  #
+  # A corpus application is a directory the CLI can be pointed at, not a package: it holds
+  # a config and a spec and nothing else, which is the shape a real user's project has.
+  # Twenty package manifests would be twenty things to keep in step for no gain. What the
+  # single manifest buys is a `node_modules` the applications can resolve a framework
+  # from, which is what lets the corpus measure the source adapters at all.
+  - 'corpus'
 
 # esbuild ships a platform binary its install script links into place.
 # It backs tsup and vitest, both of which are tooling only.

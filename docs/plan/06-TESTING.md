@@ -96,7 +96,11 @@ Procedure:
 5. Compute per-check false positive rate. Disable any check above five percent before the demo.
 6. Publish the aggregate: how many applications had at least one access rule that was specified and not enforced.
 
-A limit on the published number, recorded here because it is a property of the corpus rather than of the run: **every one of the twenty applications is a hand-written `node:http` server, so the whole corpus was probed black box.** The rate says nothing about findings derived from source, because none was produced. `fixtures/ledger-express` is the only place the source path is exercised at all, and a future corpus wanting to measure it has to be generated on a framework an adapter reads.
+**Corrected 2026-08-23, by doing it.** This paragraph read: every one of the twenty applications is a hand-written `node:http` server, so the whole corpus was probed black box, and a future corpus wanting to measure the source path has to be generated on a framework an adapter reads. Four applications now are, taking the corpus to twenty-four: two on Express and two on Express with a `prisma/schema.prisma` beside them. `corpus/prompts.md` gained a fifth axis for what the source says, since that was the one thing the set never varied.
+
+What that bought, in one line each: a corpus finding cites a file for the first time; the structural diff's schema path ran for the first time, including the S8.6 rule about a declared field only being reported missing when the observed list came from a schema; and adding a single new noun found a real false positive in name matching, because `expenses` read as `expens` and matched no entity.
+
+**The remaining limit, stated the same way.** Twenty of twenty-four are still `node:http`, so the source path is measured across four applications and the schema path across two. Next.js is absent on purpose: the adapter reads a directory convention, and a tree of `route.ts` files served by anything other than Next is a fiction rather than an application. Running a real one needs the framework, a build step, and a boot the corpus runner is not built for.
 
 Ethics and scope: only applications the author owns or has explicit permission to inspect. No third party production systems, no reconnaissance of applications belonging to others, no publication of any finding tied to an identifiable third party application without consent. The tool is pointed at consenting targets only, and the corpus documentation states this plainly.
 

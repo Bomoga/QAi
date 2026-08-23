@@ -12,6 +12,93 @@ section immediately below and everything after it is the original. Reproduce wit
 live in `corpus/ledger.json` and are keyed by the finding's content hash, so re-running the
 corpus only asks about findings that are genuinely new.
 
+## Expanded to four frameworks' worth of source, 2026-08-23
+
+Four applications were added, taking the corpus to twenty-four, and they exist to remove
+the largest structural gap in the number rather than to make it bigger. Every application
+before them is a hand-written `node:http` server, so **no source adapter had ever run
+against a corpus application**: every observation was black box, every entity was inferred
+from a response, and two of the three adapters the tool ships were measured by one fixture.
+
+| Application                          | Framework          | Intent       | What it exercises                                      |
+| ------------------------------------ | ------------------ | ------------ | ------------------------------------------------------ |
+| `p9-expenses-express-strict`         | Express            | correct      | the Express adapter on an application that is right    |
+| `p9-expenses-express-middleware-gap` | Express            | subtly wrong | a middleware that authenticates and does not authorize |
+| `p10-catalog-prisma-strict`          | Express and Prisma | correct      | entities read from a schema rather than inferred       |
+| `p10-catalog-prisma-draft-leak`      | Express and Prisma | subtly wrong | a field the spec declares and the model does not have  |
+
+|             | False positive rate | Judged |
+| ----------- | ------------------- | ------ |
+| access      | 0.0%                | 10     |
+| behavioral  | 0.0%                | 14     |
+| structural  | 0.0%                | 31     |
+| **overall** | **0.0%**            | **55** |
+
+**Twelve new findings, twelve true positives, and the rate holds.** Fifty-five judged where
+the S8 run judged thirty-eight.
+
+**A corpus finding cites a file for the first time.** `p9-expenses-express-middleware-gap`
+hands any signed in person somebody else's expense, and the finding names the line:
+
+```
+GET /api/expenses/EXP-1 as actor colleague returned 200 with Expense fields
+amount_cents, approved, id, memo, submitted_by.
+Source: index.ts:102
+```
+
+Line 102 is `app.get('/api/expenses/:id', requireSignIn, ...)`, the route whose middleware
+answers whether the caller is signed in and never asks whether the record is theirs. The
+list route on the line above filters correctly and passes, which is the shape that says the
+tool read the two routes separately.
+
+**The structural diff's schema path ran for the first time.** `p10-catalog-prisma-strict`
+observes two entities with `origin: schema` and high confidence, where every other
+application in the corpus reports `inferred`. Its broken sibling declares
+`Product.discontinued_at`, which `prisma/schema.prisma` does not have, and the diff reports
+it:
+
+```
+fieldMismatches: [{ entity: 'Product', specifiedNotObserved: ['discontinued_at'] }]
+```
+
+That rule was added at S8.6, to stop a field the crawl never requested being reported as
+missing, and **it could not fire for any application in the corpus that motivated it**,
+because none had a schema for the observed field list to come from.
+
+### What the expansion found in the tool
+
+**A real false positive, in name matching.** `singular('expenses')` returned `expens`, so
+`/api/expenses/:id/approve` matched no entity and the structural diff reported an endpoint
+the spec plainly covers. The rule strips `es` after s, x, z, ch, or sh, which is right for
+`buses` and wrong for `expenses`: both end in `ses` and nothing separates `bus` plus `es`
+from `expense` plus `s`. Every noun the corpus had used until then happened to dodge it,
+`invoices` included, because `c` is not in that set.
+
+`namesMatch` now compares two small candidate sets rather than one chosen singular, and
+`Expense` still does not match `Expenditure`. **It was found by adding one noun**, which is
+the argument for varying the corpus rather than enlarging it.
+
+**A spec authoring trap worth knowing, hit twice while writing these.** A boolean is written
+`'false'` in an access rule condition and `false` in an acceptance criterion. Both are
+right: a condition compares against a configured instance attribute and configuration can
+only hold strings, while a criterion compares against the JSON the application returned.
+The grammars refuse the wrong one rather than guessing, which is how both mistakes surfaced
+immediately, but a spec author writing both in one file has to know the difference.
+
+### What this still does not cover
+
+**Next.js is not here, and pretending otherwise was the alternative.** The adapter reads
+`app/**/route.ts`, and a tree of those files served by anything other than Next is a Next
+shaped fiction rather than a Next application. Running a real one means the framework, a
+build step, and a boot time the corpus runner is not built for. The Next adapter is still
+measured by synthetic source trees in its unit tests and by nothing else.
+
+**Four applications is not a framework survey.** Twenty of twenty-four are still
+`node:http`, so the source path is measured across four applications and the schema path
+across two.
+
+---
+
 ## Re-run on 2026-08-22, after the recall fixes
 
 Everything below this section is the S8 run and is left as the record of it. This section

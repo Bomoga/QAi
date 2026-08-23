@@ -1,0 +1,56 @@
+# Bearer tokens, access enforced in a middleware, and a source root the adapter reads.
+#
+# The same shape as its correct sibling. What differs is inside the application: the
+# middleware answers whether the caller is signed in and nothing answers whether this one
+# is theirs.
+
+target:
+  baseUrl: http://127.0.0.1:47810
+  sourceRoot: app
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: submitter
+    auth:
+      kind: bearer
+      tokenEnv: EXPENSES_ROSA_TOKEN
+    attributes:
+      user_id: rosa
+
+  - id: colleague
+    auth:
+      kind: bearer
+      tokenEnv: EXPENSES_THEO_TOKEN
+    attributes:
+      user_id: theo
+
+  - id: approver
+    auth:
+      kind: bearer
+      tokenEnv: EXPENSES_MIRA_TOKEN
+    attributes:
+      user_id: mira
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+# The approver, because they can read every expense. A submitter is scoped to their own,
+# so a state read as one would come back short rather than wrong, which M2.8 warns is a
+# scoping bug arriving dressed as a state bug.
+stateActor: approver
+
+resources:
+  - name: Expense
+    routes:
+      read: /api/expenses/{id}
+      list: /api/expenses
+    instances:
+      - id: EXP-1
+        attributes:
+          submitted_by: rosa
+      - id: EXP-2
+        attributes:
+          submitted_by: theo

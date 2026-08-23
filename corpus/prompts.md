@@ -21,12 +21,21 @@ produce a spec that agrees with whatever was built, and every run would come bac
 A corpus of twenty applications that differ only in their nouns is one application
 measured twenty times. The set varies four things on purpose:
 
-| Axis                     | Values                                                          |
-| ------------------------ | --------------------------------------------------------------- |
-| Credential               | bearer token, an identity header, a session cookie, none at all |
-| Where access is enforced | in the handler, in a middleware, inside the data query, nowhere |
-| Refusal shape            | 403, 404, 401, an empty list, a filtered list                   |
-| Correctness              | correct, subtly wrong, obviously wrong                          |
+| Axis                     | Values                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| Credential               | bearer token, an identity header, a session cookie, none at all                     |
+| Where access is enforced | in the handler, in a middleware, inside the data query, nowhere                     |
+| Refusal shape            | 403, 404, 401, an empty list, a filtered list                                       |
+| Correctness              | correct, subtly wrong, obviously wrong                                              |
+| What the source says     | nothing an adapter reads, an Express route table, a route table and a Prisma schema |
+
+**The last axis was added 2026-08-23 and it is the one that had never varied.** The first
+twenty applications are all hand-written `node:http` servers, chosen because they needed no
+dependencies, and no source adapter recognizes that shape. So every observation in the
+corpus was black box, every entity was inferred from a response rather than read from a
+model, and two of the three adapters the tool ships were measured by one fixture and
+nothing else. A rate that says nothing about half the probe is a narrower number than it
+looks.
 
 **The correct applications carry the most weight.** A finding against an application that
 does what its spec says is a false positive, and the rate this stage produces is mostly
@@ -89,3 +98,15 @@ prices are internal and are never returned to a caller who is not a manager.
 An API for courses and enrolments. A student sees their own enrolments and the public
 course list. Enrolling is for the signed in student themselves. Grades are visible to the
 student they belong to and to the teacher of that course.
+
+### P9. Expense reports
+
+An API for expense reports. A person submits expenses and reads only their own. An approver
+reads anybody's and is the only one who can approve one. Approving an expense is not the
+same permission as reading it.
+
+### P10. Product catalog with drafts
+
+An API for a product catalog. A product belongs to a team. A published product is readable
+by anybody, signed in or not. An unpublished product is a draft and only the team that owns
+it may see it, in a listing or on its own. A product can be retired without being deleted.
