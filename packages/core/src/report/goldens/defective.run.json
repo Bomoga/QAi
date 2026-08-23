@@ -2,14 +2,16 @@
   "checks": [
     {
       "checkId": "CHK-1a75f0146a58",
-      "detail": "GET /api/invoices as actor outsider returned 200 with 2 row(s), 1 of which the rule denies: INV-1001. Request: GET /api/invoices. Evidence: EV-000007. Suggestion: scope the GET /api/invoices handler so it returns only rows matching the rule condition Invoice.org_id != actor.org_id, filtering in the query rather than after fetching.",
+      "detail": "GET /api/invoices as actor outsider returned 200 with 2 row(s), 1 of which the rule denies: INV-1001.",
       "deterministic": true,
       "evidence": [
         "EV-000007"
       ],
+      "requestRef": "GET /api/invoices",
       "requirementId": "REQ-002",
       "ruleId": "AR-002-01",
       "severity": "high",
+      "suggestion": "scope the GET /api/invoices handler so it returns only rows matching the rule condition Invoice.org_id != actor.org_id, filtering in the query rather than after fetching.",
       "title": "Invoice list returned rows belonging to another owner",
       "type": "access",
       "verdict": "fail"
@@ -204,14 +206,16 @@
     },
     {
       "checkId": "CHK-95b4ecf038a8",
-      "detail": "GET /api/invoices/INV-1001 as actor outsider returned 200 with Invoice fields id, notes, org_id, total_cents. Request: GET /api/invoices/INV-1001. Evidence: EV-000006. Suggestion: in the GET /api/invoices/{id} handler, check the rule condition Invoice.org_id != actor.org_id before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
+      "detail": "GET /api/invoices/INV-1001 as actor outsider returned 200 with Invoice fields id, notes, org_id, total_cents.",
       "deterministic": true,
       "evidence": [
         "EV-000006"
       ],
+      "requestRef": "GET /api/invoices/INV-1001",
       "requirementId": "REQ-001",
       "ruleId": "AR-001-01",
       "severity": "high",
+      "suggestion": "in the GET /api/invoices/{id} handler, check the rule condition Invoice.org_id != actor.org_id before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
       "title": "Invoice readable by actor outsider, which the spec denies",
       "type": "access",
       "verdict": "fail"
@@ -291,14 +295,16 @@
     },
     {
       "checkId": "CHK-c7e96357fdb0",
-      "detail": "PATCH /api/invoices/INV-1001 as actor anonymous returned 200 with Invoice fields id, notes, org_id, total_cents. Request: PATCH /api/invoices/INV-1001. Evidence: EV-00000d. Suggestion: in the PATCH /api/invoices/{id} handler, check the caller identity before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
+      "detail": "PATCH /api/invoices/INV-1001 as actor anonymous returned 200 with Invoice fields id, notes, org_id, total_cents.",
       "deterministic": true,
       "evidence": [
         "EV-00000d"
       ],
+      "requestRef": "PATCH /api/invoices/INV-1001",
       "requirementId": "REQ-003",
       "ruleId": "AR-003-01",
       "severity": "high",
+      "suggestion": "in the PATCH /api/invoices/{id} handler, check the caller identity before returning the record, and respond 404 rather than 403 so the response does not confirm that the record exists.",
       "title": "Invoice readable by actor anonymous, which the spec denies",
       "type": "access",
       "verdict": "fail"
@@ -543,7 +549,7 @@
       "verdict": "verified"
     }
   ],
-  "resultVersion": "0.2",
+  "resultVersion": "0.3",
   "runId": "RUN-golden-defective",
   "spec": {
     "files": [

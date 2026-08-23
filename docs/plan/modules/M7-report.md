@@ -96,6 +96,16 @@ is the explicit equivalent.
 
 ## Open questions
 
+- **Resolved 2026-08-23: the reference and the suggested fix are fields, so no emitter
+  prints either twice.** M7.7 recorded this from the report's side, that an access
+  `detail` already ended with "Request: ... Evidence: ... Suggestion: ..." and the text
+  report then printed an evidence reference the detail had just given. M3.8 recorded the
+  other half, that a suggestion lived in `detail` because `CheckResult` had no field for
+  one, and named it the contract question to raise. Raised and answered yes: `detail` is
+  the observation alone, `requestRef` and `suggestion` are their own fields, and all three
+  emitters render each part once. Sniffing the parts back out of a string, which that note
+  said would be worse than the duplication, never had to happen.
+
 - **Resolved 2026-08-21. GitHub rejected the SARIF, and had always rejected it.** `renderSarif` gives a result a `physicalLocation` only when the check
   carries a `locationRef`, and a `logicalLocations` entry otherwise, which is what the
   module asks for and is valid SARIF 2.1.0. GitHub's ingester requires a physical

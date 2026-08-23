@@ -984,11 +984,29 @@ S9 is the last stage in 05-BUILD-ORDER.md.
   the predicted shape depended on only the first instance being tried. The note describes a
   tool that stopped at the first instance, and rewriting it would erase the evidence that
   the behaviour changed.
-- **What is still open after this branch**, so the list does not have to be rebuilt: the
-  text report prints a finding's reference twice, once inside `detail` and once as its own
-  line, which is the M3.8 contract question about `CheckResult` having no field for a
-  reference or a suggestion. Left alone deliberately: it is a contract change, not
-  punctuation.
+- **Resolved 2026-08-23, and it was the last thing on that list: a finding's reference and
+  its suggested fix are fields.** `detail` carried both because `CheckResult` had no place
+  for either, so every emitter printed the reference twice, once in the sentence and once
+  from `locationRef` and `evidence`. M3.8 named it the contract question to raise and M7.7
+  met the same duplication from the report's side, two stages apart. Answered yes.
+  `resultVersion` is `0.3`.
+- **The suggestion arrives unlabelled and every emitter labels it.** It used to carry its
+  own `Suggestion:` prefix, which was the only way to guarantee the label
+  04-CONVENTIONS.md requires once the text was going to be concatenated. A field does not
+  need to smuggle its own label, and an emitter rendering it under a heading would print
+  the word twice. The rule stays structural rather than remembered:
+  `report/suggestion-label.test.ts` drives all three emitters and asserts the label, the
+  absence of a bare label when there is no suggestion, and that each reference appears
+  exactly once. Proved by breaking it: dropping the label from the text emitter alone
+  failed one case.
+- **Six tests pinned the old shape and were rewritten rather than deleted.** They read the
+  reference out of `detail` because that is where it lived, and they make the same claims
+  about the same facts against the fields that carry them now. `referenceLine` is gone
+  outright: it existed to join three parts into one sentence and nothing joins them.
+- **A finding reads as parts now, each once.** Observation, `Source`, `Request`,
+  `Evidence`, `Suggestion`, on their own lines. Both goldens moved and the diff was read:
+  three access details split into three fields each, plus the version. Verdict counts
+  unchanged at 7/6/2 and 13/0/2.
 
 - **Post-merge fix, branch `fix/behavioral-file-references`: a behavioral finding can cite
   a file too.** S9 fixed the access half and recorded the behavioral half as a known gap,

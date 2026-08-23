@@ -251,7 +251,7 @@ async function attemptAccessCheck(
         {
           identity: plan.identity,
           title: `${plan.resource} list returned rows belonging to another owner`,
-          detail: listFailureDetail({
+          ...listFailureDetail({
             plan,
             request,
             evidenceId,
@@ -303,7 +303,7 @@ async function attemptAccessCheck(
         {
           identity: plan.identity,
           title: `${plan.resource} readable by actor ${plan.actorId}, which the spec denies`,
-          detail: denyFailureDetail({
+          ...denyFailureDetail({
             plan,
             request,
             evidenceId,
@@ -353,7 +353,7 @@ async function attemptAccessCheck(
             {
               identity: plan.identity,
               title: `${plan.resource} deleted by actor ${plan.actorId}, which the spec denies`,
-              detail: destructiveFailureDetail({
+              ...destructiveFailureDetail({
                 plan,
                 request,
                 evidenceId,
@@ -415,7 +415,7 @@ async function attemptAccessCheck(
       {
         identity: plan.identity,
         title: `${plan.resource} refused to actor ${plan.actorId}, which the spec allows`,
-        detail: allowFailureDetail({
+        ...allowFailureDetail({
           plan,
           request,
           evidenceId,

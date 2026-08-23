@@ -150,6 +150,6 @@ is the explicit equivalent.
 
 - **`TargetConfig` gained a `resources` section**, holding route templates and seeded instances, which M2 owns. It is here because a rule names a resource and this module refuses to guess a URL, while M4 lands a stage later. When the probe arrives the Observation takes precedence and this stays as the documented fallback.
 
-- **A suggested fix lives inside `CheckResult.detail`.** The contract has no field for one and adding it would be a contract change. If a report should render suggestions separately, that is the contract question.
+- **Resolved 2026-08-23: a suggested fix has a field.** It lived inside `CheckResult.detail` because the contract had none, and this note said adding one was the contract question to raise. It was raised and answered yes. `CheckResult` carries `suggestion` and `requestRef`, `detail` is the observation alone, and the emitters render each part once instead of printing the reference twice. The suggestion arrives unlabelled and every emitter labels it, which `report/suggestion-label.test.ts` holds them to.
 
 - **`HttpClient` has no teardown.** Calling `process.exit` with undici's pool open trips a libuv assertion on Windows and reports a crash code rather than the exit code the run reached. M8 will need a way to close the pool before exiting.

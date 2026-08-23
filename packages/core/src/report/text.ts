@@ -203,8 +203,13 @@ function findingsSection(result: RunResult, colors: Colors): string[] {
     lines.push(`  [${paintSeverity(check.severity, colors)}] ${describe(check)}`);
     lines.push(`    ${check.title}`);
     if (check.detail !== undefined) lines.push(`    ${check.detail}`);
+    // Source when a probe read one, the request otherwise, per 04-CONVENTIONS.md. Both
+    // when both are known: which file serves a route does not say which record was asked
+    // for. Until 2026-08-23 these lived inside `detail` as well and printed twice.
     if (check.locationRef !== undefined) lines.push(`    Source: ${check.locationRef}`);
+    if (check.requestRef !== undefined) lines.push(`    Request: ${check.requestRef}`);
     if (check.evidence.length > 0) lines.push(`    Evidence: ${check.evidence.join(', ')}`);
+    if (check.suggestion !== undefined) lines.push(`    Suggestion: ${check.suggestion}`);
     if (!check.deterministic) lines.push('    Model assisted');
   }
 

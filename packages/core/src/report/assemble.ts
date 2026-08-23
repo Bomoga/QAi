@@ -298,9 +298,9 @@ export function assembleRun(input: AssembleInput): RunResult {
   );
 
   return {
-    // 0.2 since Q6 added the observation summary. Additive, so the contract's own rule
-    // bumps the minor.
-    resultVersion: input.resultVersion ?? '0.2',
+    // 0.3 since the M3.8 answer added `requestRef` and `suggestion`, after 0.2 added the
+    // observation summary at Q6. Both additive, so the contract's own rule bumps the minor.
+    resultVersion: input.resultVersion ?? '0.3',
     runId: input.runId,
     toolVersion: input.toolVersion,
     startedAt: input.startedAt,
