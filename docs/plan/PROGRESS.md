@@ -954,12 +954,26 @@ S9 is the last stage in 05-BUILD-ORDER.md.
   one entirely. **All five now produce a failed access check and nothing is missed.** The
   one that was missed, `p3-notes-delete-open`, is caught by reading the record either side
   of the delete, which is the verdict rule doing exactly what it was decided for.
-- **The corpus now holds one `unclear`, its first.** On `p3-notes-shared-flag` the
-  application does what REQ-004 intends, a shared note being readable by anyone signed in,
-  and violates AR-001-01 as written, which denies that actor reading any note that is not
-  theirs. The disagreement is between two requirements of one spec rather than between the
-  spec and the application, so neither classification is honest and it is left unsettled
-  for whoever owns that spec.
+- **The corpus held one `unclear`, its first, and the spec owner settled it on
+  2026-08-23.** On `p3-notes-shared-flag` the application does what REQ-004 intends, a
+  shared note being readable by anyone signed in, and violated AR-001-01 as written, which
+  denied that actor reading any note that is not theirs. The disagreement was between two
+  requirements of one spec rather than between the spec and the application, so neither
+  classification was honest. **REQ-004 is correct**, so the rule was under-specified: it
+  reads `Note.owner_id != actor.user_id and Note.shared == 'false'` now, the instances
+  carry the `shared` attribute a condition needs in order to read it, and NOTE-2 is no
+  longer a record the rule denies.
+- **That is a spec fix and not a check being disabled, and the difference is checkable.**
+  The application's `NOTES.md` says a run should find the anonymous read of NOTE-2 and that
+  the owner checks coming back clean is what says the tool is not flagging everything. Both
+  hold now: REQ-004 still fails on both the access rule and the criterion, REQ-001 passes
+  against NOTE-1 with a 403, and the rate is unchanged at 0.0% over 43 judged. The finding
+  is `absent` in the ledger, which is the S8.6 mechanism for a cause that was fixed.
+- **The condition grammar refused to guess on the way through.** The corrected rule was
+  first written `Note.shared == false` and the parser rejected the bare identifier, naming
+  what it expected instead. That is D20 working as decided: `Invoice.org_id == admin` is
+  far more likely a mistyped reference than a literal. The quoted form parses and matches
+  the attribute type, since configuration can only hold strings.
 - **Reviewing it found the measurement defect again.** An `unclear` finding was excluded
   from the rate, correctly, and from the printed line as well, so it disappeared without
   trace. That is the S8.6 lesson about a denominator that narrows quietly, arriving in a
