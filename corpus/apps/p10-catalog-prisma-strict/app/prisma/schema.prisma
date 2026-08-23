@@ -1,0 +1,29 @@
+// The data model, as the generator wrote it.
+//
+// The rows are held in memory rather than in a database, which NOTES.md says plainly.
+// What this file is here for is the source adapter: it is the only schema in the corpus,
+// and without one every entity in every observation is inferred from a response rather
+// than read from a model.
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./catalog.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Product {
+  id          String   @id
+  name        String
+  price_cents Int
+  published   Boolean  @default(false)
+  owner_team  String
+}
+
+model Team {
+  id      String    @id
+  name    String
+  members String[]
+}

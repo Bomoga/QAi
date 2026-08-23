@@ -1,0 +1,136 @@
+specVersion: '0.1'
+name: 'Expense reports'
+
+# Written from prompt P9 in corpus/prompts.md, before reading the application.
+
+actors:
+  - id: submitter
+    description: 'The signed in person whose expenses are under test'
+  - id: colleague
+    description: 'A different signed in person, who submits their own expenses'
+  - id: approver
+    description: 'A signed in person who may approve anybody expense'
+  - id: anonymous
+    description: 'A caller presenting no credential'
+
+entities:
+  - name: Expense
+    fields:
+      - name: id
+        type: string
+      - name: submitted_by
+        type: string
+      - name: amount_cents
+        type: number
+      - name: memo
+        type: string
+      - name: approved
+        type: boolean
+
+requirements:
+  - id: REQ-001
+    statement: 'An expense is readable by the person who submitted it and by nobody else who submits'
+    entities: [Expense]
+    fields: [Expense.submitted_by]
+    tags: [access-control]
+    accessRules:
+      - id: AR-001-01
+        actor: colleague
+        action: read
+        resource: Expense
+        condition: 'Expense.submitted_by != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'an expense submitted by somebody else'
+        when: 'actor colleague reads Expense EXP-1'
+        then: 'status in 403, 404 and body omits field Expense.memo'
+
+  - id: REQ-002
+    statement: 'A person reads their own expense'
+    entities: [Expense]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: submitter
+        action: read
+        resource: Expense
+        condition: 'Expense.submitted_by == actor.user_id'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'an expense they submitted'
+        when: 'actor submitter reads Expense EXP-1'
+        then: 'status is 200 and body contains field Expense.memo'
+
+  - id: REQ-003
+    statement: 'The expense list shows a submitter only their own expenses'
+    entities: [Expense]
+    fields: [Expense.submitted_by]
+    tags: [access-control, data-exposure]
+    accessRules:
+      - id: AR-003-01
+        actor: colleague
+        action: list
+        resource: Expense
+        condition: 'Expense.submitted_by != actor.user_id'
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'expenses submitted by more than one person'
+        when: 'actor colleague lists Expense'
+        then: 'every Expense has submitted_by equal to actor.user_id'
+
+  - id: REQ-004
+    statement: 'A caller who is not signed in reads nothing'
+    entities: [Expense]
+    tags: [access-control, authentication]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: Expense
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'any expense'
+        when: 'actor anonymous reads Expense EXP-1'
+        then: 'status in 401, 403 and body omits field Expense.memo'
+
+  - id: REQ-005
+    statement: 'A caller who is not signed in cannot list expenses'
+    entities: [Expense]
+    tags: [access-control, authentication]
+    accessRules:
+      - id: AR-005-01
+        actor: anonymous
+        action: list
+        resource: Expense
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'any expenses at all'
+        when: 'actor anonymous lists Expense'
+        then: 'status in 401, 403'
+
+  - id: REQ-006
+    statement: 'An approver reads any expense, since approving one means seeing it'
+    entities: [Expense]
+    tags: [access-control]
+    accessRules:
+      - id: AR-006-01
+        actor: approver
+        action: read
+        resource: Expense
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-006-01
+        mode: deterministic
+        given: 'an expense somebody else submitted'
+        when: 'actor approver reads Expense EXP-1'
+        then: 'status is 200 and body contains field Expense.amount_cents'

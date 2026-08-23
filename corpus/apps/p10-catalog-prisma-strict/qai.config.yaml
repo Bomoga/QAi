@@ -1,0 +1,55 @@
+# A session cookie, and the only application in the corpus with a schema.
+#
+# `sourceRoot` reaches both adapters here: the Express route table and
+# `prisma/schema.prisma`. The schema is what makes the entities in this observation
+# `origin: schema` rather than inferred from a response, which is the half of the
+# structural diff nothing in the corpus has ever exercised.
+
+target:
+  baseUrl: http://127.0.0.1:47810
+  sourceRoot: app
+  disposable: true
+  resetCommand: 'node -e "process.stdout.write(\"state is in memory, restart to reset\")"'
+
+actors:
+  - id: owner
+    auth:
+      kind: cookie
+      name: session
+      valueEnv: CATALOG_NADIA_SESSION
+    attributes:
+      team_id: team-alpha
+
+  - id: other
+    auth:
+      kind: cookie
+      name: session
+      valueEnv: CATALOG_OMAR_SESSION
+    attributes:
+      team_id: team-beta
+
+  - id: anonymous
+    auth:
+      kind: none
+    attributes: {}
+
+stateActor: owner
+
+resources:
+  - name: Product
+    routes:
+      read: /api/products/{id}
+      list: /api/products
+    instances:
+      - id: PRD-1
+        attributes:
+          published: 'true'
+          owner_team: team-alpha
+      - id: PRD-2
+        attributes:
+          published: 'false'
+          owner_team: team-alpha
+      - id: PRD-3
+        attributes:
+          published: 'true'
+          owner_team: team-beta

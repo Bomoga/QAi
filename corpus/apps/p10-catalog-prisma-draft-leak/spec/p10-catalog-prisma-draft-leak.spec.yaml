@@ -1,0 +1,135 @@
+specVersion: '0.1'
+name: 'Product catalog'
+
+# Written from prompt P10 in corpus/prompts.md, before reading the application.
+
+actors:
+  - id: owner
+    description: 'A signed in member of the team that owns the drafts under test'
+  - id: other
+    description: 'A signed in member of a different team'
+  - id: anonymous
+    description: 'A caller presenting no credential, which the catalog allows for published products'
+
+entities:
+  - name: Product
+    fields:
+      - name: id
+        type: string
+      - name: name
+        type: string
+      - name: price_cents
+        type: number
+      - name: published
+        type: boolean
+      - name: owner_team
+        type: string
+      # The prompt asks for a product to be retired without deleting it. The schema has
+      # no such column, so this is a field the spec claims and the model does not have.
+      - name: discontinued_at
+        type: string
+
+  - name: Team
+    fields:
+      - name: id
+        type: string
+      - name: name
+        type: string
+      - name: members
+        type: string
+
+requirements:
+  - id: REQ-001
+    statement: 'A draft product is readable only by the team that owns it'
+    entities: [Product]
+    fields: [Product.published, Product.owner_team]
+    tags: [access-control, data-exposure]
+    accessRules:
+      - id: AR-001-01
+        actor: other
+        action: read
+        resource: Product
+        condition: "Product.published == 'false' and Product.owner_team != actor.team_id"
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-001-01
+        mode: deterministic
+        given: 'a draft belonging to another team'
+        when: 'actor other reads Product PRD-2'
+        then: 'status in 403, 404 and body omits field Product.name'
+
+  - id: REQ-002
+    statement: 'A team reads its own draft'
+    entities: [Product]
+    tags: [access-control]
+    accessRules:
+      - id: AR-002-01
+        actor: owner
+        action: read
+        resource: Product
+        condition: 'Product.owner_team == actor.team_id'
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-002-01
+        mode: deterministic
+        given: 'a draft their team owns'
+        when: 'actor owner reads Product PRD-2'
+        then: 'status is 200 and body contains field Product.name'
+
+  - id: REQ-003
+    statement: 'A caller who is not signed in never sees a draft'
+    entities: [Product]
+    fields: [Product.published]
+    tags: [access-control, data-exposure]
+    accessRules:
+      - id: AR-003-01
+        actor: anonymous
+        action: read
+        resource: Product
+        condition: "Product.published == 'false'"
+        effect: deny
+    acceptanceCriteria:
+      - id: AC-003-01
+        mode: deterministic
+        given: 'an unpublished product'
+        when: 'actor anonymous reads Product PRD-2'
+        then: 'status in 401, 403, 404 and body omits field Product.name'
+
+  - id: REQ-004
+    statement: 'A published product is readable by anybody, signed in or not'
+    entities: [Product]
+    tags: [access-control]
+    accessRules:
+      - id: AR-004-01
+        actor: anonymous
+        action: read
+        resource: Product
+        condition: "Product.published == 'true'"
+        effect: allow
+    acceptanceCriteria:
+      - id: AC-004-01
+        mode: deterministic
+        given: 'a published product'
+        when: 'actor anonymous reads Product PRD-1'
+        then: 'status is 200 and body contains field Product.price_cents'
+
+  - id: REQ-005
+    statement: 'The product list shows a caller no draft they may not read'
+    entities: [Product]
+    fields: [Product.published]
+    tags: [data-exposure]
+    acceptanceCriteria:
+      - id: AC-005-01
+        mode: deterministic
+        given: 'a catalog holding drafts belonging to more than one team'
+        when: 'actor anonymous lists Product'
+        # A real boolean, because this compares against the JSON the application
+        # returned. The conditions above quote theirs, because those compare against a
+        # configured instance attribute and configuration can only hold strings.
+        then: 'every Product has published equal to true'
+
+  - id: REQ-006
+    statement: 'A product belongs to one team, and a team is the unit that owns drafts'
+    entities: [Team, Product]
+    fields: [Product.owner_team]
+    tags: [correctness]

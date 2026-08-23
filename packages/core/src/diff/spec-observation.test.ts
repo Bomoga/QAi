@@ -118,6 +118,48 @@ describe('name handling', () => {
   it('does not match two different models', () => {
     expect(namesMatch('Invoice', 'Organization')).toBe(false);
   });
+
+  /**
+   * Nouns whose singular already ends in `se`, found by pointing the corpus at one.
+   *
+   * `singular` strips `es` after s, x, z, ch, or sh, which is right for `buses` and wrong
+   * for `expenses`: both end in `ses` and no rule can tell `bus` plus `es` from `expense`
+   * plus `s`. It read `expenses` as `expens`, so `/api/expenses/:id/approve` matched no
+   * entity and the structural diff reported an endpoint the spec plainly covers.
+   *
+   * Every noun in the corpus until now happened to dodge it. `invoices` ends in `ces` and
+   * `c` is not in that set, so it fell through to the plain strip and came out right.
+   */
+  it.each([
+    ['Expense', 'expenses'],
+    ['License', 'licenses'],
+    ['Response', 'responses'],
+    ['Purchase', 'purchases'],
+  ])('matches %s against %s, where the singular ends in se', (left, right) => {
+    expect(namesMatch(left, right)).toBe(true);
+  });
+
+  it.each([
+    ['Bus', 'buses'],
+    ['Box', 'boxes'],
+    ['Church', 'churches'],
+  ])('still matches %s against %s, where the es really is the plural', (left, right) => {
+    expect(namesMatch(left, right)).toBe(true);
+  });
+
+  it('does not read status as statu, which is why the guard exists', () => {
+    // The M4.8 rule. Widening the match must not reintroduce what it was written to stop.
+    expect(singular('status')).toBe('status');
+    expect(namesMatch('Status', 'statu')).toBe(false);
+  });
+
+  it('still refuses two nouns that merely rhyme', () => {
+    // The widening is a second candidate form, not a fuzzy match. Over-matching would
+    // silence a real "endpoint nobody specified", which is the finding this diff exists
+    // to make.
+    expect(namesMatch('Expense', 'Expenditure')).toBe(false);
+    expect(namesMatch('House', 'Mouse')).toBe(false);
+  });
 });
 
 describe('entity matching', () => {

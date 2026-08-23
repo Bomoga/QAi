@@ -902,6 +902,42 @@ S9 is the last stage in 05-BUILD-ORDER.md.
 
 ## Notes carried forward
 
+- **The corpus varies what the source says as of 2026-08-23, and that axis had never
+  varied.** Twenty of twenty applications were hand-written `node:http` servers, so no
+  source adapter had ever run against one: every observation was black box, every entity
+  inferred, and two of the three adapters measured by one fixture. Four applications now
+  are readable, two on Express and two with a `prisma/schema.prisma`, taking the corpus to
+  twenty-four. Twelve new findings, twelve true positives, rate holds at 0.0% over 55
+  judged where the S8 run judged 38.
+- **Two paths in the tool ran for the first time.** A corpus finding cites a file,
+  `index.ts:102`, the route whose middleware asks whether the caller is signed in and never
+  asks whether the record is theirs. And the structural diff's schema path ran: entities at
+  `origin: schema`, and a declared field reported missing, which is the rule S8.6 added and
+  which **no application in the corpus that motivated it could reach**, because none had a
+  schema for the observed field list to come from.
+- **Adding one noun found a real false positive.** `singular('expenses')` returned
+  `expens`, so `/api/expenses/:id/approve` matched no entity and an endpoint the spec
+  plainly covers was reported as undeclared, at medium, on a correct application. The rule
+  strips `es` after s, x, z, ch, or sh, which is right for `buses` and wrong for
+  `expenses`; both end in `ses` and nothing separates them. Every noun the corpus had used
+  happened to dodge it, `invoices` included, because `c` is not in that set. **The argument
+  for varying a corpus rather than enlarging it, in one bug.**
+- **A spec authoring trap, hit twice in one sitting.** A boolean is written `'false'` in an
+  access rule condition and `false` in an acceptance criterion. Both are right: a condition
+  compares against a configured instance attribute and configuration can only hold strings,
+  while a criterion compares against the JSON the application returned. Both grammars
+  refuse the wrong form rather than guessing, which is why both mistakes surfaced at once,
+  but an author writing both in one file has to know the difference.
+- **`corpus` is a workspace package now**, one manifest for the whole set rather than one
+  per application, and only so an application can resolve a framework. An application stays
+  a directory the CLI can be pointed at, which is the shape a real user's project has, and
+  twenty-four package manifests would be twenty-four things to keep in step for no gain.
+- **Next.js is deliberately absent from the corpus.** The adapter reads a directory
+  convention, and a tree of `route.ts` files served by anything other than Next is a
+  fiction rather than an application. Running a real one needs the framework, a build step,
+  and a boot the corpus runner is not built for. That adapter is still measured by synthetic
+  source trees in its unit tests and by nothing else.
+
 - **The three open decisions were answered on 2026-08-22, and a fourth with them.** Q6,
   Q7, and Q8 had each been hit more than once and are recorded as D13, D14, and D15 in
   07-DECISIONS.md. The fourth is D16, whether a denied delete that returns nothing is a
