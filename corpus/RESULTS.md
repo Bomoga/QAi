@@ -78,6 +78,14 @@ from `expense` plus `s`. Every noun the corpus had used until then happened to d
 `Expense` still does not match `Expenditure`. **It was found by adding one noun**, which is
 the argument for varying the corpus rather than enlarging it.
 
+**It is classified in the ledger rather than deleted from it**, marked `false-positive` and
+held aside as `absent`, the same treatment the four false positives S8.6 repaired receive.
+That is deliberate: an entry the latest run no longer produces is excluded from the rate,
+and keeping it is the only evidence that fixing a cause moved the number rather than the
+number simply never having noticed. **Five of the six findings held aside are repaired
+false positives**, which is the honest reading of "0.0%": not that the tool has never been
+wrong, but that nothing it currently produces is.
+
 **A spec authoring trap worth knowing, hit twice while writing these.** A boolean is written
 `'false'` in an access rule condition and `false` in an acceptance criterion. Both are
 right: a condition compares against a configured instance attribute and configuration can
