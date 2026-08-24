@@ -29,6 +29,13 @@ packages:
 # Deleting the line does not work: pnpm treats a build it ignored without being told to as
 # an error, `ERR_PNPM_IGNORED_BUILDS`, and rewrites this file with a placeholder. Only the
 # explicit `false` says considered, and it must not build.
+#
+# sharp is Next's image optimizer and arrives with it. An API only application never
+# resizes an image, it ships prebuilds for every realistic target the way better-sqlite3
+# does, and a machine without a toolchain is exactly the machine the definition of success
+# names. Same reasoning, same value, and `false` rather than absent for the same reason:
+# pnpm treats a build it ignored without being told to as an error.
 allowBuilds:
   better-sqlite3: false
+  sharp: false
   esbuild: true

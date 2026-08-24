@@ -8,16 +8,28 @@ The tool makes claims about other people's software. It has to be more trustwort
 |---|---|---|---|
 | Unit | Pure functions, recorded fixtures | Fast | Every commit |
 | Contract | Zod schemas against golden JSON files | Fast | Every commit |
-| Integration | `fixtures/ledger` and `fixtures/ledger-express` on localhost | Medium | Every PR |
+| Integration | `fixtures/ledger`, `fixtures/ledger-express`, and `fixtures/next-routes` on localhost | Medium | Every PR |
 | Corpus | Twenty to fifty real generated applications | Slow, manual review | Week 8, once |
 
 No test reaches an external host, per rule R9.
 
 ## The fixture applications
 
-There are two, and they are one application served twice. `fixtures/ledger` is a deliberately defective invoicing application over `node:http` and is the primary integration target. `fixtures/ledger-express` serves the same API on Express and is the demo subject.
+There are three. Two of them are one application served twice. `fixtures/ledger` is a deliberately defective invoicing application over `node:http` and is the primary integration target. `fixtures/ledger-express` serves the same API on Express and is the demo subject. `fixtures/next-routes` is the third and is a different kind of thing: no spec, no seeded defect, and one question to answer.
 
-Requirements, and both meet them:
+### The third fixture, added 2026-08-23
+
+`fixtures/next-routes` is a real Next.js App Router tree and exists so the Next adapter can be checked against Next. The adapter derives a URL from a directory structure, and its unit tests assert those derivations against synthetic trees, which asserts that the adapter agrees with what its author believed about Next. A wrong belief passes. `test/adapter-conformance.test.ts` runs the adapter over the tree, boots Next, and requests every URL the adapter claims: a wrong derivation produces a 404, which is the one answer meaning Next routed nothing.
+
+Same posture as M7.4's note that the only authority on what GitHub will ingest is GitHub.
+
+**It is a fixture rather than a corpus application, deliberately.** The claim is that a derivation matches the framework, which is a property to assert once rather than a rate to measure across applications. A Next application in `corpus/apps/` would make every corpus run pay a framework boot to re-measure a fixed property, and the runner starts an application with `node --experimental-strip-types app/index.ts`, which is not how Next starts.
+
+**What it costs**, since it is the heaviest thing in the suite: `next`, `react`, and `react-dom` as dependencies of that fixture, about nine seconds on the test suite, and `sharp` declared `false` in `allowBuilds` for the reason `better-sqlite3` is. Next writes `.next/` and `next-env.d.ts` on boot, so both are gitignored and both are named in `eslint.config.js` and `.prettierignore`, because neither tool reads `.gitignore` and a passing test that leaves a failing lint behind it is worse than no test.
+
+**Proved by breaking it:** removing the route group rule from the adapter fails two cases, one of which is the conformance request, because Next answers 404 for the path the adapter then claims.
+
+Requirements for the two that serve the ledger, and both meet them:
 
 - Minimal stack, one process, boots in under three seconds. Measured 2026-08-21: 0.88s for `pnpm --filter ledger dev` and 0.84s for `pnpm --filter ledger-express dev`.
 - Seeded with two organizations and two users, so cross-actor access is testable.
@@ -100,7 +112,7 @@ Procedure:
 
 What that bought, in one line each: a corpus finding cites a file for the first time; the structural diff's schema path ran for the first time, including the S8.6 rule about a declared field only being reported missing when the observed list came from a schema; and adding a single new noun found a real false positive in name matching, because `expenses` read as `expens` and matched no entity.
 
-**The remaining limit, stated the same way.** Twenty of twenty-four are still `node:http`, so the source path is measured across four applications and the schema path across two. Next.js is absent on purpose: the adapter reads a directory convention, and a tree of `route.ts` files served by anything other than Next is a fiction rather than an application. Running a real one needs the framework, a build step, and a boot the corpus runner is not built for.
+**The remaining limit, stated the same way.** Twenty of twenty-four are still `node:http`, so the source path is measured across four applications and the schema path across two. Next.js is still not in the corpus, for the reason above, but it is no longer unmeasured: `fixtures/next-routes` checks the adapter against the framework itself, which is the claim that was missing.
 
 Ethics and scope: only applications the author owns or has explicit permission to inspect. No third party production systems, no reconnaissance of applications belonging to others, no publication of any finding tied to an identifiable third party application without consent. The tool is pointed at consenting targets only, and the corpus documentation states this plainly.
 
