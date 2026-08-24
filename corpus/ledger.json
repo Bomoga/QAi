@@ -627,8 +627,9 @@
       "type": "structural",
       "severity": "medium",
       "title": "endpoint POST /api/expenses/:id/approve was observed and is specified nowhere",
-      "classification": "unreviewed",
-      "absent": true
+      "classification": "false-positive",
+      "absent": true,
+      "note": "A false positive, and the only one the corpus has produced since S8.6. `/api/expenses/:id/approve` sits under a path segment naming the Expense entity and every requirement in that spec references it, so the endpoint is specified and should never have been reported. The cause was in name matching: `singular('expenses')` returned `expens`, because the rule strips `es` after s, x, z, ch, or sh, which is right for `buses` and wrong for a noun whose singular already ends in `se`. Fixed at 041bd26 by comparing candidate forms rather than one chosen singular, so the finding is gone and this entry is held aside. Recorded rather than deleted: a repaired false positive is the only evidence that fixing a cause moves the number."
     }
   ]
 }
