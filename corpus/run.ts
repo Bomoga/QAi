@@ -1,12 +1,12 @@
-import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import process from 'node:process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { RunResultSchema } from '../packages/core/src/index.ts';
-import { CORPUS_BASE_URL, CORPUS_PORT, discoverCorpusApps, type CorpusApp } from './lib/apps.ts';
+import { CORPUS_BASE_URL, discoverCorpusApps, type CorpusApp } from './lib/apps.ts';
 import { classifyCheckExit, describeCoverage } from './lib/outcome.ts';
+import { CHECK_TIMEOUT_MS, runCommand, startApp, stop, waitForPort } from './lib/serve.ts';
 
 /**
  * The corpus run: every application in `corpus/apps/`, checked once, everything recorded.
@@ -34,13 +34,6 @@ const APPS_DIR = join(ROOT, 'corpus', 'apps');
 const RESULTS_DIR = join(ROOT, 'corpus', 'results');
 const QAI = join(ROOT, 'packages', 'cli', 'bin', 'qai.js');
 
-/** How long an application gets to answer on its port before the run gives up on it. */
-const READY_TIMEOUT_MS = 20_000;
-const READY_INTERVAL_MS = 200;
-
-/** How long `qai check` gets before the run gives up on it. */
-const CHECK_TIMEOUT_MS = 180_000;
-
 export type AppOutcome =
   | { readonly kind: 'checked'; readonly slug: string; readonly exitCode: number }
   | { readonly kind: 'did-not-start'; readonly slug: string; readonly reason: string }
@@ -48,76 +41,6 @@ export type AppOutcome =
 
 function log(line: string): void {
   process.stdout.write(`${line}\n`);
-}
-
-async function waitForPort(url: string, child: ChildProcess): Promise<void> {
-  const deadline = Date.now() + READY_TIMEOUT_MS;
-
-  while (Date.now() < deadline) {
-    // An application that died is never going to answer, so say that rather than
-    // spending the whole timeout on a process that is gone.
-    if (child.exitCode !== null) {
-      throw new Error(`the process exited with code ${child.exitCode} before it listened`);
-    }
-
-    try {
-      await fetch(url);
-      return;
-    } catch {
-      await new Promise((done) => setTimeout(done, READY_INTERVAL_MS));
-    }
-  }
-
-  throw new Error(`nothing answered on ${url} within ${READY_TIMEOUT_MS}ms`);
-}
-
-function stop(child: ChildProcess): Promise<void> {
-  if (child.exitCode !== null) return Promise.resolve();
-
-  return new Promise((done) => {
-    child.once('exit', () => {
-      done();
-    });
-    child.kill();
-    // A process that ignores the signal must not hold the whole corpus run.
-    setTimeout(() => {
-      child.kill('SIGKILL');
-      done();
-    }, 5_000).unref();
-  });
-}
-
-function run(
-  command: string,
-  args: readonly string[],
-  options: { cwd: string; env: Readonly<Record<string, string>>; timeoutMs: number },
-): Promise<{ code: number; stderr: string }> {
-  return new Promise((done, fail) => {
-    const child = spawn(command, [...args], {
-      cwd: options.cwd,
-      env: { ...process.env, ...options.env },
-      shell: false,
-    });
-
-    let stderr = '';
-    child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
-    child.stdout.resume();
-
-    const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      fail(new Error(`timed out after ${options.timeoutMs}ms`));
-    }, options.timeoutMs);
-
-    child.once('error', (error) => {
-      clearTimeout(timer);
-      fail(error);
-    });
-
-    child.once('close', (code) => {
-      clearTimeout(timer);
-      done({ code: code ?? 1, stderr });
-    });
-  });
 }
 
 /**
@@ -138,13 +61,7 @@ function coverageOf(out: string): string {
 async function checkOne(app: CorpusApp, resultsDir: string): Promise<AppOutcome> {
   log(`\n${app.slug}`);
 
-  const server = spawn(process.execPath, ['--experimental-strip-types', app.entry], {
-    cwd: app.dir,
-    env: { ...process.env, ...app.env, PORT: String(CORPUS_PORT) },
-    shell: false,
-  });
-  server.stdout.resume();
-  server.stderr.resume();
+  const server = startApp(app);
 
   try {
     await waitForPort(`${CORPUS_BASE_URL}/`, server);
@@ -157,7 +74,7 @@ async function checkOne(app: CorpusApp, resultsDir: string): Promise<AppOutcome>
 
   try {
     const out = join(resultsDir, `${app.slug}.run.json`);
-    const { code, stderr } = await run(
+    const { code, stderr } = await runCommand(
       process.execPath,
       [QAI, 'check', '--format', 'json', '--out', out],
       { cwd: app.dir, env: app.env, timeoutMs: CHECK_TIMEOUT_MS },

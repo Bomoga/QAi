@@ -114,6 +114,24 @@ What that bought, in one line each: a corpus finding cites a file for the first 
 
 **The remaining limit, stated the same way.** Twenty of twenty-four are still `node:http`, so the source path is measured across four applications and the schema path across two. Next.js is still not in the corpus, for the reason above, but it is no longer unmeasured: `fixtures/next-routes` checks the adapter against the framework itself, which is the claim that was missing.
 
+### Mutation, added 2026-08-25
+
+Step four of the procedure above is a review, and `corpus/RESULTS.md` records that the review was performed by the same agent that wrote the tool, the applications, and the specs. That is the largest limit on the rate and no further reading can lift it, because the second reading comes from where the first one did.
+
+`corpus/mutate.ts` asks a question with an answer instead of a verdict: **repair the defect a finding claims to be about, and does the finding stop being produced?** A finding that survives the repair of the thing it names was never about that thing, whatever its ledger note says. The mutation table is `corpus/mutations.ts`; the pure decision logic is `corpus/lib/mutation.ts` and is unit tested without starting anything.
+
+Rules that keep it honest, all enforced by the runner:
+
+- **The edit must be a repair a person would actually make**, taken from the application's own `NOTES.md`. Writing `return false` to move a finding would prove only that the tool notices the application changing, which is not in doubt.
+- **The baseline is checked too.** A repair whose finding was already absent would otherwise pass while proving nothing.
+- **A `find` that matches zero or more than once is an error.** Stale or ambiguous, never best effort.
+- **Every edit is reverted**, and the file is read back to confirm it, before the runner moves on. A corpus left quietly repaired would change the rate the next time anybody ran `corpus/run.ts`.
+- **Findings that move without being listed are reported as collateral and never failed on.** Deciding a coupling is a defect is a reading, which is what this avoids.
+
+Three mutations so far, all repairs, all behaving. It found a mistake on its first run: a behavioral criterion about the same read was missing from an expectation list, and the collateral report is what said so.
+
+**What it is not.** Six findings across three applications, out of fifty-five. It says nothing about the rest and nothing about whether a finding is well worded. It is one narrow claim settled by something other than the author's opinion.
+
 Ethics and scope: only applications the author owns or has explicit permission to inspect. No third party production systems, no reconnaissance of applications belonging to others, no publication of any finding tied to an identifiable third party application without consent. The tool is pointed at consenting targets only, and the corpus documentation states this plainly.
 
 ## What is not tested

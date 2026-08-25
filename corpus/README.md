@@ -5,7 +5,7 @@ the tool, with every finding reviewed by hand and classified. It produces the nu
 project has to be able to defend: how often a finding is wrong.
 
 `06-TESTING.md` owns the procedure. `docs/plan/PROGRESS.md` tracks the tasks. This file is
-the layout and the ground rules. **`RESULTS.md` is the result**: the rate, the per
+the layout and the ground rules. `mutate.ts` repairs a planted defect and requires the finding about it to stop, which is the one check here that does not rest on the author's judgement. **`RESULTS.md` is the result**: the rate, the per
 application table, the aggregate, and the limits on the number.
 
 ## Ethics and scope
