@@ -6,7 +6,7 @@ import { FIXTURE_SPEC_PATH } from '../../scripts/validate-fixture-spec.ts';
 import { isLoadFailure, loadSpec, type LoadedSpec } from './load.ts';
 
 /**
- * The Definition of Done in modules/M1-spec.md requires that the fixture spec loads
+ * The Definition of Done in M1 requires that the fixture spec loads
  * with zero errors and the expected requirement count. It is also the only spec in
  * the repository written the way a user would write one, so it is the first place a
  * schema or grammar change will show up as something an author cannot express.
@@ -28,7 +28,7 @@ describe('fixtures/ledger/spec/ledger.spec.yaml', () => {
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   });
 
-  it('has the requirement count 06-TESTING.md asks for', () => {
+  it('has the requirement count the testing strategy asks for', () => {
     expect(loadFixture().spec.requirements).toHaveLength(15);
   });
 

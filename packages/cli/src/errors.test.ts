@@ -146,7 +146,7 @@ describe('presenting one error', () => {
   });
 
   it('gives an unexpected throw code 3 and a way to get the detail', () => {
-    // 03-CONTRACTS.md gives 3 to a fatal runtime error with the run aborted, and an
+    // the contract gives 3 to a fatal runtime error with the run aborted, and an
     // exception reaching the top is exactly that.
     const error = unexpected(new Error('boom'));
 

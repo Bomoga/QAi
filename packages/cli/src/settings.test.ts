@@ -132,7 +132,7 @@ describe('resolving run settings', () => {
   });
 
   it('names every environment variable after the qai token', () => {
-    // 00-INDEX.md says every identifier derives from that one token so a rename stays
+    // the naming table says every identifier derives from that one token so a rename stays
     // mechanical.
     for (const name of Object.values(ENV_NAMES)) expect(name.startsWith('QAI_')).toBe(true);
   });

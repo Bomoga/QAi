@@ -1,5 +1,5 @@
 /**
- * Defect switches, one per entry in the catalog in 06-TESTING.md.
+ * Defect switches, one per entry in the catalog in the testing strategy.
  *
  * Defects default to on. This app exists to be found wanting; a run that has to be
  * told to misbehave would let a broken toggle pass for a clean target.

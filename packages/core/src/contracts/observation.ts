@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { EvidenceIdSchema, InstantSchema } from './evidence.ts';
 
 /**
- * Observation, section 2 of 03-CONTRACTS.md. Describes what exists, never what should
+ * Observation, section 2 of the contract. Describes what exists, never what should
  * exist. The output of a probe, which is read-only by construction.
  *
  * `origin` and `confidence` are mandatory on every entity and endpoint because a report

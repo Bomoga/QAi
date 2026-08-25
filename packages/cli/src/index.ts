@@ -111,7 +111,7 @@ export interface MainOptions {
  * turns the number into an exit.
  *
  * **A usage error is 2, not 1.** Commander's own default for a bad flag is 1, and 1 is
- * already spoken for: 03-CONTRACTS.md gives it to a run that completed and found
+ * already spoken for: the contract gives it to a run that completed and found
  * something at or above the threshold. A misspelled flag exiting 1 would tell CI the
  * application has findings, which is the worst available lie. 2 is the code for a
  * configuration error and a bad invocation is one.
@@ -150,7 +150,7 @@ export async function main(argv: readonly string[], options: MainOptions = {}): 
       return 2;
     }
 
-    // Anything else reaching here is a fatal runtime error, which 03-CONTRACTS.md gives
+    // Anything else reaching here is a fatal runtime error, which the contract gives
     // code 3. Without this the binary ends in a raw trace and whatever code Node chose,
     // and for a tool whose exit code is the product that is worse than the crash.
     return present(unexpected(error), {

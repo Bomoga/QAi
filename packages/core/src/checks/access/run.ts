@@ -507,7 +507,7 @@ function describeListInconclusive(where: string, reason: string, status?: number
   }
 }
 
-/** States the observation, never the label. See the output style in 04-CONVENTIONS.md. */
+/** States the observation, never the label. See the output style in the style guide. */
 function describeInconclusive(where: string, reason: string, status?: number): string {
   switch (reason) {
     case 'transport-error':

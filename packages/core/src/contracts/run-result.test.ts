@@ -5,7 +5,7 @@ import { ObservationSchema } from './observation.ts';
 import { CheckResultSchema, RunResultSchema, SummarySchema } from './run-result.ts';
 
 /**
- * The examples in 03-CONTRACTS.md, verbatim. They are the contract's own illustration
+ * The examples in the contract, verbatim. They are the contract's own illustration
  * of each shape, so a schema that cannot parse them has drifted from the document.
  */
 
@@ -113,7 +113,7 @@ const CONTRACT_RUN_RESULT = {
 };
 
 describe('ObservationSchema', () => {
-  it('accepts the example in 03-CONTRACTS.md unchanged', () => {
+  it('accepts the example in the contract unchanged', () => {
     expect(ObservationSchema.safeParse(CONTRACT_OBSERVATION).success).toBe(true);
   });
 
@@ -158,7 +158,7 @@ describe('ObservationSchema', () => {
 });
 
 describe('EvidenceSchema', () => {
-  it('accepts the example in 03-CONTRACTS.md unchanged', () => {
+  it('accepts the example in the contract unchanged', () => {
     expect(EvidenceSchema.safeParse(CONTRACT_EVIDENCE).success).toBe(true);
   });
 
@@ -191,7 +191,7 @@ describe('EvidenceSchema', () => {
 });
 
 describe('RunResultSchema', () => {
-  it('accepts the example in 03-CONTRACTS.md unchanged', () => {
+  it('accepts the example in the contract unchanged', () => {
     const result = RunResultSchema.safeParse(CONTRACT_RUN_RESULT);
     expect(result.success).toBe(true);
   });

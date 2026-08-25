@@ -7,7 +7,7 @@ import type { RunResult, Severity } from '../contracts/index.ts';
  * `process.exit`. This returns a number and M8 decides what to do with it, which is what
  * keeps the rule from being a convention somebody has to remember.
  *
- * **Only 0 and 1 live here.** 03-CONTRACTS.md gives 2 to an invalid spec or a
+ * **Only 0 and 1 live here.** The contract gives 2 to an invalid spec or a
  * configuration error and 3 to an unreachable target or a fatal runtime error, and both
  * describe a run that did not happen or did not finish. A function handed a finished
  * RunResult is by construction not in either case.
@@ -19,7 +19,7 @@ const SEVERITY_ORDER: readonly Severity[] = ['high', 'medium', 'low', 'info'];
 export interface ExitPolicy {
   /**
    * The lowest severity that counts as failure. Defaults to `high`, per the exit code
-   * table in 03-CONTRACTS.md.
+   * table in the contract.
    */
   readonly failOn?: Severity;
   /**

@@ -34,7 +34,7 @@ describe('the qai entry point', () => {
   });
 
   it('exits 2 on a bad invocation, never 1', async () => {
-    // 1 is spoken for: 03-CONTRACTS.md gives it to a run that completed and found
+    // 1 is spoken for: the contract gives it to a run that completed and found
     // something at or above the threshold. Commander's own default for a usage error is
     // 1, so a misspelled flag would tell CI the application has findings, which is the
     // worst lie available here. 2 is the configuration error code and a bad invocation

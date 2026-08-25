@@ -2,10 +2,10 @@
 
 The same invoicing application as `fixtures/ledger`, served on Express so a source
 adapter has a route table to read. It is the demo target for the sequence in
-`docs/plan/01-PRODUCT.md`.
+the product definition.
 
 **Do not fix the defects.** The same rule as the other fixture, and the same catalog in
-`docs/plan/06-TESTING.md`.
+the testing strategy.
 
 ## Why this exists
 
@@ -58,6 +58,6 @@ The other fixture keeps D5 for the checks and goldens built on it.
 ## Dependency
 
 `express` is the only third-party runtime dependency in this repository, and it is here
-rather than in `packages/`. `04-CONVENTIONS.md` governs what the product may depend on;
+rather than in `packages/`. The style guide governs what the product may depend on;
 a fixture depends on whatever framework it is a fixture of, or it cannot be one. It is
 pure JavaScript with no install script, so a clean install still needs no toolchain.

@@ -9,7 +9,7 @@ import type { Judge, JudgeQuestion, JudgeResponse } from '../checks/behavioral/j
  * exports rather than by inspection.
  *
  * No model client is imported yet, and none can be until a dependency is approved: the
- * list in 04-CONVENTIONS.md has no model SDK on it. What exists here is the boundary and
+ * list in the style guide has no model SDK on it. What exists here is the boundary and
  * the honest answer for when no model is configured.
  */
 

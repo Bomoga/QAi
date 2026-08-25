@@ -49,7 +49,7 @@ export function isTransportError(outcome: RequestOutcome): outcome is RequestFai
   return outcome.kind === 'transport-error';
 }
 
-/** 256 KB, from modules/M2-target.md. Beyond it a body is cut and marked truncated. */
+/** 256 KB, from M2. Beyond it a body is cut and marked truncated. */
 export const DEFAULT_BODY_LIMIT_BYTES = 256 * 1024;
 
 export interface HttpClientOptions {

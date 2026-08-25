@@ -5,7 +5,7 @@ import { z } from 'zod';
  *
  * **This is a transcription, not the published schema.** Validating against the real
  * document means running a JSON Schema validator, and no validator is on the approved
- * dependency list in 04-CONVENTIONS.md, while rule R9 forbids a test fetching one at
+ * dependency list in the style guide, while rule R9 forbids a test fetching one at
  * run time. Recorded in the M7 Open questions rather than resolved locally, since
  * adding a dependency is a decision for a human.
  *

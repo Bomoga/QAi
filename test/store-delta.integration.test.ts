@@ -230,7 +230,7 @@ describe('check records the run it produced', () => {
   it('stores the run under the id its own report carries', async () => {
     // Nothing else puts a run in the store, so a check that did not record its result
     // would leave `qai diff` and `qai report` with nothing to read, which is the sixth
-    // step of the success sequence in 01-PRODUCT.md.
+    // step of the success sequence in the product definition.
     const dir = workspace();
     workspaces.push(dir);
     copyFileSync(FIXTURE_SPEC, join(dir, 'spec', 'ledger.spec.yaml'));

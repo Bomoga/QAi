@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Spec, section 1 of 03-CONTRACTS.md. Input only, never mutated by a run.
+ * Spec, section 1 of the contract. Input only, never mutated by a run.
  *
  * Every schema here is strict. A key the schema does not know is an error, not
  * something to drop quietly: a misspelled `acceptanceCriteria` that parses cleanly
@@ -12,7 +12,7 @@ import { z } from 'zod';
  * M1.5 assigns them at load time from the parent requirement and ordinal position.
  */
 
-/** 03-CONTRACTS.md, identifier conventions. Hand-authored and stable. */
+/** the contract, identifier conventions. Hand-authored and stable. */
 export const RequirementIdSchema = z
   .string()
   .regex(/^REQ-[A-Za-z0-9_-]+$/, 'requirement id must look like REQ-014');

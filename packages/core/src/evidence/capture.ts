@@ -20,11 +20,11 @@ export const DEFAULT_EVIDENCE_DIR = '.qai/evidence';
 /**
  * The shape of the file `response.bodyRef` points at.
  *
- * 03-CONTRACTS.md gives Evidence a `response.bodyRef` and no place at all for a
- * request body, but modules/M2-target.md says the request body is captured. Rather
+ * The contract gives Evidence a `response.bodyRef` and no place at all for a
+ * request body, but M2 says the request body is captured. Rather
  * than add a contract field, both bodies live in the referenced document under named
- * keys. Recorded in PROGRESS.md: if an emitter needs the response body alone, that is
- * a contract question, not a local fix.
+ * keys. If an emitter ever needs the response body alone, that is a contract question
+ * rather than a local fix.
  */
 export interface EvidenceBodyDocument {
   readonly request?: { readonly body: string };

@@ -5,7 +5,7 @@ import { AuthRequiredSchema, ObservationNoteSchema, ProbeModeSchema } from './ob
 import { AccessRuleIdSchema, AcceptanceCriterionIdSchema, RequirementIdSchema } from './spec.ts';
 
 /**
- * RunResult, section 3 of 03-CONTRACTS.md. The public interface.
+ * RunResult, section 3 of the contract. The public interface.
  *
  * Every emitter and every future surface is a projection of this. Nothing downstream of
  * assembly may re-derive a fact by re-reading the target or the store, which is why this
@@ -32,7 +32,7 @@ export const SeveritySchema = z.enum(['high', 'medium', 'low', 'info']);
 export const CheckTypeSchema = z.enum(['access', 'behavioral', 'structural']);
 
 /**
- * Closed set, from 03-CONTRACTS.md. `capability-unavailable` covers an optional
+ * Closed set, from the contract. `capability-unavailable` covers an optional
  * dependency being absent, for example Playwright not installed, and is deliberately
  * distinct from `model-inconclusive`, which means the model ran and was uncertain.
  * Collapsing the two would hide whether a gap is fixable by installing something.
@@ -192,7 +192,7 @@ export const CheckResultSchema = z
      * The request the check issued, `GET /api/invoices/INV-1001`.
      *
      * A finding ends with a file reference when source is available and a request
-     * reference when it is not, per `04-CONVENTIONS.md`. `locationRef` is the first half
+     * reference when it is not, per the style guide. `locationRef` is the first half
      * and this is the second. Both may be present: knowing which file serves a route does
      * not tell a reader which record was asked for.
      */

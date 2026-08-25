@@ -67,7 +67,7 @@ import { DEFAULT_SPEC_GLOB } from './validate.ts';
  *
  * **Every run is recorded.** `qai diff` and `qai report` read runs out of `.qai/runs.db`
  * and nothing else puts one there, so a check that did not store its result would leave
- * the sixth step of the success sequence in 01-PRODUCT.md unreachable. It is not behind
+ * the sixth step of the success sequence in the product definition unreachable. It is not behind
  * a flag: the command table in the module has no flag for it, and adding one would be a
  * change to the surface.
  *

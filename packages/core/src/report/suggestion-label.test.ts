@@ -8,7 +8,7 @@ import { renderText } from './text.ts';
 /**
  * Every emitter labels a suggestion, and the rule is a test rather than a habit.
  *
- * `04-CONVENTIONS.md` says a suggested fix is "always labeled as suggestions". Until
+ * The style guide says a suggested fix is "always labeled as suggestions". Until
  * 2026-08-23 that was guaranteed by the value carrying its own `Suggestion:` prefix, which
  * worked because the text was about to be concatenated into `detail` and nothing could
  * strip it. Now that it is a field, the label belongs to whoever renders it, and a field

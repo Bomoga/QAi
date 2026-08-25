@@ -32,7 +32,7 @@ import {
 /**
  * Captures a golden `RunResult` for one configuration of `fixtures/ledger`.
  *
- * 06-TESTING.md asks for canonical run results in both the defective and the fixed
+ * The testing strategy asks for canonical run results in both the defective and the fixed
  * configuration, and says to regenerate them only with an explicit command whose diff a
  * human reads. This is that command. Nothing in the suite calls it, and a golden that
  * changed is a question rather than a chore.

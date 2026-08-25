@@ -26,7 +26,7 @@ import {
  * evidence, and exiting 1. Fixing the fixture makes it exit 0.
  *
  * This is `qai check` in everything but name. The command itself belongs to M8 and
- * lands in S6, so the exit code policy here follows 03-CONTRACTS.md rather than
+ * lands in S6, so the exit code policy here follows the contract rather than
  * inventing one: 0 for no findings at or above the threshold, 1 for findings, 2 for a
  * spec or configuration error.
  *

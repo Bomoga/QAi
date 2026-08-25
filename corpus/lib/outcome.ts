@@ -3,7 +3,7 @@ import type { RunResult } from '../../packages/core/src/index.ts';
 /**
  * What an exit code from `qai check` means to a corpus run.
  *
- * **0 and 1 are both a completed run.** 03-CONTRACTS.md gives 1 to a run that finished
+ * **0 and 1 are both a completed run.** The contract gives 1 to a run that finished
  * and found something at or above the threshold, which for an application in this corpus
  * is the expected and interesting case. Treating it as a failure would drop exactly the
  * applications the corpus exists to measure.

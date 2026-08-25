@@ -3,7 +3,7 @@ import { Command, InvalidArgumentError, Option } from 'commander';
 /**
  * The command surface, which is the public API of this package.
  *
- * Nothing here verifies anything. 03-CONTRACTS.md pins the exit codes and M7 computes
+ * Nothing here verifies anything. The contract pins the exit codes and M7 computes
  * the 0 or 1; this file parses arguments and the command implementations that follow
  * apply what `core` decided. If a behavior can be tested without a terminal it belongs
  * in `core`, and the test file next door is the check on whether that held.

@@ -1,7 +1,7 @@
 import type { CheckResultRecord, CheckType, Severity } from '../contracts/index.ts';
 
 /**
- * Shared check shapes. `CheckResult` is the contract type from 03-CONTRACTS.md, not a
+ * Shared check shapes. `CheckResult` is the contract type from the contract, not a
  * second definition of it: the shared runtime types table names M3 as its owner, and
  * owning a type does not mean redeclaring one that is already serialized.
  */

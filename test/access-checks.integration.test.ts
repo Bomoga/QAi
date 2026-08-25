@@ -27,7 +27,7 @@ import {
  * against the real fixture app over a real socket.
  *
  * It lives at the workspace root rather than in either package because it is the only
- * thing here that legitimately depends on both. 02-ARCHITECTURE.md says `core` depends
+ * thing here that legitimately depends on both. The architecture says `core` depends
  * on nothing in this repository and `fixtures/ledger` likewise, and an integration test
  * inside either one would quietly make that false.
  *

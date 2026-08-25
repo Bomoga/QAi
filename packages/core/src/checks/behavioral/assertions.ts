@@ -5,7 +5,7 @@ import { isRequest, parseWhen, type WhenRequest } from './when.ts';
 /**
  * The assertion vocabulary for deterministic acceptance criteria.
  *
- * The table in `modules/M5-behavioral-checks.md` is a closed set, extended only with
+ * The table in M5 is a closed set, extended only with
  * approval, and this file is that table in code:
  *
  *   status is 404

@@ -2,9 +2,7 @@
 
 Twenty to fifty generated applications, each with a shallow hand-written spec, run through
 the tool, with every finding reviewed by hand and classified. It produces the number this
-project has to be able to defend: how often a finding is wrong.
-
-`06-TESTING.md` owns the procedure. `docs/plan/PROGRESS.md` tracks the tasks. This file is
+project has to be able to defend: how often a finding is wrong. The testing strategy owns the procedure. This file is
 the layout and the ground rules. `mutate.ts` repairs a planted defect and requires the finding about it to stop, which is the one check here that does not rest on the author's judgement. **`RESULTS.md` is the result**: the rate, the per
 application table, the aggregate, and the limits on the number.
 
@@ -16,7 +14,7 @@ publication of any finding tied to an identifiable third party application witho
 consent. The tool is pointed at consenting targets only.
 
 **Every application in this corpus was generated for this purpose from the prompt set in
-`prompts.md`.** That is the first of the three sources `06-TESTING.md` lists and the one
+`prompts.md`.** That is the first of the three sources the testing strategy lists and the one
 it prefers. The other two, open source projects that state they were AI generated and
 applications built by classmates, both need a human to obtain consent or vouch for
 provenance, so nothing enters this corpus by either route without that happening first.

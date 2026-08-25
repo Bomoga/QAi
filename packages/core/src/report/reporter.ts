@@ -2,7 +2,7 @@
  * The progress interface `core` is given, since `core` produces no output itself.
  *
  * Rule R5 forbids `console.*`, `process.stdout`, and `process.exit` anywhere in this
- * package, and 03-CONTRACTS.md lists `Reporter` among the shared runtime types with M7
+ * package, and the contract lists `Reporter` among the shared runtime types with M7
  * as its owner. This is that type. It is a port: `core` declares what it needs to say,
  * and a surface decides where the words go and what they look like.
  *

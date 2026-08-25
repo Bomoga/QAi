@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Evidence, from 03-CONTRACTS.md. The recorded artifact proving a check's verdict.
+ * Evidence, from the contract. The recorded artifact proving a check's verdict.
  *
  * Invariant I3: a finding without one of these is not a finding. Rule R7: the artifact
  * is captured before the verdict is decided, so an evidence id always exists by the time

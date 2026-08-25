@@ -125,7 +125,7 @@ function suiteFor(name: string, checks: readonly CheckResultRecord[]): Suite {
 
 /**
  * The suite a requirement gets when nothing ran for it: one skipped case carrying the
- * reason from `unverifiedReasons`, which is the closed set in 03-CONTRACTS.md.
+ * reason from `unverifiedReasons`, which is the closed set in the contract.
  */
 function emptySuite(requirementId: string, reason: string): Suite {
   return {

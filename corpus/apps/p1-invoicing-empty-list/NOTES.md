@@ -19,7 +19,7 @@
   somebody enumerates.
 
 **What this is here to ask.** A deny list rule against an empty list is the case
-`03-CONTRACTS.md` and M3.6 argue about: rows have to be present and identifiable before
+the contract and M3.6 argue about: rows have to be present and identifiable before
 correct scoping can be claimed, so an empty list is `inconclusive` rather than a pass.
 This application should produce that, and an inconclusive is the right answer rather than
 a gap in the tool. It is worth having a corpus application that lands there on purpose,

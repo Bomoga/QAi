@@ -110,7 +110,7 @@ somewhere the framework can settle it.
 `node:http`, so the source path is measured across four applications and the schema path
 across two.
 
-## The aggregate 06-TESTING asks for, current
+## The aggregate the testing strategy asks for, current
 
 **How many applications had at least one access rule specified and not enforced.**
 
@@ -197,7 +197,7 @@ built and deliberately names enforcement styles, refusal shapes, and credential 
 push against this. It cannot remove the bias.
 
 **The review was performed by the same agent that wrote the tool and the corpus.** Step
-four of the procedure in `06-TESTING.md` exists to be independent and this one was not.
+four of the procedure in the testing strategy exists to be independent and this one was not.
 This is still the largest single limit on the number, narrowed for six findings by the
 mutation section above and untouched for the other forty-nine, and it is worse than a reviewer being
 generous to their own work. For any one application the same agent wrote the application,
@@ -364,7 +364,7 @@ Four earlier reviews are held in the ledger and excluded from this rate, marked 
 because the tool no longer produces them. All four were false positives in the structural
 diff and all four were fixed at S8.6 rather than suppressed. Before that fix the structural
 rate was 36.4% over eleven judged. The three causes are recorded in
-`docs/plan/modules/M4-probe.md`.
+M4.
 
 ## Per application
 
@@ -457,7 +457,7 @@ could not tell. That is invariant I4 doing exactly what it is for, and it is the
 between a miss and a lie.
 
 **`check-error` is reported when nothing errored, for the fourth time.** `2 check(s) ran and
-none reached a verdict` is not an error, and the closed reason set in `03-CONTRACTS.md` has
+none reached a verdict` is not an error, and the closed reason set in the contract has
 no member for it. A contract question, recorded and not resolved here.
 
 **A real data leak can be reported at `medium` and not fail the run.** Behavioral findings
@@ -481,7 +481,7 @@ built and deliberately names enforcement styles, refusal shapes, and credential 
 push against this. It cannot remove the bias.
 
 **The review was performed by the same agent that wrote the tool and the corpus.** Step
-four of the procedure in `06-TESTING.md` exists to be independent and this one was not.
+four of the procedure in the testing strategy exists to be independent and this one was not.
 This is the largest single limit on the number. A reviewer who wrote the check being judged
 knows what it was trying to do, and knowing that makes a borderline finding easier to read
 as correct. Every classification carries a written reason in `corpus/ledger.json` so that a

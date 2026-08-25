@@ -24,7 +24,7 @@ function parseErr(input: string): ConditionParseError {
 }
 
 describe('the condition the fixture spec depends on', () => {
-  it('parses the example from 03-CONTRACTS.md', () => {
+  it('parses the example from the contract', () => {
     const ast = parseOk('Invoice.org_id != actor.org_id');
 
     expect(ast.comparisons).toHaveLength(1);

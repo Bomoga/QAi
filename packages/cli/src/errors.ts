@@ -18,7 +18,7 @@ import type { Stream } from './reporter.ts';
  *
  * **The code is part of the error, not the caller's afterthought.** 2 is a spec or
  * configuration problem with no run performed and 3 is a target that could not be
- * reached or a run that aborted, per 03-CONTRACTS.md. Carrying it here is what stops a
+ * reached or a run that aborted, per the contract. Carrying it here is what stops a
  * new error path picking 1, which belongs to a completed run with findings.
  */
 
@@ -137,7 +137,7 @@ export function presentContextError(error: ContextErrorLike, options: PresentOpt
 /**
  * The last resort, for something nobody predicted.
  *
- * Exit 3, because 03-CONTRACTS.md gives that code to a fatal runtime error with the run
+ * Exit 3, because the contract gives that code to a fatal runtime error with the run
  * aborted, and an exception reaching the top is exactly that. Without this the binary
  * ends in a raw stack trace and an exit code Node chose, which for a tool whose exit code
  * is the product is worse than the crash.

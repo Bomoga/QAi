@@ -20,7 +20,7 @@ const LEAKED_INVOICE = JSON.stringify({
 });
 
 /**
- * One test per row of the table in modules/M3-access-checks.md. The rows are the
+ * One test per row of the table in M3. The rows are the
  * product decision; if one of these changes, the module document changes with it.
  */
 describe('the deny verdict table', () => {

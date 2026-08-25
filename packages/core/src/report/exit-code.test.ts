@@ -82,7 +82,7 @@ describe('computing the exit code a run recommends', () => {
   });
 
   it('does not fail on an inconclusive check by itself', () => {
-    // 03-CONTRACTS.md states this directly. An inconclusive check is not a finding and
+    // the contract states this directly. An inconclusive check is not a finding and
     // carries no severity into `findingsBySeverity`.
     const inconclusive = run({
       checks: { total: 4, pass: 0, fail: 0, inconclusive: 4 },
