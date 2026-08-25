@@ -42,7 +42,7 @@ export interface Settings {
   readonly concurrency: Setting<number>;
 }
 
-/** Every variable name derives from the `qai` token, per 00-INDEX.md. */
+/** Every variable name derives from the `qai` token, per the naming table. */
 export const ENV_NAMES = {
   config: 'QAI_CONFIG',
   format: 'QAI_FORMAT',

@@ -3,7 +3,7 @@
  *
  * Everything here is pure. `corpus/mutate.ts` starts applications and runs the tool; this
  * decides what the two sets of finding ids mean, which is the part worth testing without
- * paying for a process. The split is the same one `02-ARCHITECTURE.md` draws between core
+ * paying for a process. The split is the same one the architecture draws between core
  * and the CLI, for the same reason.
  */
 

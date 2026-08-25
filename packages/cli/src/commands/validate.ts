@@ -24,7 +24,7 @@ import type { Stream } from '../reporter.ts';
  * configuration problem and the exit code says so.
  */
 
-/** The default in 00-INDEX.md. `loadSpec` expands it, so it is passed through as written. */
+/** The default in the naming table. `loadSpec` expands it, so it is passed through as written. */
 export const DEFAULT_SPEC_GLOB = 'spec/*.spec.yaml';
 
 export interface ValidateOptions {
@@ -104,7 +104,7 @@ export function runValidate(options: ValidateOptions): Promise<number> {
   const presentTo = { stderr, ...(options.verbose === true ? { verbose: true } : {}) };
 
   if (isLoadFailure(loaded)) {
-    // Exit 2: the spec is invalid and no run was performed, per 03-CONTRACTS.md.
+    // Exit 2: the spec is invalid and no run was performed, per the contract.
     if (loaded.error.diagnostics.length === 0) {
       return Promise.resolve(
         present(

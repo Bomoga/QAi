@@ -12,10 +12,10 @@ import type { UnverifiedCheck } from './behavioral/run.ts';
  * a caller that remembered two would drop a gap silently. That is how AR-011-01 stayed
  * unplannable across two stages while being reported honestly on every run.
  *
- * **These are deliberately not `CheckResult`s.** The vocabulary in 00-INDEX.md defines a
+ * **These are deliberately not `CheckResult`s.** The project vocabulary defines a
  * check as a single verification attempt producing one verdict, and none of these was
  * attempted. Turning them into inconclusive results would put things that never ran into
- * `summary.checks.total`, which reads as work the tool did. 03-CONTRACTS.md already has
+ * `summary.checks.total`, which reads as work the tool did. The contract already has
  * the right home for them, `unverifiedReasons` on the RunResult, keyed by requirement and
  * drawn from a closed set, and every shape below already carries a reason from that set.
  *

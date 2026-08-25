@@ -4,7 +4,7 @@ import type { AccessCheckPlan } from './plan.ts';
 /**
  * Severity and finding text.
  *
- * The output style in 04-CONVENTIONS.md is the specification for everything here.
+ * The output style in the style guide is the specification for everything here.
  * State the observation, not the label. Name the actor, the request, and the response.
  * Never claim intent. End with a file reference when source is available and a request
  * reference when it is not. Phrase a suggested fix as something a user could paste into
@@ -57,7 +57,7 @@ export interface FindingTextInput {
  *
  * **Unlabelled since 2026-08-23**, when `suggestion` became a field. It used to carry its
  * own `Suggestion:` prefix, which was the only way to guarantee the label that
- * `04-CONVENTIONS.md` requires when the text was going to be concatenated into `detail`.
+ * the style guide requires when the text was going to be concatenated into `detail`.
  * A field does not need to smuggle its own label, and an emitter rendering it under a
  * heading would have printed the word twice. The rule stays structural rather than
  * remembered: `suggestion-label.test.ts` asserts that every emitter labels it.

@@ -22,7 +22,7 @@ import { observationIdFrom, runCheck, runIdFrom } from './check.ts';
  * A run against a live application is an integration test and lives at M8.9, against
  * `fixtures/ledger`. What is worth pinning here is every way a run refuses to start, and
  * the exit code each one produces, because those are the codes CI reads and 1 is
- * reserved: 03-CONTRACTS.md gives it to a run that completed and found something, so
+ * reserved: the contract gives it to a run that completed and found something, so
  * nothing that failed to start may return it.
  *
  * The unreachable case points at a closed local port. That is a refused connection on
@@ -338,7 +338,7 @@ describe('qai check, against a target whose source can be read', () => {
   });
 
   it('ends an access finding with the file that serves the route', async () => {
-    // Step 3 of the definition of success in 01-PRODUCT.md, end to end: a failed access
+    // Step 3 of the definition of success in the product definition, end to end: a failed access
     // check citing the handler rather than the request. `app.get('/api/invoices/:id',
     // readInvoice)` is on line 6 of the source written above.
     const target = await startTarget();
@@ -354,7 +354,7 @@ describe('qai check, against a target whose source can be read', () => {
   });
 
   it('ends it with the request when there is no source to cite', async () => {
-    // 04-CONVENTIONS.md: a file reference when source is available and a request
+    // the style guide: a file reference when source is available and a request
     // reference when it is not. Without this half the assertion above could pass against
     // a tool that attached a file reference to everything.
     const target = await startTarget();

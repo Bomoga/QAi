@@ -29,7 +29,7 @@ import type { CoverageGap } from '../checks/gaps.ts';
  */
 
 /**
- * The rollup, exactly as 03-CONTRACTS.md states it.
+ * The rollup, exactly as the contract states it.
  *
  * A requirement is `verified` only with at least one check and no failures. Any fail
  * makes it `failed`. All inconclusive, or no checks at all, makes it `unverified`.

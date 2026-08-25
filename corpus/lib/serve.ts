@@ -7,7 +7,7 @@ import { CORPUS_BASE_URL, CORPUS_PORT, type CorpusApp } from './apps.ts';
  * Starting a corpus application, waiting for it, running a command against it, stopping it.
  *
  * Extracted from `run.ts` at the mutation work so `mutate.ts` could reuse it rather than
- * keep a second copy. The same rule `06-TESTING.md` states about the two ledger servers
+ * keep a second copy. The same rule the testing strategy states about the two ledger servers
  * applies here: two copies of a process harness drift, and a harness that behaved
  * differently depending on which script started it would make every result it produced
  * unreadable.

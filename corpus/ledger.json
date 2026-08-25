@@ -296,7 +296,7 @@
       "requirementId": "REQ-003",
       "ruleId": "AR-003-01",
       "classification": "true-positive",
-      "note": "The only high severity access finding in the corpus, and it is right. \"POST /api/bookings as actor anonymous returned 201 with Booking fields booked_by, id, room_id, starts_at.\" The application has no authentication at all, so an unsigned caller creates a booking. The finding names the actor, the request, the status, and the fields that came back, which is the shape 04-CONVENTIONS.md asks for."
+      "note": "The only high severity access finding in the corpus, and it is right. \"POST /api/bookings as actor anonymous returned 201 with Booking fields booked_by, id, room_id, starts_at.\" The application has no authentication at all, so an unsigned caller creates a booking. The finding names the actor, the request, the status, and the fields that came back, which is the shape the style guide asks for."
     },
     {
       "app": "p4-bookings-open",

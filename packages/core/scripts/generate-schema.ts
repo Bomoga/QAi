@@ -22,8 +22,7 @@ export function generateSpecJsonSchema(): string {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     $id: 'https://github.com/Bomoga/QAi/schema/spec.schema.json',
     title: 'QAi spec',
-    description:
-      'Machine-readable statement of intent. See docs/plan/03-CONTRACTS.md section 1. Input only, never mutated by a run.',
+    description: 'Machine-readable statement of intent. Input only, never mutated by a run.',
     ...schema,
   };
 

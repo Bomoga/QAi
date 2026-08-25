@@ -9,7 +9,7 @@ import {
 } from './spec.ts';
 
 /**
- * The canonical example from section 1 of 03-CONTRACTS.md, verbatim. If this stops
+ * The canonical example from section 1 of the contract, verbatim. If this stops
  * parsing, either the schema drifted from the contract or the contract changed without
  * this file being updated in the same commit. Both are the change protocol failing.
  */
@@ -62,7 +62,7 @@ const CONTRACT_EXAMPLE = {
 };
 
 describe('SpecSchema', () => {
-  it('accepts the example in 03-CONTRACTS.md unchanged', () => {
+  it('accepts the example in the contract unchanged', () => {
     const result = SpecSchema.safeParse(CONTRACT_EXAMPLE);
     expect(result.success).toBe(true);
   });

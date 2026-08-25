@@ -36,7 +36,7 @@ export const LLM_BOUNDARY_MESSAGE =
   LLM_BOUNDARY_DIR +
   '. Everywhere else, a verdict must be produced by deterministic assertion.';
 
-/** 02-ARCHITECTURE.md: core depends on nothing here, cli depends on core, action depends on cli. */
+/** the architecture: core depends on nothing here, cli depends on core, action depends on cli. */
 export const CORE_FORBIDDEN_PATTERNS = ['@qai/cli', '@qai/cli/*', '@qai/action', '@qai/action/*'];
 export const CLI_FORBIDDEN_PATTERNS = ['@qai/action', '@qai/action/*'];
 

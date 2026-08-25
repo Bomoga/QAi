@@ -11,7 +11,7 @@ import { CONFIDENCE_SOURCE_ONLY, type SourceAdapter, type SourceScan } from '../
  *
  * Read textually, by decision. The module implementation notes prefer `@prisma/internals`
  * to parse the schema properly, and that package is not on the approved dependency list
- * in 04-CONVENTIONS.md; the plan was corrected rather than the list widened. The block
+ * in the style guide; the plan was corrected rather than the list widened. The block
  * grammar is regular enough to read this way, and this matches what the Next.js and
  * Express adapters already do.
  *

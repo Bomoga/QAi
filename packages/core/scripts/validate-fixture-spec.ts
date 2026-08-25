@@ -5,10 +5,10 @@ import { isLoadFailure, loadSpec } from '../src/spec/load.ts';
 
 /**
  * Loads the fixture spec and reports what came back. Named in the Definition of Done
- * in modules/M1-spec.md, and the closest thing to `qai validate` that exists before
+ * in M1, and the closest thing to `qai validate` that exists before
  * the CLI does.
  *
- * Exit codes follow the table in 03-CONTRACTS.md: 0 for a clean load, 2 for a spec
+ * Exit codes follow the table in the contract: 0 for a clean load, 2 for a spec
  * that could not be loaded.
  */
 

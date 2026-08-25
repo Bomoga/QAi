@@ -25,7 +25,7 @@ import type { BehavioralContext, BehavioralPlan } from './types.ts';
  *
  * **The reason travels beside the results, not inside them.** `CheckResult` has no field
  * for an unverified reason and adding one would be a contract change. The closed set in
- * 03-CONTRACTS.md is per requirement, so this returns the reasons it actually knows and
+ * the contract is per requirement, so this returns the reasons it actually knows and
  * whoever assembles the RunResult rolls them up, the same widening `planBehavioralChecks`
  * made with `unplannable`.
  *

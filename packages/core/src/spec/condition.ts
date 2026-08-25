@@ -5,7 +5,7 @@
  * and no path by which a spec string becomes executable code. Evaluation of the AST
  * belongs to M3 for access rules and M5 for behavioral criteria.
  *
- * The grammar, from modules/M1-spec.md:
+ * The grammar, from M1:
  *
  *   condition   := comparison (("and" | "&&") comparison)*
  *   comparison  := operand op operand

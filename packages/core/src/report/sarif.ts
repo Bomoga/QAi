@@ -12,7 +12,7 @@ import type { CheckResultRecord, CheckType, RunResult, Severity } from '../contr
  * SARIF library is on the approved dependency list anyway.
  *
  * **What becomes a result.** A finding, which is a failed check, plus the structural
- * disagreements. 01-PRODUCT.md calls those structural findings and 03-CONTRACTS.md
+ * disagreements. The product definition calls those structural findings and the contract
  * reserves a `structural` check type for them, so the rule the module asks for has
  * something to carry. Leaving them out would mean the entity the spec declares and the
  * application never built, which is the sharpest thing this tool reports, never reaches
@@ -271,7 +271,7 @@ function structuralResult(
 /**
  * The disagreements, as results.
  *
- * `observedNotSpecified` carries its own severity. The other two do not: 03-CONTRACTS.md
+ * `observedNotSpecified` carries its own severity. The other two do not: the contract
  * gives them no severity field, and M4.8 exported the defaults as constants for whoever
  * turned an entry into a finding rather than adding a contract field. This is that
  * caller.

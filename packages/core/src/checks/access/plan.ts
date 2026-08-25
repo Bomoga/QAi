@@ -20,7 +20,7 @@ import type { CheckIdentity, CheckPlan } from '../types.ts';
  * a check runs against a guess.
  *
  * A rule that cannot be planned is not dropped. It comes back in `unplannable` with a
- * reason from the closed set in 03-CONTRACTS.md, which is what keeps a coverage gap
+ * reason from the closed set in the contract, which is what keeps a coverage gap
  * visible instead of turning it into a quiet green.
  */
 
@@ -99,7 +99,7 @@ function identityFor(rule: AccessRule, requirementId: string): CheckIdentity {
 }
 
 /**
- * Resolution order from modules/M3-access-checks.md: an Observation endpoint whose
+ * Resolution order from M3: an Observation endpoint whose
  * `responseShape.entity` matches, then a configured route, then nothing. Never a URL
  * guessed by pluralizing an entity name.
  *
@@ -157,7 +157,7 @@ function resolveRoute(
  * Both sides go through the erasure in `probe/identity.ts`, so a configured
  * `/api/invoices/{id}` and an observed `/api/invoices/:id` are one route. A route the
  * Observation does not hold, or holds only from a crawl, leaves the finding with its
- * request reference, which is what `04-CONVENTIONS.md` asks for when there is no source.
+ * request reference, which is what the style guide asks for when there is no source.
  *
  * Exported because the behavioral planner asks the same question about the route its
  * criterion will request, and two answers to "which file serves this" would eventually

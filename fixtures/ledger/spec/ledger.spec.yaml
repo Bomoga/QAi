@@ -2,7 +2,7 @@ specVersion: '0.1'
 name: 'Ledger invoicing'
 
 # This describes the ledger app as intended, not as built. Every defect in the
-# catalog in docs/plan/06-TESTING.md is a disagreement between this file and the
+# catalog in the testing strategy is a disagreement between this file and the
 # running application, which is the disagreement the tool exists to find.
 #
 # Requirements are numbered to match the defect they cover where one exists:
@@ -12,7 +12,7 @@ name: 'Ledger invoicing'
 # positive, which invariant I2 treats as worse than a missed finding.
 #
 # Criteria were rewritten at M5.8-pre2 into the two vocabularies in
-# modules/M5-behavioral-checks.md, `when` as a request and `then` as assertions.
+# M5, `when` as a request and `then` as assertions.
 # The file was authored at M1.8 in prose, before either table existed, so none of
 # the `when` clauses and only four of the `then` clauses could be read.
 #

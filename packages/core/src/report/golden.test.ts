@@ -15,7 +15,7 @@ import { renderText } from './text.ts';
  * The emitters, rendered from canonical run results captured against
  * `fixtures/ledger` in both configurations.
  *
- * 06-TESTING.md asks for exactly this and gives the reason: emitter tests render from
+ * The testing strategy asks for exactly this and gives the reason: emitter tests render from
  * these files rather than from a live run, which keeps report work decoupled from check
  * work. Nothing here starts a target or issues a request, so a change to a check cannot
  * turn these red and a change to an emitter cannot hide behind a check that stopped
@@ -188,7 +188,7 @@ describe.each(CONFIGURATIONS)('rendering the %s golden', (name) => {
 
 describe('the exit code each golden recommends', () => {
   it('is 1 for the defective run and 0 for the fixed one at the default threshold', () => {
-    // The MVP success sequence in 01-PRODUCT.md, in the two states it names: non-zero
+    // The MVP success sequence in the product definition, in the two states it names: non-zero
     // before the fix and zero after.
     expect(computeExitCode(golden('defective'), {})).toBe(1);
     expect(computeExitCode(golden('fixed'), {})).toBe(0);

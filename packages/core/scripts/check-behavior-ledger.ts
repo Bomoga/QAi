@@ -28,7 +28,7 @@ import {
  * switches are turned.
  *
  * This is `qai check` in everything but name for the behavioral half. The command
- * belongs to M8 and lands in S6, so the exit code policy here follows 03-CONTRACTS.md
+ * belongs to M8 and lands in S6, so the exit code policy here follows the contract
  * rather than inventing one: 0 for no findings at or above the threshold, 1 for
  * findings, 2 for a spec or configuration error. Inconclusive checks never move it,
  * which is what makes a missing Playwright unable to change the outcome of a run.

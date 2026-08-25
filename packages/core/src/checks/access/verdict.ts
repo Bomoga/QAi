@@ -1,7 +1,7 @@
 import type { CapturedResponse, RequestOutcome } from '../../target/request.ts';
 
 /**
- * The deny rule verdict table, from modules/M3-access-checks.md.
+ * The deny rule verdict table, from M3.
  *
  * | Observed                                          | Verdict      |
  * | 401, 403, or 404 with no resource fields in body  | pass         |
@@ -157,7 +157,7 @@ export function isEmptyResponseBody(body: string): boolean {
 /**
  * The allow rule assessment.
  *
- * modules/M3-access-checks.md states this one in prose rather than a table: an allow
+ * M3 states this one in prose rather than a table: an allow
  * rule is verified by attempting the action and requiring success. So success is the
  * whole assertion, and success is a 2xx.
  *

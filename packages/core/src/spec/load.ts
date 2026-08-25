@@ -20,7 +20,7 @@ import { hashSpec } from './hash.ts';
 /**
  * Spec loading, merging, identifier derivation, and diagnostics.
  *
- * The Spec this returns matches 03-CONTRACTS.md exactly. Parsed conditions travel
+ * The Spec this returns matches the contract exactly. Parsed conditions travel
  * beside it in `conditions` rather than on the rule, because adding an AST field to
  * the Spec contract would be a contract change, and the contract is the thing every
  * other module is typed by. M3 looks a rule's AST up by its now-assigned id.
@@ -43,7 +43,7 @@ export interface LoadedSpec {
    *
    * Added at M8.4. The caller hands in patterns and gets back one merged Spec, so
    * without this nothing downstream can say which files it came from.
-   * `RunResult.spec.files` in 03-CONTRACTS.md is exactly that list, and `qai validate`
+   * `RunResult.spec.files` in the contract is exactly that list, and `qai validate`
    * has to name what it read or a user cannot tell a passing spec from a glob that
    * matched the wrong directory.
    */
@@ -81,7 +81,7 @@ function resolveFiles(paths: readonly string[], cwd: string): string[] {
   // fast-glob only understands forward slashes: a backslash is an escape character to
   // it, so a Windows path matches nothing and the loader reports no spec files rather
   // than the one the user named. Normalizing here is what the library's own
-  // documentation asks callers to do, and 04-CONVENTIONS.md wants Windows to work
+  // documentation asks callers to do, and the style guide wants Windows to work
   // without a shell assumption.
   const patterns = paths.map((pattern) => pattern.replaceAll('\\', '/'));
 

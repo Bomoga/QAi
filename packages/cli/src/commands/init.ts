@@ -20,16 +20,16 @@ import { present } from '../errors.ts';
  * reason, and assert zero diagnostics rather than merely no error.
  */
 
-/** Where the starter spec goes. `spec/*.spec.yaml` is the default in 00-INDEX.md. */
+/** Where the starter spec goes. `spec/*.spec.yaml` is the default in the naming table. */
 export const SPEC_PATH = 'spec/app.spec.yaml';
 
-/** The state directory, which is git ignored per 00-INDEX.md. */
+/** The state directory, which is git ignored per the naming table. */
 export const GITIGNORE_ENTRY = '.qai/';
 
 /**
  * The starter config.
  *
- * Two actors, because 00-INDEX.md says at least two are required for meaningful access
+ * Two actors, because the naming table says at least two are required for meaningful access
  * checking, and one of anything teaches the wrong shape. `disposable` is false, since a
  * target is not disposable until somebody writes it down. Credentials are variable names
  * and never values: M2.1 rejects a literal at load time, and a template that taught the
@@ -239,7 +239,7 @@ export function runInit(options: InitOptions): Promise<number> {
         : `  ${gitignore === 'created' ? 'created' : 'updated'}  .gitignore, ignoring ${GITIGNORE_ENTRY}`,
     );
   } catch (cause) {
-    // Exit 2: a configuration error with no run performed, per 03-CONTRACTS.md.
+    // Exit 2: a configuration error with no run performed, per the contract.
     return Promise.resolve(
       present(
         {

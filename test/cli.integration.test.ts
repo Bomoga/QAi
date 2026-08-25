@@ -69,7 +69,7 @@ describe('init and validate, the first two commands a user runs', () => {
 describe('check against the fixture, in both configurations', () => {
   it('exits 1 with the defects on and 0 with them off', async () => {
     // The M8 Definition of Done, and the two halves of the MVP success sequence in
-    // 01-PRODUCT.md: non-zero before the fix, zero after.
+    // the product definition: non-zero before the fix, zero after.
     const defective = workspace();
     const fixed = workspace();
 

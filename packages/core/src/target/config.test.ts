@@ -61,7 +61,7 @@ redaction:
 `;
 
 describe('loading the proposed config shape', () => {
-  it('accepts the example from modules/M2-target.md', () => {
+  it('accepts the example from M2', () => {
     write(LEDGER);
     const config = load();
 

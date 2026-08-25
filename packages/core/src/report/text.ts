@@ -203,7 +203,7 @@ function findingsSection(result: RunResult, colors: Colors): string[] {
     lines.push(`  [${paintSeverity(check.severity, colors)}] ${describe(check)}`);
     lines.push(`    ${check.title}`);
     if (check.detail !== undefined) lines.push(`    ${check.detail}`);
-    // Source when a probe read one, the request otherwise, per 04-CONVENTIONS.md. Both
+    // Source when a probe read one, the request otherwise, per the style guide. Both
     // when both are known: which file serves a route does not say which record was asked
     // for. Until 2026-08-23 these lived inside `detail` as well and printed twice.
     if (check.locationRef !== undefined) lines.push(`    Source: ${check.locationRef}`);
@@ -272,7 +272,7 @@ function summarySection(result: RunResult, colors: Colors): string[] {
     // Labeled coverage, and told what it counts. It is not a pass rate and a failing
     // check still counts as coverage, since the requirement was established.
     `  Coverage: ${Math.round(coverage * 100)}% of requirements with at least one check that reached a verdict`,
-    // Always shown, including at zero, per 03-CONTRACTS.md.
+    // Always shown, including at zero, per the contract.
     `  Model assisted checks: ${modelAssistedCheckCount}`,
   ];
 }

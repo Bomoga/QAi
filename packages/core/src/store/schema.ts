@@ -15,7 +15,7 @@ import Database from 'better-sqlite3';
  * know what a later one added, and writing to it would corrupt history that is already
  * on disk. The refusal names both versions so the fix is obvious.
  *
- * **Evidence bodies are files, not rows.** `03-CONTRACTS.md` puts them under
+ * **Evidence bodies are files, not rows.** The contract puts them under
  * `.qai/evidence/` and the module says so outright: blobs make the database unwieldy and
  * the directory ungreppable. The `evidence` table holds the record and a path.
  *
@@ -25,7 +25,7 @@ import Database from 'better-sqlite3';
  * JSON are exactly what `listRuns` sorts and filters on.
  */
 
-/** Where the store lives inside the state directory named in 00-INDEX.md. */
+/** Where the store lives inside the state directory named in the naming table. */
 export const STATE_DIRECTORY = '.qai';
 export const DATABASE_FILE = 'runs.db';
 export const EVIDENCE_DIRECTORY = 'evidence';

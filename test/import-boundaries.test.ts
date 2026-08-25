@@ -12,7 +12,7 @@ import {
 
 /**
  * Hard rule R1 requires a test asserting the model boundary rule is configured, and
- * 02-ARCHITECTURE.md requires the package dependency direction to be lint enforced.
+ * the architecture requires the package dependency direction to be lint enforced.
  * Both are asserted against the config ESLint actually resolves for a path, not
  * against the shape of the config file, so a reordering that silently drops a rule
  * fails here rather than passing review.

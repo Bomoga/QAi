@@ -6,7 +6,7 @@ import { createLedgerServer } from '../src/app.ts';
 import { OUTSIDER_TOKEN, OWNER_TOKEN, seedLedger } from '../src/data.ts';
 
 /**
- * Defect D1 from the catalog in 06-TESTING.md: an invoice is readable across
+ * Defect D1 from the catalog in the testing strategy: an invoice is readable across
  * organizations by id. These tests hold the defect in place. If one of them starts
  * failing because the leak was repaired, the integration target no longer has
  * anything for an access check to find, and the repair is the regression.

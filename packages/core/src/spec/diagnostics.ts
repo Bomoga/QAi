@@ -23,7 +23,7 @@ export interface LoadDiagnostic {
 
 /**
  * Returned when loading could not produce a Spec at all. The CLI maps this to exit
- * code 2, per the exit code table in 03-CONTRACTS.md.
+ * code 2, per the exit code table in the contract.
  */
 export interface SpecError {
   readonly kind: 'error';

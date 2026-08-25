@@ -317,7 +317,7 @@ describe('a criterion carries the handler reference for the route it will reques
 
   it('leaves it absent for a black box observation of the same route', () => {
     // A crawl reaches the route and cannot say which file serves it, so the finding keeps
-    // its request reference. That is what 04-CONVENTIONS.md asks for.
+    // its request reference. That is what the style guide asks for.
     const spec = specWith([{ when: 'actor owner reads Invoice', then: 'status is 200' }]);
     const { plans } = planBehavioralChecks(
       spec,

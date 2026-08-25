@@ -3,7 +3,7 @@ import type { Spec } from '../contracts/index.ts';
 /**
  * Redaction, applied at capture, before anything reaches disk. Rule R8.
  *
- * The order is fixed and stated in modules/M2-target.md: authorization and cookie
+ * The order is fixed and stated in M2: authorization and cookie
  * headers always, then configured patterns, then any field the Spec marks
  * `sensitive: true`, matched by name at any depth.
  *
