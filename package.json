@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Checks that an application does what its spec said it would.",
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },
