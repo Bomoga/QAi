@@ -139,5 +139,11 @@ and a misspelled flag reporting it would tell CI the application has findings.
 
 ## Status
 
-Pre-release, built in stages against a plan in `docs/plan/`. The report emitters and the
-command surface are the current work.
+Pre-release. Every stage of the build plan is complete: the spec loader, the probe and its
+source adapters, all three check families, run storage and run to run comparison, four
+report formats, the command surface, and the GitHub Action. 1747 tests pass and none of
+them touch the network.
+
+What is not done is release. There is no published package, `main` does not exist yet, and
+the Action needs built output committed before a checkout of it works. Until then this is
+run from a clone, as described above.
