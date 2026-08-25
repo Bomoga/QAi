@@ -130,20 +130,32 @@ endpoint scoping correctly and a dataset that happens to be empty are indistingu
 outside, and a row whose ownership cannot be judged also blocks a pass.
 **Volatility:** low. **Blast radius:** `checks/access/list.ts` and the list half of the verdict table.
 
+**D22. The project is MIT licensed. Q23, decided 2026-08-25.**
+There was no `LICENSE` and no `license` field in any manifest, so under default copyright
+nobody had permission to use, copy, or modify any of it, the corpus applications included.
+`LICENSE` holds the canonical MIT text, copied rather than written and checked against a
+reference copy shipped by a dependency, and all four manifests carry `"license": "MIT"`.
+Nothing in the text is customized: a license with a word changed is one no tool recognizes
+and every downstream reader has to read in full. Rejected: Apache-2.0, whose express patent
+grant and change notice requirement buy protection that matters most with corporate
+contributors and patent risk in play, neither of which is true yet.
+**Volatility:** frozen in practice. **Blast radius:** relicensing needs every copyright
+holder to agree, so this is cheap today and expensive the moment anybody else contributes.
+
 ---
 
 ## Open questions, unresolved
 
 These are known gaps. An agent encountering one stops and reports rather than deciding.
 
-**Four, all outward facing, raised 2026-08-24 while drafting `08-PUBLICATION.md`.** They are
-stated in full there and summarized here, because this table is the one an agent reads to
-decide whether to stop.
+**Three, all outward facing, raised 2026-08-24 while drafting `08-PUBLICATION.md`.** Q23,
+the licence, was the fourth and is answered above as D22. The rest are stated in full in
+that document and summarized here, because this table is the one an agent reads to decide
+whether to stop.
 
 | Id | Question | Why it is not an agent's call |
 |---|---|---|
 | Q22 | What name does a stranger type to install this | `qai` on the public registry has belonged to somebody else since 2019, so `npx qai` cannot mean this project. Claiming a name in a public namespace is not an agent's action. |
-| Q23 | MIT or Apache-2.0 | There is no LICENSE file, so no permission to use anything exists yet. A licence is a legal claim by the author. |
 | Q24 | Does the repository become public, and when | It carries 24 deliberately broken applications and the specs describing how. Defensible to publish, and it should be a decision rather than a side effect. |
 | Q25 | How the corpus rate is stated in public | 0.0% reads as an independent measurement and is not one. Any public form without that sentence attached misrepresents it. |
 

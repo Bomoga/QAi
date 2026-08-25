@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "GitHub Action wrapper, annotation upload.",
+  "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

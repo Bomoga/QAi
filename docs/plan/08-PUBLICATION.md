@@ -17,7 +17,7 @@ document ends in questions rather than in a command.
 | Tests                          | 1736 passing, none touching the network                |
 | Corpus                         | 24 applications, 55 judged findings, 0 false positives |
 | `qai` on npm                   | **taken by somebody else since 2019**                  |
-| LICENSE file                   | **does not exist**                                     |
+| LICENSE file                   | MIT, since 2026-08-25                                  |
 | `main` branch                  | **does not exist**                                     |
 | Package versions               | `0.0.0`, all three `private: true`                     |
 | The GitHub Action, end to end  | exercised as an action since 2026-08-25                |
@@ -60,15 +60,22 @@ The `@qai` scope returned a 404 for `@qai/core`, which says that package does no
 and says nothing about who owns the scope. Scope ownership cannot be read without
 attempting to claim it.
 
-### 2. There is no LICENSE file
+### 2. There was no LICENSE file
 
-No `LICENSE`, and no `license` field in any of the four manifests. Under default copyright
-that means nobody has permission to use, copy, or modify any of it. It blocks the registry,
-it blocks the action, and it quietly blocks the corpus applications too, which are
-committed source in the same tree.
+**Closed 2026-08-25 by Q23, answered MIT.**
 
-This is the cheapest blocker on the list and the one that makes every other item moot until
-it is chosen.
+There was no `LICENSE` and no `license` field in any of the four manifests. Under default
+copyright that meant nobody had permission to use, copy, or modify any of it: the registry,
+the action, and the corpus applications alike, since those are committed source in the same
+tree.
+
+`LICENSE` now holds the MIT text and all four manifests carry `"license": "MIT"`. The text
+is the canonical one, copied rather than written, and checked against a reference copy
+shipped by a dependency rather than trusted from memory. **Nothing in it is customized.** A
+license with a word changed is a license no tool recognizes and every downstream reader has
+to actually read, which is the opposite of what picking a standard one is for.
+
+The one line that is not boilerplate is the copyright holder, `2026 Adrian Morton`.
 
 ### 3. `main` does not exist
 
@@ -133,14 +140,18 @@ Note the mismatch that publication forces into the open: the package is named `@
 the binary it installs is `qai`. Those can differ, and the action currently calls the
 binary name, which is the name that is taken.
 
-### 7. The manifests carry no `repository`, `license`, or `homepage`
+### 7. The manifests carry no `repository` or `homepage`
 
-Absent metadata is a small thing that becomes visible the moment a package page exists.
+`license` was the third item here and landed with blocker 2. The rest is small and becomes
+visible the moment a package page exists.
 
-## Four open questions that are not an agent's call
+## Three open questions that are not an agent's call
 
-Nothing below has a right answer that can be derived from the repository. Each one is
-recorded here so the plan can proceed once it is answered, and each one is a stop.
+Q23 is answered and is kept below with its answer, because a plan that deletes a question
+once it is settled loses the reason the answer was picked.
+
+Nothing here has a right answer that can be derived from the repository. Each one is
+recorded so the plan can proceed once it is answered, and each unanswered one is a stop.
 
 They are numbered `Q` because they are open. `07-DECISIONS.md` holds them in its open
 questions table, and answering one turns it into a `D` entry there, which is the same
@@ -157,10 +168,12 @@ protocol every other decision in this project followed.
   The action still needs a resolvable CLI, so this shape requires the action to install
   from the repository rather than from the registry.
 
-**Q23. The licence.** MIT or Apache-2.0 are the two that fit. Apache-2.0 carries an express
-patent grant and a change notice requirement; MIT is shorter and grants less explicitly.
-A tool that inspects other people's applications and writes findings about them is worth a
-moment's thought on the patent clause rather than a reflex.
+**Q23. The licence. Answered MIT on 2026-08-25**, and recorded as D22 in `07-DECISIONS.md`.
+Apache-2.0 was the alternative and carries an express patent grant and a change notice
+requirement, which buys protection that matters most with corporate contributors and patent
+risk in play. Neither is true here yet, and MIT is what the ecosystem this ships into
+defaults to. Revisiting it later means relicensing, which needs every copyright holder to
+agree, so it is cheap now and expensive once anybody else has contributed.
 
 **Q24. Whether the repository becomes public, and when.** It contains the corpus, which
 contains 24 deliberately broken applications and the specs describing exactly how they are
@@ -183,10 +196,11 @@ Phases, with the gate that ends each one. Nothing in a later phase starts early.
 **Phase 0. Decide.** Q22 through Q25. Recorded in `07-DECISIONS.md` like every other
 decision this project has made.
 
-**Phase 1. Licence and metadata.** `LICENSE` at the root. `license`, `repository`,
-`homepage`, and `description` in all four manifests. `author`. This phase is
-mechanical once Q23 is answered.
-Gate: the licence is stated in exactly one place and referenced everywhere else.
+**Phase 1. Licence and metadata.** Half done on 2026-08-25: `LICENSE` is at the root and
+all four manifests carry `"license": "MIT"`. **Remaining: `repository`, `homepage`, and
+`author`**, which are small and become visible the moment a package page exists.
+Gate, half met: the licence text lives in exactly one place and every manifest points at it
+by SPDX identifier rather than restating it.
 
 **Phase 2. Make the action true.** Mostly done ahead of Phase 0, on 2026-08-25, because two
 thirds of it turned out not to need any decision. The `npx --yes qai` line is gone and
