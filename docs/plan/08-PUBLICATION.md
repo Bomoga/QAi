@@ -137,12 +137,16 @@ binary name, which is the name that is taken.
 
 Absent metadata is a small thing that becomes visible the moment a package page exists.
 
-## Four decisions that are not an agent's call
+## Four open questions that are not an agent's call
 
 Nothing below has a right answer that can be derived from the repository. Each one is
 recorded here so the plan can proceed once it is answered, and each one is a stop.
 
-**D22. The published name.** Three shapes, and they are not equally good:
+They are numbered `Q` because they are open. `07-DECISIONS.md` holds them in its open
+questions table, and answering one turns it into a `D` entry there, which is the same
+protocol every other decision in this project followed.
+
+**Q22. The published name.** Three shapes, and they are not equally good:
 
 - Publish `@qai/cli` and `@qai/core` under the `@qai` scope, if the scope can be claimed,
   and have the binary keep the name `qai`. The action then calls `npx --yes @qai/cli`,
@@ -153,18 +157,18 @@ recorded here so the plan can proceed once it is answered, and each one is a sto
   The action still needs a resolvable CLI, so this shape requires the action to install
   from the repository rather than from the registry.
 
-**D23. The licence.** MIT or Apache-2.0 are the two that fit. Apache-2.0 carries an express
+**Q23. The licence.** MIT or Apache-2.0 are the two that fit. Apache-2.0 carries an express
 patent grant and a change notice requirement; MIT is shorter and grants less explicitly.
 A tool that inspects other people's applications and writes findings about them is worth a
 moment's thought on the patent clause rather than a reflex.
 
-**D24. Whether the repository becomes public, and when.** It contains the corpus, which
+**Q24. Whether the repository becomes public, and when.** It contains the corpus, which
 contains 24 deliberately broken applications and the specs describing exactly how they are
 broken. That is a teaching asset and it is also a directory of working access control
 defects. Publishing it is defensible and it should be a decision rather than a side effect
 of flipping repository visibility.
 
-**D25. How the corpus number is stated in public.** `corpus/RESULTS.md` says 0.0% over 55
+**Q25. How the corpus number is stated in public.** `corpus/RESULTS.md` says 0.0% over 55
 judged findings, and says in the same document that the review was performed by the agent
 that wrote the tool and the corpus. **Any public statement of the rate that does not carry
 that sentence with it is a misrepresentation**, because the number reads as an independent
@@ -176,12 +180,12 @@ review before publishing anything is part of this decision.
 
 Phases, with the gate that ends each one. Nothing in a later phase starts early.
 
-**Phase 0. Decide.** D22 through D25. Recorded in `07-DECISIONS.md` like every other
+**Phase 0. Decide.** Q22 through Q25. Recorded in `07-DECISIONS.md` like every other
 decision this project has made.
 
 **Phase 1. Licence and metadata.** `LICENSE` at the root. `license`, `repository`,
 `homepage`, and `description` in all four manifests. `author`. This phase is
-mechanical once D23 is answered.
+mechanical once Q23 is answered.
 Gate: the licence is stated in exactly one place and referenced everywhere else.
 
 **Phase 2. Make the action true.** Mostly done ahead of Phase 0, on 2026-08-25, because two
@@ -193,8 +197,8 @@ mechanism chosen and is therefore the half that waits.
 
 **Phase 3. Honesty pass on the README.** The status line still says the report emitters and
 the command surface are the current work; they were finished at S7 and S6. The `npx qai`
-caveat has to change to match D22 either way. The corpus claim, if it appears at all,
-carries its limit per D25.
+caveat has to change to match Q22 either way. The corpus claim, if it appears at all,
+carries its limit per Q25.
 Gate: every command in the README has been run, from a clean clone, in the form written.
 
 **Phase 4. `main`.** Create it from `dev`. Protect it. Point the action reference at a tag
@@ -206,7 +210,7 @@ Gate: `main` exists, CI runs on it, and the README reference resolves.
 starts here rather than one reconstructed from 28 merged pull requests. Tag `v0.1.0`.
 Gate: the tag names a commit that CI passed.
 
-**Phase 6. Publish.** Only if D22 chose the registry. `@qai/core` and `@qai/cli` together,
+**Phase 6. Publish.** Only if Q22 chose the registry. `@qai/core` and `@qai/cli` together,
 since `workspace:*` resolves at pack time and one without the other installs nothing.
 Gate: **the stranger's rehearsal**, below.
 

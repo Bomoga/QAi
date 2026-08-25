@@ -51,15 +51,15 @@ The product name is confirmed: **QAi**, quality assurance with AI. `QAi` is the 
 | Identifier token | `qai` | Lowercase, used in every identifier, path, and command |
 | Binary | `qai` | `npx qai` once published, which it is not. Today: `node packages/cli/bin/qai.js` |
 | Package scope | `@qai/` | `core`, `cli`, `action` |
+| Config file | `qai.config.yaml` | Project root |
+| Spec file default | `spec/*.spec.yaml` | Multiple files allowed |
+| State directory | `.qai/` | SQLite database, evidence, cached runs; git ignored |
 
 **The published name is not settled and this table does not settle it.** `qai` on the public
 registry has belonged to somebody else since 2019, so `npx qai` cannot mean this project
 without a decision. The token stays `qai` everywhere inside the repository; what a stranger
-types to install it is open, and is D22 in `08-PUBLICATION.md`. Nothing here changes until
+types to install it is open, and is Q22 in `07-DECISIONS.md`. Nothing here changes until
 that is answered.
-| Config file | `qai.config.yaml` | Project root |
-| Spec file default | `spec/*.spec.yaml` | Multiple files allowed |
-| State directory | `.qai/` | SQLite database, evidence, cached runs; git ignored |
 
 To rename later: change this table, then run a repository wide replace of the token `qai`. Do not introduce a second name anywhere, including in prose, comments, or test fixtures.
 
