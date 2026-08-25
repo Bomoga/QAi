@@ -129,6 +129,62 @@ all leak through a listing or a field rather than through a rule the spec wrote 
 tool reports each of them through a behavioral criterion, which is the check family that
 covers what an access rule cannot say.
 
+## Mutation, which is the first evidence here the author did not produce
+
+Added 2026-08-25, and it exists because of the limit stated immediately below.
+
+Every classification in `corpus/ledger.json` is the author's reading of a finding the same
+author's tool produced against the same author's application. A second reading cannot fix
+that, because the second reading comes from where the first one did. So this asks a
+question that has an answer rather than a verdict: **repair the defect a finding claims to
+be about, and does the finding stop being produced?**
+
+That is a fact about the tool. A finding that survives the repair of the thing it names was
+never about that thing, whatever its ledger note says, and a confident note makes no
+difference to the outcome. Run it with:
+
+```
+node --experimental-strip-types corpus/mutate.ts
+```
+
+Each mutation is the smallest honest version of the fix the application's own `NOTES.md`
+says is missing, and every edit is reverted before the runner moves on. Three so far, all
+repairs, and all three behaved:
+
+| Mutation                    | Repair                                                     | Findings that had to stop                                  |
+| --------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
+| `p6-dm-participant-check`   | a direct message becomes readable only by its participants | `CHK-33b07dd6da85`, `CHK-97537a59037c`, `CHK-deb64e1d07f5` |
+| `p9-detail-route-ownership` | the detail route asks whether the expense is the caller's  | `CHK-1c057d817d25`, `CHK-4f10ca8e34b3`                     |
+| `p10-listing-draft-filter`  | the listing filters through `visibleTo`                    | `CHK-90059f8d3ab8`                                         |
+
+**What this bought, specifically.**
+
+`CHK-33b07dd6da85` is the classification this document would have flagged first if anybody
+had asked which one to doubt. Its ledger note concedes the finding fires against a
+requirement the application's author expected to pass, and argues it is correct anyway
+because the rule as written is violated. That is the shakiest reasoning in the file. It
+stopped on repair, along with the other two findings about the same read, which is what
+that argument predicted and is no longer only an argument.
+
+`p10-listing-draft-filter` is the negative half. Four findings became three: the behavioral
+criterion cleared and the structural mismatch on `Product.discontinued_at` survived
+untouched, correctly, because that divergence is deliberate and has nothing to do with the
+listing. A repair that had cleared it too would have meant the structural diff was reading
+something it should not.
+
+**It found a mistake on the first run.** `CHK-deb64e1d07f5` was missing from the p6
+expectation list and the runner reported it as collateral rather than passing quietly. It
+is the behavioral criterion about the same read of MSG-3 and belongs in the list, so the
+table was wrong and the run said so. Collateral is reported and never failed on, because
+deciding that a coupling is a defect is a reading, which is the thing this script exists to
+avoid doing.
+
+**What it does not do.** Six findings across three applications is not the corpus. It says
+nothing about the other forty-nine, nothing about the structural route index findings that
+are half the total, and nothing about whether a finding's wording is any good. It is one
+narrow claim, checked by something other than the author's opinion, and it is the only
+sentence in this document with that property.
+
 ## The limits on this number, which are part of it
 
 Current as of 2026-08-24, over twenty-four applications and fifty-five judged findings.
@@ -142,7 +198,8 @@ push against this. It cannot remove the bias.
 
 **The review was performed by the same agent that wrote the tool and the corpus.** Step
 four of the procedure in `06-TESTING.md` exists to be independent and this one was not.
-This is still the largest single limit on the number, and it is worse than a reviewer being
+This is still the largest single limit on the number, narrowed for six findings by the
+mutation section above and untouched for the other forty-nine, and it is worse than a reviewer being
 generous to their own work. For any one application the same agent wrote the application,
 the spec that says the application is wrong, the check that looks for it, the wording of
 the finding, and the verdict that the finding is correct. Those are not five judgements
