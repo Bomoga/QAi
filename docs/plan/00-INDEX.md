@@ -30,6 +30,7 @@ Do not read the entire plan on every task. Each module file states its own depen
 | `05-BUILD-ORDER.md` | Nine week milestones with exit criteria | Planning next work |
 | `06-TESTING.md` | Fixture app, defect catalog, golden files, corpus run | Writing tests |
 | `07-DECISIONS.md` | Decisions made, volatility, blast radius of reversal | Before proposing a change |
+| `08-PUBLICATION.md` | What blocks a release, what a human must decide first | Before anything outward facing |
 | `modules/M1-spec.md` | Spec schema, loader, validation | Assigned M1 |
 | `modules/M2-target.md` | Target config, actors, credentials, fixtures, reset | Assigned M2 |
 | `modules/M3-access-checks.md` | Access rule verification (the sharpest finding) | Assigned M3 |
@@ -50,6 +51,12 @@ The product name is confirmed: **QAi**, quality assurance with AI. `QAi` is the 
 | Identifier token | `qai` | Lowercase, used in every identifier, path, and command |
 | Binary | `qai` | `npx qai` once published, which it is not. Today: `node packages/cli/bin/qai.js` |
 | Package scope | `@qai/` | `core`, `cli`, `action` |
+
+**The published name is not settled and this table does not settle it.** `qai` on the public
+registry has belonged to somebody else since 2019, so `npx qai` cannot mean this project
+without a decision. The token stays `qai` everywhere inside the repository; what a stranger
+types to install it is open, and is D22 in `08-PUBLICATION.md`. Nothing here changes until
+that is answered.
 | Config file | `qai.config.yaml` | Project root |
 | Spec file default | `spec/*.spec.yaml` | Multiple files allowed |
 | State directory | `.qai/` | SQLite database, evidence, cached runs; git ignored |

@@ -136,7 +136,22 @@ outside, and a row whose ownership cannot be judged also blocks a pass.
 
 These are known gaps. An agent encountering one stops and reports rather than deciding.
 
-**None. Cleared 2026-08-23.**
+**Four, all outward facing, raised 2026-08-24 while drafting `08-PUBLICATION.md`.** They are
+stated in full there and summarized here, because this table is the one an agent reads to
+decide whether to stop.
+
+| Id | Question | Why it is not an agent's call |
+|---|---|---|
+| Q22 | What name does a stranger type to install this | `qai` on the public registry has belonged to somebody else since 2019, so `npx qai` cannot mean this project. Claiming a name in a public namespace is not an agent's action. |
+| Q23 | MIT or Apache-2.0 | There is no LICENSE file, so no permission to use anything exists yet. A licence is a legal claim by the author. |
+| Q24 | Does the repository become public, and when | It carries 24 deliberately broken applications and the specs describing how. Defensible to publish, and it should be a decision rather than a side effect. |
+| Q25 | How the corpus rate is stated in public | 0.0% reads as an independent measurement and is not one. Any public form without that sentence attached misrepresents it. |
+
+Q22 additionally blocks a live hazard rather than only a release: `packages/action/action.yml`
+runs `npx --yes qai check`, which resolves to the stranger's package the moment the action
+is reachable from another repository. It is inert only because nothing can reach it yet.
+
+**Cleared once before, on 2026-08-23**, and the note below is kept because the lesson holds.
 
 Q1 through Q5 sat in this table until then and every one of them had shipped as proposed,
 some of them stages earlier: Q4 was answered by use at M1.8, Q5's own module file said

@@ -1,0 +1,209 @@
+# Publication
+
+Draft, started 2026-08-24. This is not a release and it does not authorize one. It is the
+plan for one, and more usefully it is the list of things that are not true yet.
+
+Every stage in `05-BUILD-ORDER.md` is complete. That is what makes this document possible
+and it is not the same as being publishable. Publishing is outward facing: it puts a name
+in a public namespace, it makes a licence claim, and it invites strangers to run this
+against their own applications. None of those are decisions an agent makes, so this
+document ends in questions rather than in a command.
+
+## The state today, verified against the repository on 2026-08-24
+
+| Thing                          | State                                                  |
+| ------------------------------ | ------------------------------------------------------ |
+| Stages S0 to S9                | complete and merged                                    |
+| Tests                          | 1736 passing, none touching the network                |
+| Corpus                         | 24 applications, 55 judged findings, 0 false positives |
+| `qai` on npm                   | **taken by somebody else since 2019**                  |
+| LICENSE file                   | **does not exist**                                     |
+| `main` branch                  | **does not exist**                                     |
+| Package versions               | `0.0.0`, all three `private: true`                     |
+| The GitHub Action, end to end  | **never once executed**                                |
+
+## Seven things that block it
+
+These are ordered by how badly they break, not by how hard they are to fix.
+
+### 1. The name `qai` belongs to somebody else
+
+Verified by lookup: `qai` exists on the public registry at `0.0.1-beta.1`, created
+2019-12-17. It is dormant and that does not help, because a dormant name is still a taken
+name and the registry does not reassign one on request.
+
+This is worse than a naming inconvenience, because `packages/action/action.yml` hardcodes
+the resolution:
+
+```
+npx --yes qai check
+```
+
+**Published today, in a stranger's repository, that line installs and runs a package this
+project has never seen.** `--yes` means nothing prompts. It is the single most dangerous
+line in the repository and it is dangerous only once the action is reachable, which is the
+one thing publication does.
+
+The `@qai` scope returned a 404 for `@qai/core`, which says that package does not exist
+and says nothing about who owns the scope. Scope ownership cannot be read without
+attempting to claim it.
+
+### 2. There is no LICENSE file
+
+No `LICENSE`, and no `license` field in any of the four manifests. Under default copyright
+that means nobody has permission to use, copy, or modify any of it. It blocks the registry,
+it blocks the action, and it quietly blocks the corpus applications too, which are
+committed source in the same tree.
+
+This is the cheapest blocker on the list and the one that makes every other item moot until
+it is chosen.
+
+### 3. `main` does not exist
+
+Only `dev` and stage branches are pushed. `PROGRESS.md` recorded this at S7 and it is still
+true. `README.md` opens with the headline install:
+
+```yaml
+- uses: Bomoga/QAi/packages/action@main
+```
+
+That reference cannot resolve. The first thing a reader is told to copy is the first thing
+that fails.
+
+### 4. The action has never been run as an action
+
+`.github/workflows/qai.yml` checks the fixture on every push, which is a real dogfood and
+is not this. It reimplements the action's steps against a local build. The one line it
+borrows is `node packages/action/dist/index.js`, the output reader.
+
+So `action.yml` itself, its input wiring, its exit code handling, and the `npx` step above
+have no test and no execution behind them. **The artifact most exposed by publication is
+the artifact with the least evidence.** It should not go out until a workflow in this
+repository consumes it as `uses:` and passes.
+
+### 5. `packages/action/dist` is gitignored and uncommitted
+
+`dist/` is in `.gitignore` and `git ls-files packages/action/dist` returns nothing.
+
+A GitHub Action is consumed by checking out the ref. **Nothing builds it on the way in.**
+The "Read the report" step runs `node "${{ github.action_path }}/dist/index.js"` against a
+file that will not be there. Either the built output is committed on the release branch, or
+a release workflow builds and commits it, or the step stops depending on a build artifact.
+That is a real design choice and it belongs to whoever picks the release mechanism.
+
+### 6. Every package is `private: true` at version `0.0.0`
+
+Deliberate, from S0.2 onward, and recorded here so nothing on this list is mistaken for an
+oversight. `packages/cli/bin/qai.js` says it plainly: the `bin` entry was withheld until it
+did something, because `npx qai` should not resolve until it does.
+
+Note the mismatch that publication forces into the open: the package is named `@qai/cli` and
+the binary it installs is `qai`. Those can differ, and the action currently calls the
+binary name, which is the name that is taken.
+
+### 7. The manifests carry no `repository`, `license`, or `homepage`
+
+Absent metadata is a small thing that becomes visible the moment a package page exists.
+
+## Four decisions that are not an agent's call
+
+Nothing below has a right answer that can be derived from the repository. Each one is
+recorded here so the plan can proceed once it is answered, and each one is a stop.
+
+**D22. The published name.** Three shapes, and they are not equally good:
+
+- Publish `@qai/cli` and `@qai/core` under the `@qai` scope, if the scope can be claimed,
+  and have the binary keep the name `qai`. The action then calls `npx --yes @qai/cli`,
+  which resolves to something this project controls. Smallest change to what exists.
+- Pick an unscoped name that is free, and rename the binary to match it. Larger blast
+  radius: the README, the action, the docs, and every example.
+- Do not publish to the registry at all. Ship the action and the clone instructions only.
+  The action still needs a resolvable CLI, so this shape requires the action to install
+  from the repository rather than from the registry.
+
+**D23. The licence.** MIT or Apache-2.0 are the two that fit. Apache-2.0 carries an express
+patent grant and a change notice requirement; MIT is shorter and grants less explicitly.
+A tool that inspects other people's applications and writes findings about them is worth a
+moment's thought on the patent clause rather than a reflex.
+
+**D24. Whether the repository becomes public, and when.** It contains the corpus, which
+contains 24 deliberately broken applications and the specs describing exactly how they are
+broken. That is a teaching asset and it is also a directory of working access control
+defects. Publishing it is defensible and it should be a decision rather than a side effect
+of flipping repository visibility.
+
+**D25. How the corpus number is stated in public.** `corpus/RESULTS.md` says 0.0% over 55
+judged findings, and says in the same document that the review was performed by the agent
+that wrote the tool and the corpus. **Any public statement of the rate that does not carry
+that sentence with it is a misrepresentation**, because the number reads as an independent
+measurement and is not one. The honest public form is the one the document already reaches:
+nothing the tool currently produces is known to be wrong. Whether to seek an independent
+review before publishing anything is part of this decision.
+
+## The sequence, once those are answered
+
+Phases, with the gate that ends each one. Nothing in a later phase starts early.
+
+**Phase 0. Decide.** D22 through D25. Recorded in `07-DECISIONS.md` like every other
+decision this project has made.
+
+**Phase 1. Licence and metadata.** `LICENSE` at the root. `license`, `repository`,
+`homepage`, and `description` in all four manifests. `author`. This phase is
+mechanical once D23 is answered.
+Gate: the licence is stated in exactly one place and referenced everywhere else.
+
+**Phase 2. Make the action true.** Replace the `npx --yes qai` line with whatever D22
+decided. Resolve the `dist` question from blocker 5. Add a workflow that consumes
+`./packages/action` with `uses:` against `fixtures/ledger`, asserts the SARIF appears, and
+asserts the exit code.
+Gate: **the action passes in this repository as an action, not as copied steps.** This is
+the largest piece of work on the list and the one with real risk in it.
+
+**Phase 3. Honesty pass on the README.** The status line still says the report emitters and
+the command surface are the current work; they were finished at S7 and S6. The `npx qai`
+caveat has to change to match D22 either way. The corpus claim, if it appears at all,
+carries its limit per D25.
+Gate: every command in the README has been run, from a clean clone, in the form written.
+
+**Phase 4. `main`.** Create it from `dev`. Protect it. Point the action reference at a tag
+rather than a branch, because `@main` moves under consumers and a moving action reference
+is how a passing pipeline breaks without a commit.
+Gate: `main` exists, CI runs on it, and the README reference resolves.
+
+**Phase 5. Version and tag.** `0.1.0` across the workspace, not `1.0.0`. A changelog that
+starts here rather than one reconstructed from 28 merged pull requests. Tag `v0.1.0`.
+Gate: the tag names a commit that CI passed.
+
+**Phase 6. Publish.** Only if D22 chose the registry. `@qai/core` and `@qai/cli` together,
+since `workspace:*` resolves at pack time and one without the other installs nothing.
+Gate: **the stranger's rehearsal**, below.
+
+## The definition of done
+
+S9.4 rehearsed a cold install from a clone. That is not this. The rehearsal that ends this
+plan starts from a position nobody in this project has ever occupied:
+
+1. A machine that has never held this repository.
+2. A target application that is not `fixtures/ledger` and not a corpus application.
+3. The README, followed literally, with nothing inferred and nothing corrected on the way.
+4. A GitHub repository that is not this one, running the action by its published reference,
+   producing findings inline on a pull request.
+
+If any step needs knowledge that is not written down, the plan is not finished, and the
+missing knowledge goes into the README rather than into the operator.
+
+## What an agent does not do here
+
+Stated plainly because this document is a plan for exactly the actions an agent must not
+take on its own initiative.
+
+- Do not publish to any registry.
+- Do not create `main`.
+- Do not tag a release.
+- Do not change repository visibility.
+- Do not claim a name or a scope in a public namespace.
+- Do not state the corpus rate anywhere public without the limit attached.
+
+Drafting this, filling in Phase 1 and Phase 2, and preparing a tag for a human to push are
+all ordinary work. The six above are not, and being asked to do the surrounding work is not
+authorization for them.
