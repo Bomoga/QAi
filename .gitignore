@@ -13,3 +13,6 @@ coverage/
 # `node --experimental-strip-types corpus/run.ts`. The durable artifacts are the
 # review ledger and the summary, which are committed.
 corpus/results/
+
+# Implementation plan. Kept locally, deliberately not shipped.
+docs/plan/

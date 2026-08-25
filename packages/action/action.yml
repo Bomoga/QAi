@@ -2,9 +2,9 @@ name: 'QAi'
 description: 'Check that an application does what its spec said it would, and report where they disagree.'
 author: 'QAi'
 
-# A composite action, per modules/M8-cli-ci.md: install, run the check, upload the SARIF,
-# set the outputs. It holds no verification logic. Everything it could decide is decided
-# by the CLI, which is decided by core.
+# A thin composite action: resolve the CLI, run the check, upload the SARIF, set the
+# outputs. It holds no verification logic. Everything it could decide is decided by the
+# CLI, which is decided by core.
 
 branding:
   icon: 'check-square'
@@ -88,7 +88,8 @@ runs:
       # registry, where the name has belonged to somebody else since 2019, so the line
       # would have installed and run a stranger's package in the caller's workspace with
       # nothing prompting. It was inert only because no other repository could reach this
-      # action. See Q22 in `docs/plan/07-DECISIONS.md`.
+      # action. What a stranger types to install the CLI directly is still undecided; what
+      # is settled is that this action never asks a registry for it.
       #
       # Both failures below are loud and name the fix. An action that cannot find its own
       # CLI must say so rather than reach for whatever answers to the same name.
@@ -102,7 +103,7 @@ runs:
           exit 1
         fi
         if [ ! -f "${built}" ]; then
-          echo "::error::packages/cli is present and not built, so ${built} is missing. dist/ is gitignored, which means a published release has to carry the built output. See blocker 5 in docs/plan/08-PUBLICATION.md."
+          echo "::error::packages/cli is present and not built, so ${built} is missing. An action is checked out and never built, so a published release has to carry its built output. Run pnpm build if you are running this from a clone."
           exit 1
         fi
 
