@@ -20,7 +20,8 @@ document ends in questions rather than in a command.
 | LICENSE file                   | **does not exist**                                     |
 | `main` branch                  | **does not exist**                                     |
 | Package versions               | `0.0.0`, all three `private: true`                     |
-| The GitHub Action, end to end  | **never once executed**                                |
+| The GitHub Action, end to end  | exercised as an action since 2026-08-25                |
+| The action from a fresh checkout | **still fails, because `dist/` is gitignored**        |
 
 ## Seven things that block it
 
@@ -32,17 +33,28 @@ Verified by lookup: `qai` exists on the public registry at `0.0.1-beta.1`, creat
 2019-12-17. It is dormant and that does not help, because a dormant name is still a taken
 name and the registry does not reassign one on request.
 
-This is worse than a naming inconvenience, because `packages/action/action.yml` hardcodes
-the resolution:
+This used to be worse than a naming inconvenience, because `packages/action/action.yml`
+hardcoded the resolution:
 
 ```
 npx --yes qai check
 ```
 
-**Published today, in a stranger's repository, that line installs and runs a package this
-project has never seen.** `--yes` means nothing prompts. It is the single most dangerous
-line in the repository and it is dangerous only once the action is reachable, which is the
-one thing publication does.
+**Published in that state, in a stranger's repository, that line installs and runs a
+package this project has never seen**, with `--yes` meaning nothing prompts. It was the
+single most dangerous line in the repository and it was dangerous only once the action
+became reachable, which is the one thing publication does.
+
+**Fixed 2026-08-25, and it did not need the name settled.** A GitHub Action is distributed
+by checking out the repository that holds it, so `packages/cli` already arrives beside
+`packages/action` and there was never anything to download. The action now resolves
+`${{ github.action_path }}/../cli/bin/qai.js` and refuses, loudly and by name, when it is
+missing or unbuilt. Proved by running all three branches: found and built, present and
+unbuilt, absent.
+
+**The name is still unsettled.** What is gone is the hazard, not the question. Q22 remains
+open and now decides only what a human types to install the CLI, which is a smaller
+question than it was when the answer was also a live risk.
 
 The `@qai` scope returned a 404 for `@qai/core`, which says that package does not exist
 and says nothing about who owns the scope. Scope ownership cannot be read without
@@ -70,16 +82,26 @@ true. `README.md` opens with the headline install:
 That reference cannot resolve. The first thing a reader is told to copy is the first thing
 that fails.
 
-### 4. The action has never been run as an action
+### 4. The action had never been run as an action
 
-`.github/workflows/qai.yml` checks the fixture on every push, which is a real dogfood and
-is not this. It reimplements the action's steps against a local build. The one line it
-borrows is `node packages/action/dist/index.js`, the output reader.
+**Closed 2026-08-25.**
 
-So `action.yml` itself, its input wiring, its exit code handling, and the `npx` step above
-have no test and no execution behind them. **The artifact most exposed by publication is
-the artifact with the least evidence.** It should not go out until a workflow in this
-repository consumes it as `uses:` and passes.
+`.github/workflows/qai.yml` checked the fixture on every push, which is a real dogfood and
+was not this. It reimplemented the action's steps against a local build, borrowing one
+line of its `dist` to read the report. So `action.yml` itself, its input wiring, its exit
+code handling, and the `npx` step above had no test and no execution behind them. **The
+artifact most exposed by publication was the artifact with the least evidence.**
+
+That workflow now calls `uses: ./packages/action` instead, with `continue-on-error` because
+the fixture is deliberately defective and the action is supposed to fail the step. The
+assertions moved to the end of the job and grew: exit code 1, a `sarif-file` output naming
+a file that exists, and `findings-total`, `findings-error`, and `coverage-percent` all
+numeric with the first two above zero. Every one of those is produced by `packages/action`,
+so an empty one now means the report reader broke while the CLI stayed fine, which is
+exactly the failure the hand written steps could not see.
+
+The duplication is gone with it. There is one path to a SARIF report in this repository and
+it is the one that ships.
 
 ### 5. `packages/action/dist` is gitignored and uncommitted
 
@@ -87,9 +109,19 @@ repository consumes it as `uses:` and passes.
 
 A GitHub Action is consumed by checking out the ref. **Nothing builds it on the way in.**
 The "Read the report" step runs `node "${{ github.action_path }}/dist/index.js"` against a
-file that will not be there. Either the built output is committed on the release branch, or
-a release workflow builds and commits it, or the step stops depending on a build artifact.
+file that will not be there, and after the blocker 1 fix the same is true of
+`packages/cli/dist`. Either the built output is committed on the release branch, or a
+release workflow builds and commits it, or the steps stop depending on a build artifact.
 That is a real design choice and it belongs to whoever picks the release mechanism.
+
+**This is now the blocker that actually stops a release**, and it is the reason blocker 1's
+fix is a defusing rather than a completion. The action fails on a fresh checkout, by
+design, with a message naming this section. That is the correct behaviour for something
+unpublishable and it is not a substitute for publishing it.
+
+Worth stating plainly: the workflow added at blocker 4 builds before it calls the action,
+so **it proves the action works and does not prove a checkout of it works.** Those are
+different claims and only the second one matters to a stranger.
 
 ### 6. Every package is `private: true` at version `0.0.0`
 
@@ -152,12 +184,12 @@ decision this project has made.
 mechanical once D23 is answered.
 Gate: the licence is stated in exactly one place and referenced everywhere else.
 
-**Phase 2. Make the action true.** Replace the `npx --yes qai` line with whatever D22
-decided. Resolve the `dist` question from blocker 5. Add a workflow that consumes
-`./packages/action` with `uses:` against `fixtures/ledger`, asserts the SARIF appears, and
-asserts the exit code.
-Gate: **the action passes in this repository as an action, not as copied steps.** This is
-the largest piece of work on the list and the one with real risk in it.
+**Phase 2. Make the action true.** Mostly done ahead of Phase 0, on 2026-08-25, because two
+thirds of it turned out not to need any decision. The `npx --yes qai` line is gone and
+`qai.yml` consumes `./packages/action` with `uses:` and asserts the outputs.
+Gate, met: the action passes in this repository as an action rather than as copied steps.
+**Remaining: the `dist` question from blocker 5**, which is the half that needs a release
+mechanism chosen and is therefore the half that waits.
 
 **Phase 3. Honesty pass on the README.** The status line still says the report emitters and
 the command surface are the current work; they were finished at S7 and S6. The `npx qai`

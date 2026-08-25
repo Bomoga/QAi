@@ -147,9 +147,13 @@ decide whether to stop.
 | Q24 | Does the repository become public, and when | It carries 24 deliberately broken applications and the specs describing how. Defensible to publish, and it should be a decision rather than a side effect. |
 | Q25 | How the corpus rate is stated in public | 0.0% reads as an independent measurement and is not one. Any public form without that sentence attached misrepresents it. |
 
-Q22 additionally blocks a live hazard rather than only a release: `packages/action/action.yml`
-runs `npx --yes qai check`, which resolves to the stranger's package the moment the action
-is reachable from another repository. It is inert only because nothing can reach it yet.
+**Q22 no longer holds a live hazard, as of 2026-08-25.** It did: `packages/action/action.yml`
+ran `npx --yes qai check`, which would have resolved to the stranger's package the moment
+the action became reachable from another repository. The fix did not need the name, because
+an action is distributed by repository checkout and the CLI was always going to arrive with
+it. The action resolves `${{ github.action_path }}/../cli/bin/qai.js` and refuses loudly
+when it is absent or unbuilt. Q22 now decides only what a human types to install the CLI
+directly, which is worth answering and is no longer urgent.
 
 **Cleared once before, on 2026-08-23**, and the note below is kept because the lesson holds.
 

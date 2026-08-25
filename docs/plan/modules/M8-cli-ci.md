@@ -49,7 +49,11 @@ Deferred to M9: `qai extract`.
 
 **Errors.** A configuration or spec error prints the file, the path within it, the reason, and one suggested fix, then exits 2. A stack trace appears only under `--verbose`. An unreachable target exits 3 with the URL attempted and the underlying error.
 
-**The GitHub Action** is a thin composite action: install, run `qai check --format sarif --out results.sarif`, upload via `github/codeql-action/upload-sarif`, and set outputs for finding counts and coverage. Inputs mirror the global flags. It must work with a three line workflow snippet, which goes in the README.
+**The GitHub Action** is a thin composite action: resolve the CLI, run `qai check --format sarif --out results.sarif`, upload via `github/codeql-action/upload-sarif`, and set outputs for finding counts and coverage. Inputs mirror the global flags. It must work with a three line workflow snippet, which goes in the README.
+
+**Resolving the CLI, corrected 2026-08-25.** The first step read "install", and it was implemented as `npx --yes qai`, which resolves `qai` from the public registry. That name has belonged to somebody else since 2019, so the line would have installed and run a stranger's package in the caller's workspace the moment another repository could reach the action. There is nothing to install: an action is distributed by checking out the repository that holds it, so `packages/cli` arrives beside `packages/action`. The action resolves `${{ github.action_path }}/../cli/bin/qai.js` and fails with a named reason when it is missing or unbuilt. A published release still has to carry built output, which is blocker 5 in `08-PUBLICATION.md`.
+
+**`.github/workflows/qai.yml` consumes the action rather than reimplementing it.** It held four hand written steps that duplicated `action.yml` and borrowed one line of its `dist`, which exercised the CLI and left the action with nothing behind it. It now calls `uses: ./packages/action` under `continue-on-error`, because the fixture is deliberately defective and the action is meant to fail the step, and asserts at the end of the job: exit code 1, a `sarif-file` output naming a file that exists, and numeric `findings-total`, `findings-error`, and `coverage-percent` with the first two above zero.
 
 **Windows compatibility.** Path handling, glob expansion, and command execution must work on Windows without a shell assumption, since the primary developer works there.
 

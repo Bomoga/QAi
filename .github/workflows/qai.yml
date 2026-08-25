@@ -60,32 +60,28 @@ jobs:
 
       - name: Run qai check
         id: check
-        # The exit code is captured rather than allowed to end the step. A run that found
-        # something still has a report worth uploading, and failing here would skip the
-        # upload and leave the findings invisible on the pull request.
+        # The action, used as an action, which is the whole point of this step.
+        #
+        # It used to be four hand written steps that reimplemented what `action.yml`
+        # does, borrowing one line of its `dist` to read the report. That exercised the
+        # CLI and left the action itself with no execution behind it: the artifact a
+        # stranger touches first was the one artifact nothing ran. Calling it here means
+        # the input wiring, the CLI resolution, the SARIF upload, the outputs, and the
+        # exit code are all covered by the run that already had to happen.
+        #
+        # `continue-on-error` because the fixture is deliberately defective, so the
+        # action is expected to fail the step. The outputs survive it and the assertion
+        # at the end of the job is what decides whether the run was correct.
+        continue-on-error: true
+        uses: ./packages/action
+        with:
+          spec: fixtures/ledger/spec/ledger.spec.yaml
         env:
           LEDGER_OWNER_TOKEN: ledger-owner-token
           LEDGER_OUTSIDER_TOKEN: ledger-outsider-token
           # Deliberately matches no seeded user. It is fixture data rather than a secret,
           # which is why it is written here and every real credential is not.
           LEDGER_UNKNOWN_TOKEN: ledger-nobody-token
-        run: |
-          set +e
-          node packages/cli/bin/qai.js check fixtures/ledger/spec/ledger.spec.yaml \
-            --format sarif --out qai-results.sarif
-          echo "exit-code=$?" >> "$GITHUB_OUTPUT"
-          set -e
-          test -f qai-results.sarif
-
-      - name: Read the report
-        id: outputs
-        run: node packages/action/dist/index.js qai-results.sarif
-
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: qai-results.sarif
-          category: qai
 
       - name: Write the summary
         # The run's summary in the check output, which is the second half of the exit
@@ -96,26 +92,50 @@ jobs:
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| Findings | ${{ steps.outputs.outputs.findings-total }} |"
-            echo "| Error | ${{ steps.outputs.outputs.findings-error }} |"
-            echo "| Warning | ${{ steps.outputs.outputs.findings-warning }} |"
-            echo "| Note | ${{ steps.outputs.outputs.findings-note }} |"
-            echo "| Coverage | ${{ steps.outputs.outputs.coverage-percent }}% of requirements with at least one check that reached a verdict |"
-            echo "| Unverified | ${{ steps.outputs.outputs.requirements-unverified }} requirement(s) |"
-            echo "| Model assisted | ${{ steps.outputs.outputs.model-assisted-checks }} check(s) |"
+            echo "| Findings | ${{ steps.check.outputs.findings-total }} |"
+            echo "| Error | ${{ steps.check.outputs.findings-error }} |"
+            echo "| Warning | ${{ steps.check.outputs.findings-warning }} |"
+            echo "| Note | ${{ steps.check.outputs.findings-note }} |"
+            echo "| Coverage | ${{ steps.check.outputs.coverage-percent }}% of requirements with at least one check that reached a verdict |"
+            echo "| Unverified | ${{ steps.check.outputs.requirements-unverified }} requirement(s) |"
+            echo "| Model assisted | ${{ steps.check.outputs.model-assisted-checks }} check(s) |"
             echo ""
             echo "\`qai check\` exited ${{ steps.check.outputs.exit-code }}."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Confirm the fixture is still broken
+      - name: Confirm the fixture is still broken, and that the action said so
+        # Two assertions in one step, because they fail for different reasons and a
+        # reader should be able to tell which happened.
+        #
         # The fixture is deliberately defective, so exit 1 is the expected result and a 0
-        # would mean the tool stopped finding what is there. This job fails on anything
-        # else, which is the opposite polarity to a normal check and is the only honest
-        # way to run a tool against an application built to be wrong.
+        # would mean the tool stopped finding what is there. That is the opposite polarity
+        # to a normal check and is the only honest way to run a tool against an
+        # application built to be wrong.
+        #
+        # The rest asserts the action reported the run rather than merely surviving it.
+        # Every output below is produced by `packages/action`, so an empty one means the
+        # report reader broke while the CLI stayed fine, which is exactly the failure the
+        # old hand written steps could not see.
         run: |
+          fail() { echo "::error::$1"; exit 1; }
+
           code="${{ steps.check.outputs.exit-code }}"
-          if [ "${code}" != "1" ]; then
-            echo "::error::expected exit 1 against the defective fixture, got ${code}"
-            exit 1
-          fi
-          echo "qai check exited 1 against the defective fixture, as expected."
+          [ "${code}" = "1" ] || fail "expected exit 1 against the defective fixture, got '${code}'"
+
+          sarif="${{ steps.check.outputs.sarif-file }}"
+          [ -n "${sarif}" ] || fail "the action set no sarif-file output"
+          [ -f "${sarif}" ] || fail "the action reported ${sarif} and no such file exists"
+
+          total="${{ steps.check.outputs.findings-total }}"
+          errors="${{ steps.check.outputs.findings-error }}"
+          coverage="${{ steps.check.outputs.coverage-percent }}"
+
+          case "${total}" in ''|*[!0-9]*) fail "findings-total is not a number: '${total}'" ;; esac
+          case "${errors}" in ''|*[!0-9]*) fail "findings-error is not a number: '${errors}'" ;; esac
+          case "${coverage}" in ''|*[!0-9]*) fail "coverage-percent is not a number: '${coverage}'" ;; esac
+
+          [ "${total}" -gt 0 ] || fail "the action reported 0 findings against the defective fixture"
+          [ "${errors}" -gt 0 ] || fail "the action reported no findings at severity high"
+
+          echo "The action exited 1 against the defective fixture, as expected."
+          echo "It reported ${total} finding(s), ${errors} at high, and ${coverage}% coverage."
