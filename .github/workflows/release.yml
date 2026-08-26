@@ -1,0 +1,185 @@
+name: release
+
+# Cuts a release tag carrying the built output, which is the half of blocker 5 that the
+# bundling could not do on its own.
+#
+# **Why a tag rather than a branch.** A GitHub Action is consumed by checking out the ref
+# the caller names, and `dist/` is gitignored, so a checkout of `dev` has no built output
+# and the action refuses to run. A tag is a fixed point: it carries the build, and it does
+# not move under a consumer the way `@main` would. A moving action reference is how a
+# passing pipeline breaks with nobody having changed anything.
+#
+# **The release commit is on no branch, deliberately.** It is parented on the ref being
+# released and reachable only through its tag, so committed build output never lands on
+# `dev` and never appears in a pull request diff. The tag is a ref, so nothing collects it.
+#
+# **A human triggers this.** It is `workflow_dispatch` and nothing else: not a push, not a
+# schedule. Publishing is outward facing, and the mechanism existing is not the same as
+# permission to use it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, without the v. Must match package.json.'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: cut ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The tag is created here, so the history it points into has to be real.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Refuse a version that disagrees with the manifest
+        # The bump is a reviewed edit on dev, not something a workflow input decides. This
+        # only confirms the two agree, so a tag can never name a version the code does not
+        # claim.
+        run: |
+          declared=$(node -p "require('./package.json').version")
+          if [ "${declared}" != "${{ inputs.version }}" ]; then
+            echo "::error::package.json says ${declared} and this run asks for ${{ inputs.version }}. Bump the manifest on dev first."
+            exit 1
+          fi
+          echo "package.json and this run agree on ${declared}."
+
+      - name: Refuse a tag that already exists
+        # A release is a fixed point. Moving one changes what a consumer already pinned,
+        # which is the failure a tag exists to prevent.
+        run: |
+          if git rev-parse -q --verify "refs/tags/v${{ inputs.version }}" > /dev/null; then
+            echo "::error::v${{ inputs.version }} already exists. A release is never moved."
+            exit 1
+          fi
+          echo "v${{ inputs.version }} is free."
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # The same gates CI runs, run again here rather than trusted from a green tick on
+      # dev. A release is cut from a working tree this job assembled, and nothing else
+      # confirms that tree is the one that passed.
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format
+        run: pnpm format:check
+
+      - name: Test
+        run: pnpm test
+
+      - name: Stage the built output
+        # Exactly what a consumer's checkout needs and nothing else. `packages/core/dist`
+        # is not here on purpose: the CLI bundle inlines core, so shipping it would be
+        # 235 KB nobody loads. Neither are the source maps, which are five megabytes a
+        # release and are not read at runtime.
+        run: |
+          git add --force packages/cli/dist/index.js packages/action/dist/index.js
+          echo "Staged:"
+          git diff --cached --name-only | sed 's/^/  /'
+
+      - name: Commit and tag
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "release: v${{ inputs.version }}" -m "Built output for the action, which is checked out and never built."
+          git tag -a "v${{ inputs.version }}" -m "v${{ inputs.version }}"
+
+      - name: Verify the tag actually works before pushing it
+        # The strongest gate here, and the reason this job does more than package a build.
+        # It checks the tag out the way a consumer would, into a tree with no node_modules
+        # and no source, and runs every step `packages/action/action.yml` runs. A release
+        # that cannot do this is broken for everybody who uses it, and the only place that
+        # is cheap to discover is before the push.
+        env:
+          LEDGER_OWNER_TOKEN: ledger-owner-token
+          LEDGER_OUTSIDER_TOKEN: ledger-outsider-token
+          LEDGER_UNKNOWN_TOKEN: ledger-nobody-token
+        run: |
+          consumer="${RUNNER_TEMP}/consumer"
+          mkdir -p "${consumer}"
+          git archive "v${{ inputs.version }}" | tar -x -C "${consumer}"
+
+          # Written as `if` rather than `test ... && { ... }`. Steps run under `set -e`,
+          # where an AND list that short circuits reports the failure of its left side, so
+          # the negative form dies on the outcome it is checking for whenever it happens to
+          # be the last command in the step. It is not last today. That is a property of
+          # what follows it rather than of the assertion, which is the kind of thing that
+          # breaks silently when somebody reorders a script.
+          if [ ! -f "${consumer}/packages/cli/dist/index.js" ]; then
+            echo "::error::the tag carries no CLI bundle"
+            exit 1
+          fi
+          if [ ! -f "${consumer}/packages/action/dist/index.js" ]; then
+            echo "::error::the tag carries no report reader"
+            exit 1
+          fi
+          if [ -d "${consumer}/node_modules" ]; then
+            echo "::error::the tag carries node_modules, which it must not"
+            exit 1
+          fi
+
+          PORT=3000 node --experimental-strip-types fixtures/ledger/src/index.ts &
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:3000/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/health > /dev/null
+
+          # Every step of action.yml, against the tag's own files.
+          bin="${consumer}/packages/action/../cli/bin/qai.js"
+          set +e
+          node "${bin}" check fixtures/ledger/spec/ledger.spec.yaml \
+            --fail-on high --format sarif --out "${consumer}/results.sarif"
+          code=$?
+          set -e
+
+          # 1, because the fixture is deliberately defective. A 0 would mean the release
+          # stopped finding what is there.
+          [ "${code}" = "1" ] || { echo "::error::the tagged CLI exited ${code} against the defective fixture, expected 1"; exit 1; }
+
+          GITHUB_OUTPUT="${consumer}/outputs.txt" node "${consumer}/packages/action/dist/index.js" "${consumer}/results.sarif"
+
+          total=$(grep '^findings-total=' "${consumer}/outputs.txt" | cut -d= -f2)
+          [ "${total}" -gt 0 ] || { echo "::error::the tagged action reported no findings"; exit 1; }
+          echo "The tag runs as an action and reported ${total} finding(s)."
+
+      - name: Push the tag
+        # The tag and nothing else. No branch is pushed, so `dev` never receives a commit
+        # from this workflow and the built output stays off it.
+        run: git push origin "refs/tags/v${{ inputs.version }}"
+
+      - name: Say what was released
+        run: |
+          {
+            echo "## Released v${{ inputs.version }}"
+            echo ""
+            echo "Consumers use:"
+            echo ""
+            echo '```yaml'
+            echo "- uses: ${{ github.repository }}/packages/action@v${{ inputs.version }}"
+            echo '```'
+            echo ""
+            echo "The tag carries the CLI bundle and the report reader, and no node_modules."
+            echo "It was checked out and run against the fixture before being pushed."
+          } >> "$GITHUB_STEP_SUMMARY"

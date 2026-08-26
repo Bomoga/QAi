@@ -17,8 +17,13 @@ noticing.
 Three lines, which is the point:
 
 ```yaml
-- uses: Bomoga/QAi/packages/action@main
+- uses: Bomoga/QAi/packages/action@v0.1.0
 ```
+
+**No release has been cut yet, so that reference does not resolve.** It names a tag rather
+than a branch on purpose: a tag carries the built output the action needs and does not move
+under you afterwards. Until the first one exists, run the tool from a clone as described
+below.
 
 Findings appear inline on the pull request, sourced from SARIF, and the step summary says
 what the run found.
@@ -46,7 +51,7 @@ jobs:
       - run: npm start &
       - run: npx wait-on http://localhost:3000/health
 
-      - uses: Bomoga/QAi/packages/action@main
+      - uses: Bomoga/QAi/packages/action@v0.1.0
         with:
           fail-on: high
         env:
