@@ -1,7 +1,8 @@
+import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 
 /**
  * The run store's schema, and the migrations that get a database to it.
@@ -155,11 +156,35 @@ export interface OpenDatabaseResult {
 }
 
 /**
+ * The `better-sqlite3` constructor, resolved when the store is first opened.
+ *
+ * **The only native dependency in the product, and the only one loaded this late.**
+ * Everything else is JavaScript a bundler can inline; this is a compiled binary that has
+ * to be built for the platform and the Node version running it.
+ *
+ * Resolving it at the top of the module made its absence a load error, which crashed
+ * before any of the handling below could run. `qai check` says outright that a store
+ * which will not write is a warning rather than a failure, because the report is the
+ * product and it has already been produced by then. A static import contradicted that:
+ * the run died at import time, on a machine that could have reported perfectly well.
+ *
+ * `createRequire` rather than a dynamic `import()`, so `openDatabase` stays synchronous
+ * and no caller signature changes to accommodate a dependency none of them mention.
+ */
+function loadDatabaseConstructor(): typeof Database {
+  const require = createRequire(import.meta.url);
+  return require('better-sqlite3') as typeof Database;
+}
+
+/**
  * Opens `.qai/runs.db` under `dir`, creating and migrating as needed.
  *
  * Throws rather than returning a failure. Rule R4 makes errors values at the check level,
  * and this is not a check: a store that will not open has no partial answer to offer, and
  * the CLI already turns an unexpected throw into exit 3.
+ *
+ * A missing or unbuildable `better-sqlite3` throws from here like any other failure to
+ * open, which is what lets `qai check` degrade to a warning instead of dying.
  */
 export function openDatabase(dir: string): OpenDatabaseResult {
   const stateDir = resolve(dir, STATE_DIRECTORY);
@@ -167,7 +192,8 @@ export function openDatabase(dir: string): OpenDatabaseResult {
 
   mkdirSync(evidenceDir, { recursive: true });
 
-  const db = new Database(join(stateDir, DATABASE_FILE));
+  const DatabaseConstructor = loadDatabaseConstructor();
+  const db = new DatabaseConstructor(join(stateDir, DATABASE_FILE));
 
   // Referential integrity is off by default in SQLite, so the cascade on evidence would
   // be decoration without this.
