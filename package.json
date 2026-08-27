@@ -5,6 +5,15 @@
   "type": "module",
   "description": "Checks that an application does what its spec said it would.",
   "license": "MIT",
+  "author": "Adrian Morton",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bomoga/QAi.git"
+  },
+  "homepage": "https://github.com/Bomoga/QAi#readme",
+  "bugs": {
+    "url": "https://github.com/Bomoga/QAi/issues"
+  },
   "engines": {
     "node": ">=22"
   },
