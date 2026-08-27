@@ -1,6 +1,6 @@
 {
   "name": "@qai/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "Command parsing, config resolution, terminal output, process exit.",

@@ -45,17 +45,42 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Refuse a version that disagrees with the manifest
+      - name: Refuse a version anything disagrees with
         # The bump is a reviewed edit on dev, not something a workflow input decides. This
-        # only confirms the two agree, so a tag can never name a version the code does not
-        # claim.
+        # only confirms everything agrees, so a tag can never name a version the code does
+        # not claim.
+        #
+        # All five places, not just the root manifest. v0.1.0 went out with the three
+        # workspace manifests still saying 0.0.0 and only the root checked, which was
+        # correct by luck rather than by anything having verified it. `CLI_VERSION` matters
+        # most of the five: it is what `qai --version` prints and what lands in
+        # `toolVersion` on every report, so it is the version a user actually sees.
+        #
+        # `test/version-consistency.test.ts` asserts the same thing on every commit. This
+        # is here as well because the release path should not depend on somebody having
+        # run the suite.
         run: |
-          declared=$(node -p "require('./package.json').version")
-          if [ "${declared}" != "${{ inputs.version }}" ]; then
-            echo "::error::package.json says ${declared} and this run asks for ${{ inputs.version }}. Bump the manifest on dev first."
+          root=$(node -p "require('./package.json').version")
+          if [ "${root}" != "${{ inputs.version }}" ]; then
+            echo "::error::package.json says ${root} and this run asks for ${{ inputs.version }}. Bump on dev first."
             exit 1
           fi
-          echo "package.json and this run agree on ${declared}."
+
+          for manifest in packages/core packages/cli packages/action; do
+            declared=$(node -p "require('./${manifest}/package.json').version")
+            if [ "${declared}" != "${root}" ]; then
+              echo "::error::${manifest}/package.json says ${declared} and the root says ${root}. Every manifest moves together."
+              exit 1
+            fi
+          done
+
+          constant=$(node -p "require('fs').readFileSync('packages/cli/src/program.ts','utf8').match(/CLI_VERSION = '([^']+)'/)[1]")
+          if [ "${constant}" != "${root}" ]; then
+            echo "::error::CLI_VERSION is ${constant} and the manifests say ${root}. That constant is what qai --version prints and what every report records as toolVersion."
+            exit 1
+          fi
+
+          echo "All five version claims agree on ${root}."
 
       - name: Refuse a tag that already exists
         # A release is a fixed point. Moving one changes what a consumer already pinned,
