@@ -47,7 +47,7 @@ export function renderJson(result: RunResult): string {
 
 /**
  * The same projection for anything else this tool serializes as JSON, currently the
- * RunDelta that `qai diff` prints.
+ * RunDelta that `specgate diff` prints.
  *
  * Exported rather than copied. A second sorted serializer would be two answers to one
  * question, which is the thing the note above says this file is not: `stableStringify` in

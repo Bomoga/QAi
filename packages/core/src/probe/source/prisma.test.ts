@@ -16,7 +16,7 @@ import { blocksIn, createPrismaAdapter, fieldsInBlock, stripComment } from './pr
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'qai-prisma-'));
+  root = mkdtempSync(join(tmpdir(), 'specgate-prisma-'));
 });
 
 afterEach(() => {

@@ -4,10 +4,10 @@ import process from 'node:process';
 import { formatOutputs, outputsFromSarif, summaryLine } from './outputs.ts';
 
 /**
- * Public API of @qai/action.
+ * Public API of @specgate/action.
  *
  * The Action itself is `action.yml`, a composite action, because the module asks for a
- * thin one: install, run `qai check --format sarif`, upload, set outputs. Everything a
+ * thin one: install, run `specgate check --format sarif`, upload, set outputs. Everything a
  * composite action can express is expressed there.
  *
  * What is here is the one part with a decision in it, computing the outputs from the
@@ -27,7 +27,7 @@ export {
  *
  * Invoked by `action.yml` with the report path as its argument. It writes the summary
  * line to stdout so the step log says what the run found without anyone opening the
- * security tab, and it does not decide whether the workflow fails: `qai check` already
+ * security tab, and it does not decide whether the workflow fails: `specgate check` already
  * computed that exit code and the Action applies it, for the same reason `core` computes
  * one and the CLI applies it.
  */

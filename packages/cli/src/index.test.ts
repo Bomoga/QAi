@@ -14,17 +14,17 @@ import { main } from './index.ts';
  * M8.7, which own configuration resolution and error presentation.
  */
 function run(...argv: readonly string[]): Promise<number> {
-  return main(['node', 'qai', ...argv]);
+  return main(['node', 'specgate', ...argv]);
 }
 
-describe('the qai entry point', () => {
+describe('the specgate entry point', () => {
   it('exits 0 for a run that asked for nothing', async () => {
     await expect(run()).resolves.toBe(0);
   });
 
   it('exits 0 after printing help, rather than throwing at the user', async () => {
     // `exitOverride` makes Commander throw for `--help` too, and the throw arrives after
-    // the help has already printed. Without handling it, `qai --help` ends in a stack
+    // the help has already printed. Without handling it, `specgate --help` ends in a stack
     // trace, which is what the first run of the built binary actually did.
     await expect(run('--help')).resolves.toBe(0);
   });
@@ -49,7 +49,7 @@ describe('the qai entry point', () => {
     await expect(
       run(
         '--config',
-        'qai.config.yaml',
+        'specgate.config.yaml',
         '--format',
         'json',
         '--out',

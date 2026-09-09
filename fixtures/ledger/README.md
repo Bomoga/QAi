@@ -1,6 +1,6 @@
 # ledger
 
-A deliberately defective invoicing application. It is the integration target for QAi
+A deliberately defective invoicing application. It is the integration target for SpecGate
 and the demo subject.
 
 **Do not fix the defects.** They are the oracle the integration tests assert against.
@@ -33,7 +33,7 @@ These credentials are fixture data. They authenticate against this app and nothi
 `impostor` is the one that authenticates against nothing at all: its token matches no
 seeded user, so every route that reads a credential refuses it. That is a different case
 from the `anonymous` actor, who presents no credential, and a target can get one right
-while getting the other wrong. `qai.config.yaml` supplies it through
+while getting the other wrong. `specgate.config.yaml` supplies it through
 `LEDGER_UNKNOWN_TOKEN`, which has to be set alongside the other two.
 
 ## Defect switches

@@ -78,7 +78,7 @@ export async function stopLedgers(): Promise<void> {
 /** The config a user would have, with the port this test's server happened to get. */
 export function writeConfig(dir: string, baseUrl: string): void {
   writeFileSync(
-    join(dir, 'qai.config.yaml'),
+    join(dir, 'specgate.config.yaml'),
     [
       'target:',
       `  baseUrl: ${baseUrl}`,
@@ -154,7 +154,7 @@ export async function runCli(
 ): Promise<{ code: number; out: string; err: string }> {
   const out = capture();
   const err = capture();
-  const code = await main(['node', 'qai', ...argv], {
+  const code = await main(['node', 'specgate', ...argv], {
     stdout: out.stream,
     stderr: err.stream,
     env: ENV,
@@ -164,7 +164,7 @@ export async function runCli(
 }
 
 export function workspace(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'qai-e2e-'));
+  const dir = mkdtempSync(join(tmpdir(), 'specgate-e2e-'));
   mkdirSync(join(dir, 'spec'), { recursive: true });
   return dir;
 }

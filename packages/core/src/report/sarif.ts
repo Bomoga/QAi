@@ -228,7 +228,7 @@ function checkResults(result: RunResult): SarifResultOut[] {
       locations: locationsFor(check, anchor),
       // Content-hashed at runtime, so the same check on the same target keeps one alert
       // across runs instead of opening a new one every time CI runs.
-      partialFingerprints: { qaiCheckId: check.checkId },
+      partialFingerprints: { specgateCheckId: check.checkId },
       properties: {
         checkId: check.checkId,
         deterministic: check.deterministic,
@@ -263,7 +263,7 @@ function structuralResult(
         logicalLocations: [{ name, kind: logicalKind }],
       },
     ],
-    partialFingerprints: { qaiStructuralId: fingerprint },
+    partialFingerprints: { specgateStructuralId: fingerprint },
     properties: { severity },
   };
 }
@@ -352,7 +352,7 @@ export function renderSarif(result: RunResult): string {
       {
         tool: {
           driver: {
-            name: 'QAi',
+            name: 'SpecGate',
             version: result.toolVersion,
             informationUri: TOOL_INFORMATION_URI,
             rules: RULES.map((rule) => ({

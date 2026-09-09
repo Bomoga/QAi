@@ -17,7 +17,7 @@ import { APP_LAYOUT, discoverCorpusApps } from './apps.ts';
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'qai-corpus-'));
+  root = mkdtempSync(join(tmpdir(), 'specgate-corpus-'));
 });
 
 afterEach(() => {

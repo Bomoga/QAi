@@ -25,7 +25,7 @@ let dir: string;
 const opened: StoreDatabase[] = [];
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-store-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-store-'));
 });
 
 afterEach(() => {
@@ -147,7 +147,7 @@ describe('opening a store', () => {
     expect(db.prepare('SELECT COUNT(*) AS n FROM evidence').get()).toStrictEqual({ n: 0 });
   });
 
-  it('refuses a database written by a newer qai rather than downgrading it', () => {
+  it('refuses a database written by a newer specgate rather than downgrading it', () => {
     // An older build cannot know what a later one added, and writing to it would corrupt
     // history already on disk. The message names both versions.
     open().db.close();
@@ -158,7 +158,7 @@ describe('opening a store', () => {
     raw.close();
 
     expect(() => open()).toThrow(
-      new RegExp(`${CURRENT_SCHEMA_VERSION + 5}.*newer qai.*${CURRENT_SCHEMA_VERSION}`, 's'),
+      new RegExp(`${CURRENT_SCHEMA_VERSION + 5}.*newer specgate.*${CURRENT_SCHEMA_VERSION}`, 's'),
     );
   });
 

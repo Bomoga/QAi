@@ -1,5 +1,5 @@
 ﻿/**
- * Public API of @qai/core.
+ * Public API of @specgate/core.
  *
  * Everything a surface is allowed to touch is re-exported from here as its owning
  * module lands. Anything reached by a deeper path is private code, and a surface

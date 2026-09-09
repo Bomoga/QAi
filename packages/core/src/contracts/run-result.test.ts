@@ -53,7 +53,7 @@ const CONTRACT_EVIDENCE = {
   response: {
     status: 200,
     headers: {},
-    bodyRef: '.qai/evidence/EV-7d10b3.json',
+    bodyRef: '.specgate/evidence/EV-7d10b3.json',
     truncated: false,
   },
   redactions: ['request.headers.authorization', 'response.body.notes'],

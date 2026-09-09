@@ -25,7 +25,7 @@ import {
  * reporting the cross-owner leak as a high severity finding with request and response
  * evidence, and exiting 1. Fixing the fixture makes it exit 0.
  *
- * This is `qai check` in everything but name. The command itself belongs to M8 and
+ * This is `specgate check` in everything but name. The command itself belongs to M8 and
  * lands in S6, so the exit code policy here follows the contract rather than
  * inventing one: 0 for no findings at or above the threshold, 1 for findings, 2 for a
  * spec or configuration error.
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const config = loadConfig('qai.config.yaml', root);
+  const config = loadConfig('specgate.config.yaml', root);
   if (isConfigFailure(config)) {
     process.stdout.write(`${config.error.message}\n`);
     process.exitCode = 2;

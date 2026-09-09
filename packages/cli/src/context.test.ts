@@ -17,7 +17,7 @@ import { describeContext, isContextError, resolveContext } from './context.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-context-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-context-'));
 });
 
 afterEach(() => {
@@ -28,7 +28,7 @@ const MINIMAL_TARGET = `target:
   baseUrl: http://127.0.0.1:3000
 `;
 
-function writeConfig(body: string, name = 'qai.config.yaml'): void {
+function writeConfig(body: string, name = 'specgate.config.yaml'): void {
   writeFileSync(join(dir, name), body, 'utf8');
 }
 
@@ -63,7 +63,7 @@ describe('resolving the run context', () => {
   });
 
   it('treats a missing config file as no config layer rather than as an error', () => {
-    // Before `qai init` has run there is no file, and the CLI should still be able to
+    // Before `specgate init` has run there is no file, and the CLI should still be able to
     // say what it resolved.
     const context = resolved();
 
@@ -114,7 +114,7 @@ describe('resolving the run context', () => {
       'from-env.yaml',
     );
 
-    const context = resolved({}, { QAI_CONFIG: 'from-env.yaml' });
+    const context = resolved({}, { SPECGATE_CONFIG: 'from-env.yaml' });
     expect(context.configPath.source).toBe('environment');
     expect(context.settings.format.value).toBe('json');
   });
@@ -135,12 +135,12 @@ describe('the verbose configuration block', () => {
   concurrency: 4
 `);
 
-    const printed = describeContext(resolved({ format: 'sarif' }, { QAI_FAIL_ON: 'medium' }));
+    const printed = describeContext(resolved({ format: 'sarif' }, { SPECGATE_FAIL_ON: 'medium' }));
 
     expect(printed).toContain('Resolved configuration');
     expect(printed).toContain('sarif');
     expect(printed).toContain('flag');
-    expect(printed).toContain('QAI_FAIL_ON');
+    expect(printed).toContain('SPECGATE_FAIL_ON');
     expect(printed).toContain('config');
   });
 
@@ -148,7 +148,7 @@ describe('the verbose configuration block', () => {
     const printed = describeContext(resolved());
 
     expect(printed).toContain('No config file at');
-    expect(printed).toContain('qai.config.yaml');
+    expect(printed).toContain('specgate.config.yaml');
   });
 
   it('contains no em dash', () => {

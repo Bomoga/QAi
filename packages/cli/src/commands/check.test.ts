@@ -9,7 +9,7 @@ import {
   loadConfig,
   silentReporter,
   type TargetConfig,
-} from '@qai/core';
+} from '@specgate/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Stream } from '../reporter.ts';
@@ -31,7 +31,7 @@ import { observationIdFrom, runCheck, runIdFrom } from './check.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-check-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-check-'));
   mkdirSync(join(dir, 'spec'), { recursive: true });
 });
 
@@ -84,8 +84,8 @@ function configWith(baseUrl?: string): TargetConfig {
     '',
   ].join('\n');
 
-  writeFileSync(join(dir, 'qai.config.yaml'), body, 'utf8');
-  const loaded = loadConfig('qai.config.yaml', dir);
+  writeFileSync(join(dir, 'specgate.config.yaml'), body, 'utf8');
+  const loaded = loadConfig('specgate.config.yaml', dir);
   if (isConfigFailure(loaded)) throw new Error(loaded.error.message);
   return loaded.config;
 }
@@ -109,7 +109,7 @@ async function check(options: { config?: TargetConfig; paths?: readonly string[]
     env: {},
     paths: options.paths ?? [],
     config: options.config,
-    configPath: 'qai.config.yaml',
+    configPath: 'specgate.config.yaml',
     settings: settings(),
     stdout: out.stream,
     stderr: err.stream,
@@ -120,14 +120,14 @@ async function check(options: { config?: TargetConfig; paths?: readonly string[]
   return { code, out: out.text(), err: err.text() };
 }
 
-describe('qai check, before a run can start', () => {
+describe('specgate check, before a run can start', () => {
   it('exits 2 with no configuration, naming the command that writes one', async () => {
     writeFileSync(join(dir, 'spec', 'app.spec.yaml'), SPEC, 'utf8');
 
     const { code, err, out } = await check();
 
     expect(code).toBe(2);
-    expect(err).toContain('qai init');
+    expect(err).toContain('specgate init');
     expect(out).toBe('');
   });
 
@@ -136,7 +136,7 @@ describe('qai check, before a run can start', () => {
 
     expect(code).toBe(2);
     expect(err).toContain('no spec files matched');
-    expect(err).toContain('qai validate');
+    expect(err).toContain('specgate validate');
   });
 
   it('exits 2 when a spec will not load', async () => {
@@ -269,8 +269,8 @@ function sourcedConfig(baseUrl: string, sourceRoot?: string): TargetConfig {
     '',
   ].join('\n');
 
-  writeFileSync(join(dir, 'qai.config.yaml'), body, 'utf8');
-  const loaded = loadConfig('qai.config.yaml', dir);
+  writeFileSync(join(dir, 'specgate.config.yaml'), body, 'utf8');
+  const loaded = loadConfig('specgate.config.yaml', dir);
   if (isConfigFailure(loaded)) throw new Error(loaded.error.message);
   return loaded.config;
 }
@@ -304,7 +304,7 @@ async function stop(server: Server): Promise<void> {
   await new Promise<void>((done) => server.close(() => done()));
 }
 
-describe('qai check, against a target whose source can be read', () => {
+describe('specgate check, against a target whose source can be read', () => {
   beforeEach(() => {
     mkdirSync(join(dir, 'app'), { recursive: true });
     writeFileSync(join(dir, 'app', 'server.js'), EXPRESS_SOURCE, 'utf8');
@@ -465,8 +465,8 @@ function disposableConfig(baseUrl: string, markerPath: string, disposable = true
     '',
   ].join('\n');
 
-  writeFileSync(join(dir, 'qai.config.yaml'), body, 'utf8');
-  const loaded = loadConfig('qai.config.yaml', dir);
+  writeFileSync(join(dir, 'specgate.config.yaml'), body, 'utf8');
+  const loaded = loadConfig('specgate.config.yaml', dir);
   if (isConfigFailure(loaded)) throw new Error(loaded.error.message);
   return loaded.config;
 }

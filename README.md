@@ -1,8 +1,8 @@
-# QAi
+# SpecGate
 
 Checks that an application does what its spec said it would, and reports where they disagree.
 
-You write down what the application is meant to do. QAi works out what it actually
+You write down what the application is meant to do. SpecGate works out what it actually
 contains, checks the two against each other, and tells you where they differ, with the
 request and the response that proves each claim.
 
@@ -31,7 +31,7 @@ what the run found.
 A fuller version, with the target running first:
 
 ```yaml
-name: qai
+name: specgate
 on: [pull_request]
 
 permissions:
@@ -55,8 +55,8 @@ jobs:
         with:
           fail-on: high
         env:
-          QAI_OWNER_TOKEN: ${{ secrets.QAI_OWNER_TOKEN }}
-          QAI_OUTSIDER_TOKEN: ${{ secrets.QAI_OUTSIDER_TOKEN }}
+          SPECGATE_OWNER_TOKEN: ${{ secrets.SPECGATE_OWNER_TOKEN }}
+          SPECGATE_OUTSIDER_TOKEN: ${{ secrets.SPECGATE_OUTSIDER_TOKEN }}
 ```
 
 ### Action inputs
@@ -64,15 +64,15 @@ jobs:
 They mirror the command line flags, because a flag and an input that meant different
 things would be two surfaces to learn.
 
-| Input                | Default            | Meaning                                                   |
-| -------------------- | ------------------ | --------------------------------------------------------- |
-| `spec`               | `spec/*.spec.yaml` | Spec files or globs                                       |
-| `config`             | `qai.config.yaml`  | Path to the target configuration                          |
-| `fail-on`            | `high`             | Lowest finding severity that fails the run                |
-| `fail-on-unverified` | `false`            | Treat a requirement nobody could check as a failure       |
-| `concurrency`        | unset              | How many checks to run at once                            |
-| `working-directory`  | `.`                | Directory to run in                                       |
-| `upload-sarif`       | `true`             | Upload findings so they appear inline on the pull request |
+| Input                | Default                | Meaning                                                   |
+| -------------------- | ---------------------- | --------------------------------------------------------- |
+| `spec`               | `spec/*.spec.yaml`     | Spec files or globs                                       |
+| `config`             | `specgate.config.yaml` | Path to the target configuration                          |
+| `fail-on`            | `high`                 | Lowest finding severity that fails the run                |
+| `fail-on-unverified` | `false`                | Treat a requirement nobody could check as a failure       |
+| `concurrency`        | unset                  | How many checks to run at once                            |
+| `working-directory`  | `.`                    | Directory to run in                                       |
+| `upload-sarif`       | `true`                 | Upload findings so they appear inline on the pull request |
 
 ### Action outputs
 
@@ -85,7 +85,7 @@ things would be two surfaces to learn.
 | `coverage-percent`        | Requirements with at least one check that reached a verdict |
 | `requirements-unverified` | Requirements nobody could check                             |
 | `model-assisted-checks`   | Checks that were not fully deterministic                    |
-| `exit-code`               | The code `qai check` returned                               |
+| `exit-code`               | The code `specgate check` returned                          |
 | `sarif-file`              | Where the report was written                                |
 
 `coverage-percent` is coverage, not a pass rate. It counts requirements that reached a
@@ -94,25 +94,25 @@ established, it just came out badly.
 
 ## On the command line
 
-**QAi is not published to a registry yet, so `npx qai` does not resolve.** Clone this
+**SpecGate is not published to a registry yet, so `npx specgate` does not resolve.** Clone this
 repository, install, build, and run the binary directly:
 
 ```bash
-node packages/cli/bin/qai.js init
+node packages/cli/bin/specgate.js init
 ```
 
-That writes `qai.config.yaml`, a starter spec at `spec/app.spec.yaml`, and a `.gitignore`
-entry for `.qai/`. It never overwrites anything.
+That writes `specgate.config.yaml`, a starter spec at `spec/app.spec.yaml`, and a `.gitignore`
+entry for `.specgate/`. It never overwrites anything.
 
-The table below writes `qai` for the command. Read it as `node <clone>/packages/cli/bin/qai.js`
+The table below writes `specgate` for the command. Read it as `node <clone>/packages/cli/bin/specgate.js`
 until there is a package to install.
 
-| Command                   | What it does                                                     |
-| ------------------------- | ---------------------------------------------------------------- |
-| `qai init`                | Scaffold a config, a starter spec, and the gitignore entry       |
-| `qai validate [paths...]` | Load the specs and report what they contain and what is wrong    |
-| `qai probe [paths...]`    | Describe what the target actually contains, judging nothing      |
-| `qai check [paths...]`    | Probe, run the checks, and report where target and spec disagree |
+| Command                        | What it does                                                     |
+| ------------------------------ | ---------------------------------------------------------------- |
+| `specgate init`                | Scaffold a config, a starter spec, and the gitignore entry       |
+| `specgate validate [paths...]` | Load the specs and report what they contain and what is wrong    |
+| `specgate probe [paths...]`    | Describe what the target actually contains, judging nothing      |
+| `specgate check [paths...]`    | Probe, run the checks, and report where target and spec disagree |
 
 Global flags: `--config <path>`, `--format text|json|sarif|junit`, `--out <path>`,
 `--fail-on high|medium|low`, `--fail-on-unverified`, `--concurrency <n>`, `--no-color`,

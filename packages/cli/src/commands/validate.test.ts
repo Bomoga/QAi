@@ -11,7 +11,7 @@ import { SPEC_TEMPLATE } from './init.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-validate-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-validate-'));
   mkdirSync(join(dir, 'spec'), { recursive: true });
 });
 
@@ -73,7 +73,7 @@ requirements:
         then: 'status is 200'
 `;
 
-describe('qai validate', () => {
+describe('specgate validate', () => {
   it('exits 0 and summarises a spec that loads cleanly', async () => {
     writeSpec(CLEAN_SPEC);
 

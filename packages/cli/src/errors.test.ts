@@ -24,7 +24,7 @@ function capture(): { stream: Stream; text: () => string } {
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-errors-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-errors-'));
   mkdirSync(join(dir, 'spec'), { recursive: true });
 });
 
@@ -35,7 +35,7 @@ afterEach(() => {
 async function run(argv: readonly string[]): Promise<{ code: number; out: string; err: string }> {
   const out = capture();
   const err = capture();
-  const code = await main(['node', 'qai', ...argv], {
+  const code = await main(['node', 'specgate', ...argv], {
     stdout: out.stream,
     stderr: err.stream,
     env: {},
@@ -51,7 +51,7 @@ describe('presenting one error', () => {
       {
         code: 2,
         summary: 'the target has no base URL',
-        where: 'qai.config.yaml, at target.baseUrl',
+        where: 'specgate.config.yaml, at target.baseUrl',
         reason: 'A check issues requests.',
         suggestion: 'Set target.baseUrl.',
       },
@@ -60,7 +60,7 @@ describe('presenting one error', () => {
 
     const lines = err.text().trimEnd().split('\n');
     expect(lines[0]).toBe('error: the target has no base URL');
-    expect(lines[1]).toBe('  at qai.config.yaml, at target.baseUrl');
+    expect(lines[1]).toBe('  at specgate.config.yaml, at target.baseUrl');
     expect(lines[2]).toBe('  A check issues requests.');
     expect(lines[3]).toBe('  Suggestion: Set target.baseUrl.');
   });

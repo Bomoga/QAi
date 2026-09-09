@@ -4,9 +4,9 @@ import { join } from 'node:path';
 /**
  * What a corpus application is, and how the runner finds one.
  *
- * **A corpus application is an ordinary qai project.** It holds a `qai.config.yaml` and a
+ * **A corpus application is an ordinary specgate project.** It holds a `specgate.config.yaml` and a
  * `spec/` directory exactly where the CLI looks for them by default, so running the tool
- * against one is `qai check` in that directory and nothing else. A corpus that needed its
+ * against one is `specgate check` in that directory and nothing else. A corpus that needed its
  * own invocation would be measuring a harness rather than the product.
  *
  * **An incomplete application is reported, never skipped.** A corpus run that quietly
@@ -24,7 +24,7 @@ export const CORPUS_BASE_URL = `http://127.0.0.1:${CORPUS_PORT}`;
 export const APP_LAYOUT = {
   /** Started with `PORT` in the environment, and expected to listen on it. */
   entry: join('app', 'index.ts'),
-  config: 'qai.config.yaml',
+  config: 'specgate.config.yaml',
   specDir: 'spec',
   /**
    * Optional. Fixture credentials the application's config names by variable.

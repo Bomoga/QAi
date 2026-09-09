@@ -461,7 +461,7 @@ none reached a verdict` is not an error, and the closed reason set in the contra
 no member for it. A contract question, recorded and not resolved here.
 
 **A real data leak can be reported at `medium` and not fail the run.** Behavioral findings
-are medium and the default threshold is high, so `qai check` exited 0 against
+are medium and the default threshold is high, so `specgate check` exited 0 against
 `p6-messages-dm-leak`, `p3-notes-shared-flag`, `p5-files-listed-contents`, and
 `p8-enrolment-course-leak`. Each piece is defensible and the combination is not. A product
 decision, recorded and not resolved here.

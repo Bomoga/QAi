@@ -12,7 +12,7 @@ import {
   type Observation,
   type Reporter,
   type TargetConfig,
-} from '@qai/core';
+} from '@specgate/core';
 
 import type { Stream } from '../reporter.ts';
 import { present } from '../errors.ts';
@@ -20,7 +20,7 @@ import type { Settings } from '../settings.ts';
 import { DEFAULT_SPEC_GLOB } from './validate.ts';
 
 /**
- * `qai probe`: what the target actually contains, and nothing about what it should.
+ * `specgate probe`: what the target actually contains, and nothing about what it should.
  *
  * **No verdicts, by construction.** A probe describes; the diff and the checks judge.
  * Running this on its own is how somebody answers "what is even in here" before they
@@ -128,7 +128,7 @@ export async function runProbe(options: ProbeOptions): Promise<number> {
         code: 2,
         summary: 'no configuration was found',
         where: options.configPath,
-        suggestion: 'Run "qai init" to write one, or pass --config with the path to yours.',
+        suggestion: 'Run "specgate init" to write one, or pass --config with the path to yours.',
       },
       presentTo,
     );

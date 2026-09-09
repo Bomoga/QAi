@@ -52,7 +52,7 @@ const RESPONSE: RequestOutcome = {
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-evidence-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-evidence-'));
 });
 
 afterEach(() => {
@@ -132,8 +132,8 @@ describe('nothing sensitive reaches disk', () => {
 
   it('writes no authorization header value', () => {
     writeOne();
-    const written = readdirSync(join(dir, '.qai/evidence'))
-      .map((name) => readFileSync(join(dir, '.qai/evidence', name), 'utf8'))
+    const written = readdirSync(join(dir, '.specgate/evidence'))
+      .map((name) => readFileSync(join(dir, '.specgate/evidence', name), 'utf8'))
       .join('\n');
 
     expect(written).not.toContain('ledger-outsider-token');
@@ -142,8 +142,8 @@ describe('nothing sensitive reaches disk', () => {
 
   it('writes no field the spec marks sensitive', () => {
     writeOne();
-    const written = readdirSync(join(dir, '.qai/evidence'))
-      .map((name) => readFileSync(join(dir, '.qai/evidence', name), 'utf8'))
+    const written = readdirSync(join(dir, '.specgate/evidence'))
+      .map((name) => readFileSync(join(dir, '.specgate/evidence', name), 'utf8'))
       .join('\n');
 
     expect(written).not.toContain('Net 30, billing contact');
@@ -152,7 +152,7 @@ describe('nothing sensitive reaches disk', () => {
 
   it('still writes the fields that are not sensitive, so evidence stays useful', () => {
     const id = writeOne();
-    const body = readFileSync(join(dir, '.qai/evidence', `${id}.json`), 'utf8');
+    const body = readFileSync(join(dir, '.specgate/evidence', `${id}.json`), 'utf8');
 
     expect(body).toContain('INV-1001');
     expect(body).toContain('org-1');
@@ -161,14 +161,14 @@ describe('nothing sensitive reaches disk', () => {
 
   it('leaves no other file behind that could hold the unredacted body', () => {
     writeOne();
-    const names = readdirSync(join(dir, '.qai/evidence')).sort();
+    const names = readdirSync(join(dir, '.specgate/evidence')).sort();
     expect(names).toEqual(['EV-000001.json', 'EV-000001.record.json']);
   });
 
   it('writes a record that still parses as Evidence', () => {
     const id = writeOne();
     const raw: unknown = JSON.parse(
-      readFileSync(join(dir, '.qai/evidence', `${id}.record.json`), 'utf8'),
+      readFileSync(join(dir, '.specgate/evidence', `${id}.record.json`), 'utf8'),
     );
     expect(EvidenceSchema.safeParse(raw).success).toBe(true);
   });
@@ -178,7 +178,7 @@ describe('nothing sensitive reaches disk', () => {
     createEvidenceWriter({ cwd: dir }).write(capture);
 
     const bodyRef = capture.evidence.response?.bodyRef;
-    expect(bodyRef).toBe('.qai/evidence/EV-000001.json');
+    expect(bodyRef).toBe('.specgate/evidence/EV-000001.json');
     expect(() => readFileSync(join(dir, bodyRef ?? ''), 'utf8')).not.toThrow();
   });
 });

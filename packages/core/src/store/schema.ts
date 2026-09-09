@@ -12,12 +12,12 @@ import type Database from 'better-sqlite3';
  * the store holds run history, and a downgrade that dropped a column would destroy the
  * thing the delta exists to compare against.
  *
- * **A database from a newer qai is refused, never opened.** An older build has no way to
+ * **A database from a newer specgate is refused, never opened.** An older build has no way to
  * know what a later one added, and writing to it would corrupt history that is already
  * on disk. The refusal names both versions so the fix is obvious.
  *
  * **Evidence bodies are files, not rows.** The contract puts them under
- * `.qai/evidence/` and the module says so outright: blobs make the database unwieldy and
+ * `.specgate/evidence/` and the module says so outright: blobs make the database unwieldy and
  * the directory ungreppable. The `evidence` table holds the record and a path.
  *
  * **The whole RunResult is one JSON column.** `diffRuns` takes two RunResults and
@@ -27,7 +27,7 @@ import type Database from 'better-sqlite3';
  */
 
 /** Where the store lives inside the state directory named in the naming table. */
-export const STATE_DIRECTORY = '.qai';
+export const STATE_DIRECTORY = '.specgate';
 export const DATABASE_FILE = 'runs.db';
 export const EVIDENCE_DIRECTORY = 'evidence';
 
@@ -72,7 +72,7 @@ export const MIGRATIONS: readonly Migration[] = [
         captured_at   TEXT NOT NULL,
         actor_id      TEXT,
         -- The Evidence record's bodyRef verbatim, which is relative to the project root
-        -- and already carries the state directory, as in .qai/evidence/EV-000001.json.
+        -- and already carries the state directory, as in .specgate/evidence/EV-000001.json.
         -- The body itself is a file, never a row.
         body_path     TEXT,
         record_json   TEXT NOT NULL,
@@ -118,7 +118,7 @@ export function migrate(db: StoreDatabase): { from: number; to: number; applied:
 
   if (from > CURRENT_SCHEMA_VERSION) {
     throw new Error(
-      `the run store at schema version ${from} was written by a newer qai, and this build understands version ${CURRENT_SCHEMA_VERSION}. Upgrade qai, or point --config at a different state directory.`,
+      `the run store at schema version ${from} was written by a newer specgate, and this build understands version ${CURRENT_SCHEMA_VERSION}. Upgrade specgate, or point --config at a different state directory.`,
     );
   }
 
@@ -163,7 +163,7 @@ export interface OpenDatabaseResult {
  * to be built for the platform and the Node version running it.
  *
  * Resolving it at the top of the module made its absence a load error, which crashed
- * before any of the handling below could run. `qai check` says outright that a store
+ * before any of the handling below could run. `specgate check` says outright that a store
  * which will not write is a warning rather than a failure, because the report is the
  * product and it has already been produced by then. A static import contradicted that:
  * the run died at import time, on a machine that could have reported perfectly well.
@@ -177,14 +177,14 @@ function loadDatabaseConstructor(): typeof Database {
 }
 
 /**
- * Opens `.qai/runs.db` under `dir`, creating and migrating as needed.
+ * Opens `.specgate/runs.db` under `dir`, creating and migrating as needed.
  *
  * Throws rather than returning a failure. Rule R4 makes errors values at the check level,
  * and this is not a check: a store that will not open has no partial answer to offer, and
  * the CLI already turns an unexpected throw into exit 3.
  *
  * A missing or unbuildable `better-sqlite3` throws from here like any other failure to
- * open, which is what lets `qai check` degrade to a warning instead of dying.
+ * open, which is what lets `specgate check` degrade to a warning instead of dying.
  */
 export function openDatabase(dir: string): OpenDatabaseResult {
   const stateDir = resolve(dir, STATE_DIRECTORY);

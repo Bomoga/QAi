@@ -37,8 +37,13 @@ export const LLM_BOUNDARY_MESSAGE =
   '. Everywhere else, a verdict must be produced by deterministic assertion.';
 
 /** the architecture: core depends on nothing here, cli depends on core, action depends on cli. */
-export const CORE_FORBIDDEN_PATTERNS = ['@qai/cli', '@qai/cli/*', '@qai/action', '@qai/action/*'];
-export const CLI_FORBIDDEN_PATTERNS = ['@qai/action', '@qai/action/*'];
+export const CORE_FORBIDDEN_PATTERNS = [
+  '@specgate/cli',
+  '@specgate/cli/*',
+  '@specgate/action',
+  '@specgate/action/*',
+];
+export const CLI_FORBIDDEN_PATTERNS = ['@specgate/action', '@specgate/action/*'];
 
 export const CORE_DIRECTION_MESSAGE =
   'core imports nothing from cli or action. If core needs to tell the user something, it returns data.';
@@ -83,7 +88,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.next/**',
       '**/next-env.d.ts',
-      '.qai/**',
+      '.specgate/**',
     ],
   },
   js.configs.recommended,

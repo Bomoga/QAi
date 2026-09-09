@@ -13,13 +13,13 @@ import { GLOBAL_FLAGS, createProgram } from './program.ts';
  */
 function parse(argv: readonly string[]) {
   const program = createProgram();
-  program.parse(['node', 'qai', ...argv]);
+  program.parse(['node', 'specgate', ...argv]);
   return program;
 }
 
-describe('the qai program', () => {
-  it('is named qai, since every identifier in this project derives from that token', () => {
-    expect(createProgram().name()).toBe('qai');
+describe('the specgate program', () => {
+  it('is named specgate, since every identifier in this project derives from that token', () => {
+    expect(createProgram().name()).toBe('specgate');
   });
 
   it('accepts every global flag the module lists', () => {

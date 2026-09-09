@@ -21,7 +21,7 @@ import { renderText } from './text.ts';
  * turn these red and a change to an emitter cannot hide behind a check that stopped
  * running.
  *
- * Regenerate with `pnpm --filter @qai/core capture:goldens <defective|fixed>`, against a
+ * Regenerate with `pnpm --filter @specgate/core capture:goldens <defective|fixed>`, against a
  * freshly started ledger, and read the diff. The run mutates the target, so a capture
  * against a target that has already been run is drifted state and will not reproduce.
  * Never regenerate in bulk to make this suite pass: a golden that changed is either an

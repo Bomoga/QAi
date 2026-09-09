@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { openStore, type RunResult } from '@qai/core';
+import { openStore, type RunResult } from '@specgate/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Stream } from '../reporter.ts';
@@ -10,7 +10,7 @@ import { BUILT_IN_DEFAULTS, type Settings } from '../settings.ts';
 import { runReport } from './report.ts';
 
 /**
- * `qai report` over a real store file, because the command is a read of one.
+ * `specgate report` over a real store file, because the command is a read of one.
  *
  * What is worth pinning is every way it refuses, and the code each refusal produces. The
  * table gives this command 0 and 2 and nothing else: 1 belongs to a run that completed
@@ -20,7 +20,7 @@ import { runReport } from './report.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-report-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-report-'));
 });
 
 afterEach(() => {
@@ -188,7 +188,7 @@ describe('refusing, and how', () => {
 
     expect(code).toBe(2);
     expect(err).toContain('the store holds no runs at all');
-    expect(err).toContain('Run "qai check" to record one.');
+    expect(err).toContain('Run "specgate check" to record one.');
   });
 
   it('never exits 1, whatever the stored run found', () => {
@@ -221,13 +221,13 @@ describe('refusing, and how', () => {
   it('exits 2 when the store cannot be opened at all', () => {
     // A store that will not open has to reach the user as an error rather than as an
     // empty report, which would read as a project with no history.
-    mkdirSync(join(dir, '.qai'), { recursive: true });
-    writeFileSync(join(dir, '.qai', 'runs.db'), 'this is not a database', 'utf8');
+    mkdirSync(join(dir, '.specgate'), { recursive: true });
+    writeFileSync(join(dir, '.specgate', 'runs.db'), 'this is not a database', 'utf8');
 
     const { code, err } = report('RUN-20260820-000001');
 
     expect(code).toBe(2);
     expect(err).toContain('could not open the run store');
-    expect(err).toContain('.qai/runs.db');
+    expect(err).toContain('.specgate/runs.db');
   });
 });

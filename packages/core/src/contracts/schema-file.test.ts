@@ -15,7 +15,7 @@ import {
  * that the tool then rejects, and the author has no way to tell which one is lying.
  *
  * Regenerate with:
- *   pnpm --filter @qai/core generate:schema
+ *   pnpm --filter @specgate/core generate:schema
  *
  * and review the diff. Do not regenerate to make this pass without reading what moved.
  */

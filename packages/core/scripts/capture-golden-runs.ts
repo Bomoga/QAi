@@ -48,12 +48,12 @@ import {
  * ```
  * # defective, the switches default to on
  * PORT=3000 pnpm --filter ledger dev
- * pnpm --filter @qai/core capture:goldens defective
+ * pnpm --filter @specgate/core capture:goldens defective
  *
  * # fixed
  * LEDGER_DEFECT_D1=off LEDGER_DEFECT_D2=off LEDGER_DEFECT_D3=off \
  *   LEDGER_DEFECT_D4=off LEDGER_DEFECT_D5=off PORT=3000 pnpm --filter ledger dev
- * pnpm --filter @qai/core capture:goldens fixed
+ * pnpm --filter @specgate/core capture:goldens fixed
  * ```
  *
  * `LEDGER_OWNER_TOKEN`, `LEDGER_OUTSIDER_TOKEN`, and `LEDGER_UNKNOWN_TOKEN` all have to
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const config = loadConfig('qai.config.yaml', root);
+  const config = loadConfig('specgate.config.yaml', root);
   if (isConfigFailure(config)) {
     process.stdout.write(`${config.error.message}\n`);
     process.exitCode = 2;
@@ -122,7 +122,9 @@ async function main(): Promise<void> {
 
   const baseUrl = config.config.target.baseUrl;
   if (baseUrl === undefined) {
-    process.stdout.write('qai.config.yaml names no baseUrl, so there is nothing to capture.\n');
+    process.stdout.write(
+      'specgate.config.yaml names no baseUrl, so there is nothing to capture.\n',
+    );
     process.exitCode = 2;
     return;
   }

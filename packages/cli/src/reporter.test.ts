@@ -5,7 +5,7 @@ import { createReporter, type Stream } from './reporter.ts';
 /**
  * The one rule these tests exist to hold: progress goes to stderr.
  *
- * Stdout carries the report and nothing else, so `qai check --format json | jq` has to
+ * Stdout carries the report and nothing else, so `specgate check --format json | jq` has to
  * work. A single progress line on stdout breaks every pipe a user builds, and it breaks
  * it silently, because the JSON is still in there somewhere.
  */

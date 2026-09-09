@@ -21,7 +21,7 @@ import {
  * endpoint with its origin and confidence, and a structural diff reporting an endpoint
  * that exists and appears in no requirement.
  *
- * This is `qai probe` in everything but name. The command belongs to M8 and lands in
+ * This is `specgate probe` in everything but name. The command belongs to M8 and lands in
  * S6, the same gap S1, S2 and S3 hit, so the behavior is demonstrated here instead.
  *
  * The ledger is probed black box. M4's adapters target Next.js, Express and Prisma, and
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const config = loadConfig('qai.config.yaml', root);
+  const config = loadConfig('specgate.config.yaml', root);
   if (isConfigFailure(config)) {
     process.stdout.write(`${config.error.message}\n`);
     process.exitCode = 2;

@@ -5,7 +5,7 @@ import type { Stream } from '../reporter.ts';
 import { present } from '../errors.ts';
 
 /**
- * `qai init`: a config, a starter spec, and the `.gitignore` entry for `.qai/`.
+ * `specgate init`: a config, a starter spec, and the `.gitignore` entry for `.specgate/`.
  *
  * **It never overwrites.** Invariant I7 says the tool is read only by default, and this
  * is the one command that writes, so the rule matters most here. Somebody running `init`
@@ -15,7 +15,7 @@ import { present } from '../errors.ts';
  * the command hostile to the exact user who is unsure whether they ran it.
  *
  * **The templates have to load.** A starter config that fails to parse, or a starter
- * spec that produces authoring warnings, makes a user's first `qai validate` red through
+ * spec that produces authoring warnings, makes a user's first `specgate validate` red through
  * no fault of their own. The tests run the real loaders over the real output for that
  * reason, and assert zero diagnostics rather than merely no error.
  */
@@ -24,7 +24,7 @@ import { present } from '../errors.ts';
 export const SPEC_PATH = 'spec/app.spec.yaml';
 
 /** The state directory, which is git ignored per the naming table. */
-export const GITIGNORE_ENTRY = '.qai/';
+export const GITIGNORE_ENTRY = '.specgate/';
 
 /**
  * The starter config.
@@ -52,14 +52,14 @@ actors:
   - id: owner
     auth:
       kind: bearer
-      tokenEnv: QAI_OWNER_TOKEN
+      tokenEnv: SPECGATE_OWNER_TOKEN
     attributes:
       org_id: org-1
 
   - id: outsider
     auth:
       kind: bearer
-      tokenEnv: QAI_OUTSIDER_TOKEN
+      tokenEnv: SPECGATE_OUTSIDER_TOKEN
     attributes:
       org_id: org-2
 
@@ -96,7 +96,7 @@ name: 'My application'
 # it was built, and the tool reports where the two disagree.
 #
 # Replace Document with an entity your application actually has, point the routes in
-# qai.config.yaml at it, then run: qai check
+# specgate.config.yaml at it, then run: specgate check
 
 actors:
   - id: owner
@@ -189,11 +189,11 @@ function writeIfAbsent(target: string, contents: string): 'created' | 'exists' {
 }
 
 /**
- * Adds `.qai/` to `.gitignore`, or creates the file.
+ * Adds `.specgate/` to `.gitignore`, or creates the file.
  *
  * The existing content is preserved exactly, and a file whose last line has no
  * terminator gets one first. Without that the entry is glued onto the last line,
- * producing something like `dist/.qai/`, which ignores neither.
+ * producing something like `dist/.specgate/`, which ignores neither.
  */
 function ensureGitignore(target: string): 'created' | 'updated' | 'exists' {
   if (!existsSync(target)) {
@@ -204,7 +204,7 @@ function ensureGitignore(target: string): 'created' | 'updated' | 'exists' {
   const current = readFileSync(target, 'utf8');
   const alreadyIgnored = current
     .split(/\r?\n/)
-    .some((line) => line.trim() === GITIGNORE_ENTRY || line.trim() === '.qai');
+    .some((line) => line.trim() === GITIGNORE_ENTRY || line.trim() === '.specgate');
   if (alreadyIgnored) return 'exists';
 
   const separator = current.length === 0 || current.endsWith('\n') ? '' : '\n';
@@ -256,7 +256,7 @@ export function runInit(options: InitOptions): Promise<number> {
   }
 
   stdout.write(`${lines.join('\n')}\n`);
-  stdout.write(`\nEdit ${SPEC_PATH} to describe your application, then run: qai validate\n`);
+  stdout.write(`\nEdit ${SPEC_PATH} to describe your application, then run: specgate validate\n`);
 
   return Promise.resolve(0);
 }

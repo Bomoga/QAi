@@ -63,7 +63,7 @@ describe('seeding', () => {
     const result = await seedFixtures(configWith({ disposable: false }));
 
     if (!isRefusal(result)) throw new Error('expected a refusal');
-    expect(result.message).toContain('qai.config.yaml');
+    expect(result.message).toContain('specgate.config.yaml');
     expect(result.message.length).toBeGreaterThan(40);
   });
 

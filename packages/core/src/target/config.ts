@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { error, type LoadDiagnostic } from '../spec/diagnostics.ts';
 
 /**
- * `qai.config.yaml`. Resolution of the target, its actors, and redaction settings.
+ * `specgate.config.yaml`. Resolution of the target, its actors, and redaction settings.
  *
  * The config holds environment variable names, never values. A literal secret in a
  * file that lives in a repository is the failure this tool was built to notice in
@@ -15,7 +15,7 @@ import { error, type LoadDiagnostic } from '../spec/diagnostics.ts';
  * environment variable to use instead.
  */
 
-export const DEFAULT_CONFIG_PATH = 'qai.config.yaml';
+export const DEFAULT_CONFIG_PATH = 'specgate.config.yaml';
 
 /** Names an environment variable, so the shape rules out a value at the type level. */
 const EnvVarNameSchema = z

@@ -1,7 +1,7 @@
 /**
  * The Action's outputs, computed from the SARIF the run already produced.
  *
- * **One run, not two.** A second `qai check` to get counts in another format would double
+ * **One run, not two.** A second `specgate check` to get counts in another format would double
  * the traffic against the target and could disagree with the first, since a run mutates
  * whatever it is allowed to mutate. The SARIF carries what the outputs need in
  * `runs[0].properties`, which is why M7.4 put coverage, the model assisted count, and the

@@ -34,8 +34,8 @@ than as a footnote under it.
 
 ## Layout
 
-Every corpus application is an ordinary qai project. Running the tool against one is
-`qai check` in its directory and nothing else, because a corpus needing its own invocation
+Every corpus application is an ordinary specgate project. Running the tool against one is
+`specgate check` in its directory and nothing else, because a corpus needing its own invocation
 would be measuring the harness rather than the product.
 
 ```
@@ -48,7 +48,7 @@ corpus/
     <slug>/
       app/index.ts       an HTTP server that listens on process.env.PORT
       spec/<slug>.spec.yaml
-      qai.config.yaml    baseUrl is http://127.0.0.1:47810
+      specgate.config.yaml    baseUrl is http://127.0.0.1:47810
       env.json           optional, fixture credentials the config names
       NOTES.md           optional, which prompt produced this and what it is
   results/
@@ -71,7 +71,7 @@ pnpm build
 node --experimental-strip-types corpus/run.ts
 ```
 
-The build is not optional: `packages/cli/bin/qai.js` runs `dist`, so a tool change that
+The build is not optional: `packages/cli/bin/specgate.js` runs `dist`, so a tool change that
 has not been built is not a tool change the corpus will see.
 
 The runner exits zero whenever the run itself completed. What was found is in the results,

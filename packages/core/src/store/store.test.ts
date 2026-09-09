@@ -15,7 +15,7 @@ let dir: string;
 const stores: Store[] = [];
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-store-save-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-store-save-'));
 });
 
 afterEach(() => {
@@ -66,7 +66,7 @@ function run(overrides: Partial<RunResult> = {}): RunResult {
   } as RunResult;
 }
 
-function evidence(id = 'EV-1', bodyRef = '.qai/evidence/EV-1.json'): Evidence {
+function evidence(id = 'EV-1', bodyRef = '.specgate/evidence/EV-1.json'): Evidence {
   return {
     id,
     kind: 'http',
@@ -101,7 +101,7 @@ describe('saving a run', () => {
 
   it('records every evidence record it was given', () => {
     const store = open();
-    writeBody('.qai/evidence/EV-1.json');
+    writeBody('.specgate/evidence/EV-1.json');
 
     const report = store.saveRun(run(), [evidence()]);
 
@@ -112,7 +112,7 @@ describe('saving a run', () => {
   it('reports a body that is not on disk rather than implying one exists', () => {
     // A run assembled without an evidence writer is legitimate, and so is one whose
     // bodies were pruned. Claiming the body is there is what would not be.
-    const report = open().saveRun(run(), [evidence('EV-1', '.qai/evidence/EV-1.json')]);
+    const report = open().saveRun(run(), [evidence('EV-1', '.specgate/evidence/EV-1.json')]);
 
     expect(report.evidenceRecorded).toBe(1);
     expect(report.bodiesMissing).toStrictEqual(['EV-1']);
@@ -122,7 +122,7 @@ describe('saving a run', () => {
     // The writer in M2 already wrote it, redacted, at capture time. A store that
     // re-serialized a body it never read would be inventing content, against rule R8.
     const store = open();
-    store.saveRun(run(), [evidence('EV-1', '.qai/evidence/EV-1.json')]);
+    store.saveRun(run(), [evidence('EV-1', '.specgate/evidence/EV-1.json')]);
 
     // Still missing after the save, because saving is not writing.
     expect(

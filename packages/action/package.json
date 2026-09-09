@@ -1,6 +1,6 @@
 {
-  "name": "@qai/action",
-  "version": "0.1.0",
+  "name": "@specgate/action",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "GitHub Action wrapper, annotation upload.",
@@ -33,6 +33,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@qai/cli": "workspace:*"
+    "@specgate/cli": "workspace:*"
   }
 }

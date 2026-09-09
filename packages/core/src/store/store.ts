@@ -15,7 +15,7 @@ import { openDatabase, type StoreDatabase } from './schema.ts';
  * The run store: persistence, and the reads `diff` and `list` need.
  *
  * **Evidence bodies are not written here.** M2's writer already put them under
- * `.qai/evidence/`, redacted at capture time, before this ever sees a record. Rule R8
+ * `.specgate/evidence/`, redacted at capture time, before this ever sees a record. Rule R8
  * says redaction happens on capture, so a store that re-serialized a body it never read
  * would be inventing content and could only get it wrong. What `saveRun` does is record
  * the reference and check whether the file is actually there.
@@ -125,7 +125,7 @@ function parseRun(row: Pick<RunRow, 'run_id' | 'result_json'>): RunResult {
   return parsed.data;
 }
 
-/** `.qai/evidence/EV-1.json` is relative to the project, not to the state directory. */
+/** `.specgate/evidence/EV-1.json` is relative to the project, not to the state directory. */
 function bodyExists(projectDir: string, bodyRef: string | undefined): boolean {
   if (bodyRef === undefined) return false;
   return existsSync(isAbsolute(bodyRef) ? bodyRef : resolve(projectDir, bodyRef));

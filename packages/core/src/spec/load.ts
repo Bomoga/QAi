@@ -43,7 +43,7 @@ export interface LoadedSpec {
    *
    * Added at M8.4. The caller hands in patterns and gets back one merged Spec, so
    * without this nothing downstream can say which files it came from.
-   * `RunResult.spec.files` in the contract is exactly that list, and `qai validate`
+   * `RunResult.spec.files` in the contract is exactly that list, and `specgate validate`
    * has to name what it read or a user cannot tell a passing spec from a glob that
    * matched the wrong directory.
    */
@@ -103,7 +103,7 @@ function readAndValidate(
   try {
     // Resolved rather than concatenated. Joining with a slash is wrong for an absolute
     // path, and on Windows it produces a path with two drive letters in it, so the read
-    // fails naming something nobody wrote. Found at M8.4 by handing `qai validate` an
+    // fails naming something nobody wrote. Found at M8.4 by handing `specgate validate` an
     // absolute spec path.
     text = readFileSync(resolvePath(cwd, file), 'utf8');
   } catch (cause) {

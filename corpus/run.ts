@@ -11,13 +11,13 @@ import { CHECK_TIMEOUT_MS, runCommand, startApp, stop, waitForPort } from './lib
 /**
  * The corpus run: every application in `corpus/apps/`, checked once, everything recorded.
  *
- * **Nothing here judges anything.** It starts an application, runs `qai check` against it,
+ * **Nothing here judges anything.** It starts an application, runs `specgate check` against it,
  * writes the run result down, and stops the application. What the findings mean is S8.5,
  * done by a human reading them, and a runner that pre-classified anything would be
  * deciding the answer the stage exists to measure.
  *
  * **One application at a time, on one fixed port.** Each corpus application is an ordinary
- * qai project whose config names that port, so there is no config rewriting and no race
+ * specgate project whose config names that port, so there is no config rewriting and no race
  * between two applications for a socket. It is slower and it is reproducible.
  *
  * **An application that will not start or will not check is recorded as such.** The number
@@ -32,7 +32,7 @@ import { CHECK_TIMEOUT_MS, runCommand, startApp, stop, waitForPort } from './lib
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const APPS_DIR = join(ROOT, 'corpus', 'apps');
 const RESULTS_DIR = join(ROOT, 'corpus', 'results');
-const QAI = join(ROOT, 'packages', 'cli', 'bin', 'qai.js');
+const SPECGATE = join(ROOT, 'packages', 'cli', 'bin', 'specgate.js');
 
 export type AppOutcome =
   | { readonly kind: 'checked'; readonly slug: string; readonly exitCode: number }
@@ -76,7 +76,7 @@ async function checkOne(app: CorpusApp, resultsDir: string): Promise<AppOutcome>
     const out = join(resultsDir, `${app.slug}.run.json`);
     const { code, stderr } = await runCommand(
       process.execPath,
-      [QAI, 'check', '--format', 'json', '--out', out],
+      [SPECGATE, 'check', '--format', 'json', '--out', out],
       { cwd: app.dir, env: app.env, timeoutMs: CHECK_TIMEOUT_MS },
     );
 

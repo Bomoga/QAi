@@ -37,7 +37,7 @@ import type { CheckResultRecord, RunResult, Severity } from '../contracts/index.
  * used to carry `observation.ref` and nothing else, so those counts were not derivable
  * from the argument the module's Public API gives this function. The workaround was to
  * take the Observation the caller already held, which made this emitter something other
- * than a pure projection of a RunResult and left `qai report` unable to render the
+ * than a pure projection of a RunResult and left `specgate report` unable to render the
  * section at all from a stored run. The summary is on the result now and this reads it.
  *
  * With no summary the section names the reference rather than reporting counts of zero,

@@ -8,7 +8,7 @@ import { systemDeps } from '../src/target/deps.ts';
 /**
  * The S2 exit criterion, run end to end: authenticate two distinct actors against
  * fixtures/ledger, issue one request as each, and write two redacted evidence records
- * to .qai/evidence/.
+ * to .specgate/evidence/.
  *
  * Start the target first:
  *   PORT=3000 pnpm --filter ledger dev
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const configResult = loadConfig('qai.config.yaml', root);
+  const configResult = loadConfig('specgate.config.yaml', root);
   if (isConfigFailure(configResult)) {
     process.stdout.write(`${configResult.error.message}\n`);
     for (const diagnostic of configResult.error.diagnostics) {

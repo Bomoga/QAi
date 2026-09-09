@@ -1,4 +1,4 @@
-import type { LoadDiagnostic } from '@qai/core';
+import type { LoadDiagnostic } from '@specgate/core';
 
 import type { Stream } from './reporter.ts';
 
@@ -56,8 +56,8 @@ export function fromDiagnostic(diagnostic: LoadDiagnostic, summary: string): Cli
     reason: diagnostic.message,
     suggestion:
       diagnostic.path === ''
-        ? `Correct ${diagnostic.file} and run "qai validate" again.`
-        : `Correct ${diagnostic.path} in ${diagnostic.file} and run "qai validate" again.`,
+        ? `Correct ${diagnostic.file} and run "specgate validate" again.`
+        : `Correct ${diagnostic.path} in ${diagnostic.file} and run "specgate validate" again.`,
   };
 }
 

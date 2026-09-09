@@ -19,7 +19,7 @@ function sarif(
     version: '2.1.0',
     runs: [
       {
-        tool: { driver: { name: 'QAi', rules: [] } },
+        tool: { driver: { name: 'SpecGate', rules: [] } },
         results,
         properties: {
           specHash: 'sha256:abc',
@@ -83,7 +83,7 @@ describe('reading the outputs out of a SARIF report', () => {
   it('treats an absent property as zero rather than as undefined', () => {
     const bare = JSON.stringify({
       version: '2.1.0',
-      runs: [{ tool: { driver: { name: 'QAi' } } }],
+      runs: [{ tool: { driver: { name: 'SpecGate' } } }],
     });
     const outputs = outputsFromSarif(bare);
 

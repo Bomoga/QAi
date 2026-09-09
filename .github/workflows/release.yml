@@ -53,7 +53,7 @@ jobs:
         # All five places, not just the root manifest. v0.1.0 went out with the three
         # workspace manifests still saying 0.0.0 and only the root checked, which was
         # correct by luck rather than by anything having verified it. `CLI_VERSION` matters
-        # most of the five: it is what `qai --version` prints and what lands in
+        # most of the five: it is what `specgate --version` prints and what lands in
         # `toolVersion` on every report, so it is the version a user actually sees.
         #
         # `test/version-consistency.test.ts` asserts the same thing on every commit. This
@@ -76,7 +76,7 @@ jobs:
 
           constant=$(node -p "require('fs').readFileSync('packages/cli/src/program.ts','utf8').match(/CLI_VERSION = '([^']+)'/)[1]")
           if [ "${constant}" != "${root}" ]; then
-            echo "::error::CLI_VERSION is ${constant} and the manifests say ${root}. That constant is what qai --version prints and what every report records as toolVersion."
+            echo "::error::CLI_VERSION is ${constant} and the manifests say ${root}. That constant is what specgate --version prints and what every report records as toolVersion."
             exit 1
           fi
 
@@ -172,7 +172,7 @@ jobs:
           curl -sf http://127.0.0.1:3000/health > /dev/null
 
           # Every step of action.yml, against the tag's own files.
-          bin="${consumer}/packages/action/../cli/bin/qai.js"
+          bin="${consumer}/packages/action/../cli/bin/specgate.js"
           set +e
           node "${bin}" check fixtures/ledger/spec/ledger.spec.yaml \
             --fail-on high --format sarif --out "${consumer}/results.sarif"

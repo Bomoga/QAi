@@ -2,7 +2,7 @@ node_modules/
 dist/
 coverage/
 pnpm-lock.yaml
-.qai/
+.specgate/
 
 # The plan is the source of truth. Tooling does not get to rewrite it.
 docs/plan/

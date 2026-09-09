@@ -21,7 +21,7 @@ const BASE = 'http://localhost:3000';
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'qai-probe-'));
+  root = mkdtempSync(join(tmpdir(), 'specgate-probe-'));
 });
 
 afterEach(() => {

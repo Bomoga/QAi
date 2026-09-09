@@ -9,14 +9,14 @@ import { isConfigFailure, loadConfig, type ConfigError, type TargetConfig } from
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-config-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-config-'));
 });
 
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function write(contents: string, name = 'qai.config.yaml'): void {
+function write(contents: string, name = 'specgate.config.yaml'): void {
   writeFileSync(join(dir, name), contents, 'utf8');
 }
 
