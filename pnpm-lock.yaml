@@ -73,7 +73,7 @@ importers:
 
   packages/action:
     dependencies:
-      '@qai/cli':
+      '@specgate/cli':
         specifier: workspace:*
         version: link:../cli
 
@@ -82,7 +82,7 @@ importers:
       '@clack/prompts':
         specifier: ^1.7.0
         version: 1.7.0
-      '@qai/core':
+      '@specgate/core':
         specifier: workspace:*
         version: link:../core
       commander:

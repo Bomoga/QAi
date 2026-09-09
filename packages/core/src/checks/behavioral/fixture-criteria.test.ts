@@ -16,7 +16,7 @@ import { planBehavioralChecks } from './plan.ts';
  * that silently stops planning is coverage the report would claim and not have, and a
  * gap that silently starts planning is a clause somebody widened a parser to guess at.
  *
- * The context comes from the repository's own `qai.config.yaml` rather than a literal
+ * The context comes from the repository's own `specgate.config.yaml` rather than a literal
  * written here, because the claim being made is that this spec plans against this
  * target. A hand-built context would assert that the spec plans against a context this
  * test invented, which is not the same statement and cannot fail when config drifts.
@@ -51,7 +51,7 @@ function loadFixture(): { spec: Parameters<typeof validateAcceptanceCriteria>[0]
 }
 
 function planningContext(): PlanningContext {
-  const result = loadConfig('qai.config.yaml', ROOT);
+  const result = loadConfig('specgate.config.yaml', ROOT);
   if (isConfigFailure(result)) throw new Error(`config failed to load: ${result.error.message}`);
 
   return {

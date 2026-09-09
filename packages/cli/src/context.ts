@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 
-import { isConfigFailure, loadConfig, type ConfigError, type TargetConfig } from '@qai/core';
+import { isConfigFailure, loadConfig, type ConfigError, type TargetConfig } from '@specgate/core';
 
 import {
   formatSettings,
@@ -20,8 +20,8 @@ import {
  *
  * **A missing config file is not an error here.** `loadConfig` reports an unreadable file
  * and an absent one identically, both as "could not read", which is right for a command
- * that needs a target and wrong for resolving settings. Before `qai init` has ever run
- * there is no file, and `qai --verbose` should still be able to say what it resolved.
+ * that needs a target and wrong for resolving settings. Before `specgate init` has ever run
+ * there is no file, and `specgate --verbose` should still be able to say what it resolved.
  * Whether a command can proceed without one is that command's question; this one only
  * answers what the configuration is.
  *
@@ -39,7 +39,7 @@ export interface ContextInput {
 export interface Context {
   readonly settings: Settings;
   readonly configPath: Setting<string>;
-  /** Absent when no config file exists yet, which is a normal state before `qai init`. */
+  /** Absent when no config file exists yet, which is a normal state before `specgate init`. */
   readonly config?: TargetConfig;
   /** True when the resolved path names a file that is not there. */
   readonly configMissing: boolean;

@@ -1,5 +1,5 @@
 {
-  "name": "@qai/action",
+  "name": "@specgate/action",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -33,6 +33,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@qai/cli": "workspace:*"
+    "@specgate/cli": "workspace:*"
   }
 }

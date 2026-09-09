@@ -26,7 +26,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
  */
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BIN = join(ROOT, 'packages', 'cli', 'bin', 'qai.js');
+const BIN = join(ROOT, 'packages', 'cli', 'bin', 'specgate.js');
 const BUNDLE = join(ROOT, 'packages', 'cli', 'dist', 'index.js');
 const FIXTURE_SPEC = join(ROOT, 'fixtures', 'ledger', 'spec', 'ledger.spec.yaml');
 
@@ -67,10 +67,10 @@ beforeAll(() => {
   // A directory with no `node_modules` above it, anywhere. The system temp directory is
   // chosen for exactly that: putting this under the workspace would resolve every bare
   // import and the test would pass without testing anything.
-  home = mkdtempSync(join(tmpdir(), 'qai-standalone-'));
+  home = mkdtempSync(join(tmpdir(), 'specgate-standalone-'));
   mkdirSync(join(home, 'bin'));
   mkdirSync(join(home, 'dist'));
-  cpSync(BIN, join(home, 'bin', 'qai.js'));
+  cpSync(BIN, join(home, 'bin', 'specgate.js'));
   cpSync(BUNDLE, join(home, 'dist', 'index.js'));
 });
 
@@ -80,7 +80,7 @@ afterAll(() => {
 
 function runStandalone(args: readonly string[]): { stdout: string; status: number } {
   try {
-    const stdout = execFileSync(process.execPath, [join(home, 'bin', 'qai.js'), ...args], {
+    const stdout = execFileSync(process.execPath, [join(home, 'bin', 'specgate.js'), ...args], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],

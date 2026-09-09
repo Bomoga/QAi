@@ -1,12 +1,12 @@
 import { createColors } from 'picocolors';
 
-import type { Reporter } from '@qai/core';
+import type { Reporter } from '@specgate/core';
 
 /**
  * The CLI's implementation of the `Reporter` port that `core` declares.
  *
  * **Everything goes to stderr.** Stdout carries the report and nothing else, so
- * `qai check --format json | jq` works and `--out` is not the only way to get a clean
+ * `specgate check --format json | jq` works and `--out` is not the only way to get a clean
  * document. A single progress line on stdout breaks every pipe a user builds, and it
  * breaks it quietly, because the report is still in there somewhere. The module's Do Not
  * says this outright and it is the one thing the tests here are really defending.

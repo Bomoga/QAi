@@ -1,7 +1,7 @@
 import type { RunResult } from '../../packages/core/src/index.ts';
 
 /**
- * What an exit code from `qai check` means to a corpus run.
+ * What an exit code from `specgate check` means to a corpus run.
  *
  * **0 and 1 are both a completed run.** The contract gives 1 to a run that finished
  * and found something at or above the threshold, which for an application in this corpus
@@ -35,7 +35,10 @@ export function classifyCheckExit(code: number, stderr = ''): CheckOutcome {
   const detail = tail(stderr);
   return {
     kind: 'check-failed',
-    reason: detail.length > 0 ? `qai check exited ${code}: ${detail}` : `qai check exited ${code}`,
+    reason:
+      detail.length > 0
+        ? `specgate check exited ${code}: ${detail}`
+        : `specgate check exited ${code}`,
   };
 }
 

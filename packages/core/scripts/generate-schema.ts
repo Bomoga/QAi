@@ -21,7 +21,7 @@ export function generateSpecJsonSchema(): string {
   const document = {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     $id: 'https://github.com/Bomoga/QAi/schema/spec.schema.json',
-    title: 'QAi spec',
+    title: 'SpecGate spec',
     description: 'Machine-readable statement of intent. Input only, never mutated by a run.',
     ...schema,
   };

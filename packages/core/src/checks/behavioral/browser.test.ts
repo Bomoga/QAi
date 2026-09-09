@@ -108,12 +108,12 @@ describe('capturing a page', () => {
     const recorded = recorder();
     const result = await capturePage('http://127.0.0.1:3000/', {
       launcher: fakeLauncher('hello', recorded),
-      screenshotPath: '.qai/evidence/EV-000001.png',
+      screenshotPath: '.specgate/evidence/EV-000001.png',
     });
 
-    expect(recorded.screenshots).toEqual(['.qai/evidence/EV-000001.png']);
+    expect(recorded.screenshots).toEqual(['.specgate/evidence/EV-000001.png']);
     if (result.kind !== 'captured') throw new Error('unreachable');
-    expect(result.capture.screenshotPath).toBe('.qai/evidence/EV-000001.png');
+    expect(result.capture.screenshotPath).toBe('.specgate/evidence/EV-000001.png');
   });
 
   it('carries the actor credential as headers, which is how the page authenticates', async () => {

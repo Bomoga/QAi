@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * The `qai` binary.
+ * The `specgate` binary.
  *
  * A shim on purpose. Everything it could do belongs in `src/` where it can be tested
- * without spawning a process, so this file exists to be the thing `npx qai` resolves to
+ * without spawning a process, so this file exists to be the thing `npx specgate` resolves to
  * and to be the one place that ends the process. It did not exist before M8: S0.2
- * withheld the `bin` entry deliberately, on the grounds that `npx qai` should not
+ * withheld the `bin` entry deliberately, on the grounds that `npx specgate` should not
  * resolve until it does something.
  *
  * It is also the only place that asks whether the destination is a terminal. Nothing

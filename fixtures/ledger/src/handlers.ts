@@ -21,7 +21,7 @@ import type { DefectSwitches } from './defects.ts';
  * The rows this server is serving, as opposed to the rows it was seeded with.
  *
  * A write moves these and leaves the seed alone, so a fresh server always starts from the
- * same data and a restart is genuinely the reset that `qai.config.yaml` claims it is.
+ * same data and a restart is genuinely the reset that `specgate.config.yaml` claims it is.
  */
 export interface LedgerState {
   readonly organizations: readonly LedgerData['organizations'][number][];

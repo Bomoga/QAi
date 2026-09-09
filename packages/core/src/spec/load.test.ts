@@ -17,7 +17,7 @@ import type { SpecError } from './diagnostics.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-spec-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-spec-'));
 });
 
 afterEach(() => {
@@ -505,7 +505,7 @@ requirements:
 
 describe('paths, on every platform', () => {
   it('loads a spec named by an absolute path', () => {
-    // Found at M8.4 by handing `qai validate` an absolute path. The read used to join
+    // Found at M8.4 by handing `specgate validate` an absolute path. The read used to join
     // cwd and the file with a slash, which on Windows produced a path carrying two
     // drive letters and failed naming something nobody wrote.
     write('a.spec.yaml', LEDGER);

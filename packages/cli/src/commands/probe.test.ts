@@ -10,7 +10,7 @@ import {
   silentReporter,
   type Observation,
   type TargetConfig,
-} from '@qai/core';
+} from '@specgate/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Stream } from '../reporter.ts';
@@ -27,7 +27,7 @@ import { runProbe } from './probe.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-probe-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-probe-'));
   mkdirSync(join(dir, 'spec'), { recursive: true });
 });
 
@@ -58,8 +58,8 @@ function configWith(baseUrl?: string, sourceRoot?: string): TargetConfig {
     '',
   ].join('\n');
 
-  writeFileSync(join(dir, 'qai.config.yaml'), body, 'utf8');
-  const loaded = loadConfig('qai.config.yaml', dir);
+  writeFileSync(join(dir, 'specgate.config.yaml'), body, 'utf8');
+  const loaded = loadConfig('specgate.config.yaml', dir);
   if (isConfigFailure(loaded)) throw new Error(loaded.error.message);
   return loaded.config;
 }
@@ -131,7 +131,7 @@ async function runIt(
     env: {},
     paths: [],
     config: options.config,
-    configPath: 'qai.config.yaml',
+    configPath: 'specgate.config.yaml',
     settings: settings(options.format),
     stdout: out.stream,
     stderr: err.stream,
@@ -141,12 +141,12 @@ async function runIt(
   return { code, out: out.text(), err: err.text() };
 }
 
-describe('qai probe', () => {
+describe('specgate probe', () => {
   it('exits 2 with no configuration, naming the command that writes one', async () => {
     const { code, err } = await runIt();
 
     expect(code).toBe(2);
-    expect(err).toContain('qai init');
+    expect(err).toContain('specgate init');
   });
 
   it('exits 2 when the target has no baseUrl', async () => {
@@ -193,7 +193,7 @@ describe('qai probe', () => {
       env: {},
       paths: [],
       config: configWith(CLOSED_PORT_URL),
-      configPath: 'qai.config.yaml',
+      configPath: 'specgate.config.yaml',
       settings: settings(),
       stdout: capture().stream,
       stderr: capture().stream,
@@ -218,7 +218,7 @@ describe('qai probe', () => {
       env: {},
       paths: [],
       config: configWith(CLOSED_PORT_URL),
-      configPath: 'qai.config.yaml',
+      configPath: 'specgate.config.yaml',
       settings: settings(),
       stdout: capture().stream,
       stderr: capture().stream,

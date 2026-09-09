@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { isConfigFailure, isLoadFailure, loadConfig, loadSpec } from '@qai/core';
+import { isConfigFailure, isLoadFailure, loadConfig, loadSpec } from '@specgate/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Stream } from '../reporter.ts';
@@ -13,13 +13,13 @@ import { GITIGNORE_ENTRY, SPEC_PATH, runInit } from './init.ts';
  *
  * The assertion that matters most is not that files appear. It is that the files it
  * writes load: a starter config that fails to parse or a starter spec that produces
- * authoring warnings would make a user's very first `qai validate` red, through no fault
+ * authoring warnings would make a user's very first `specgate validate` red, through no fault
  * of theirs. Those two tests run the real loaders over the real output.
  */
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-init-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-init-'));
 });
 
 afterEach(() => {
@@ -34,7 +34,7 @@ function capture(): { stream: Stream; text: () => string } {
   };
 }
 
-async function init(configPath = 'qai.config.yaml') {
+async function init(configPath = 'specgate.config.yaml') {
   const out = capture();
   const err = capture();
   const code = await runInit({ cwd: dir, configPath, stdout: out.stream, stderr: err.stream });
@@ -45,12 +45,12 @@ function read(name: string): string {
   return readFileSync(join(dir, name), 'utf8');
 }
 
-describe('qai init', () => {
+describe('specgate init', () => {
   it('writes the config, the starter spec, and the gitignore entry', async () => {
     const { code } = await init();
 
     expect(code).toBe(0);
-    expect(read('qai.config.yaml')).toContain('target:');
+    expect(read('specgate.config.yaml')).toContain('target:');
     expect(read(SPEC_PATH)).toContain('specVersion:');
     expect(read('.gitignore')).toContain(GITIGNORE_ENTRY);
   });
@@ -60,13 +60,13 @@ describe('qai init', () => {
     // not write.
     await init();
 
-    const loaded = loadConfig('qai.config.yaml', dir);
+    const loaded = loadConfig('specgate.config.yaml', dir);
     expect(isConfigFailure(loaded) ? loaded.error.message : 'loaded').toBe('loaded');
   });
 
   it('writes a spec the loader accepts with no errors and no warnings', async () => {
     // Warnings included on purpose. An unreferenced actor or an unparseable condition
-    // would make the first `qai validate` noisy about a template nobody chose.
+    // would make the first `specgate validate` noisy about a template nobody chose.
     await init();
 
     const loaded = loadSpec([SPEC_PATH], { cwd: dir });
@@ -96,12 +96,16 @@ describe('qai init', () => {
   it('never overwrites a config that is already there', async () => {
     // Invariant I7 in the one command that writes. Somebody running init twice in a
     // configured repository must not lose the file they spent an afternoon on.
-    writeFileSync(join(dir, 'qai.config.yaml'), 'target:\n  baseUrl: http://mine:9999\n', 'utf8');
+    writeFileSync(
+      join(dir, 'specgate.config.yaml'),
+      'target:\n  baseUrl: http://mine:9999\n',
+      'utf8',
+    );
 
     const { code, out } = await init();
 
     expect(code).toBe(0);
-    expect(read('qai.config.yaml')).toContain('http://mine:9999');
+    expect(read('specgate.config.yaml')).toContain('http://mine:9999');
     expect(out).toContain('already exists');
   });
 
@@ -145,7 +149,7 @@ describe('qai init', () => {
 
   it('ends an existing gitignore with a newline before appending', async () => {
     // A file whose last line has no terminator would otherwise get the entry glued onto
-    // it, producing `dist/.qai/` and ignoring neither.
+    // it, producing `dist/.specgate/` and ignoring neither.
     writeFileSync(join(dir, '.gitignore'), 'dist/', 'utf8');
 
     await init();
@@ -163,20 +167,20 @@ describe('qai init', () => {
   it('reports what it created on stdout, one line each', async () => {
     const { out } = await init();
 
-    expect(out).toContain('qai.config.yaml');
+    expect(out).toContain('specgate.config.yaml');
     expect(out).toContain(SPEC_PATH);
     expect(out).toContain('.gitignore');
   });
 
   it('names the next command a user should run', async () => {
     // The first thing somebody wants after init is to know it worked.
-    expect((await init()).out).toContain('qai validate');
+    expect((await init()).out).toContain('specgate validate');
   });
 
   it('writes no em dash and no credential value', async () => {
     await init();
 
-    const config = read('qai.config.yaml');
+    const config = read('specgate.config.yaml');
     expect(config).not.toContain('—');
     expect(read(SPEC_PATH)).not.toContain('—');
     // Config files name environment variables, never secrets. M2.1 rejects a literal at

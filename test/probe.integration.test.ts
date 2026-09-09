@@ -235,7 +235,7 @@ describe('D5, the undeclared debug endpoint', () => {
   // hand-built resource list would only prove the rule agrees with something the test
   // invented.
   it('still fires when the caller passes the configured routes, as check does', async () => {
-    const config = loadConfig('qai.config.yaml', ROOT);
+    const config = loadConfig('specgate.config.yaml', ROOT);
     if (isConfigFailure(config)) throw new Error(config.error.message);
 
     const { observation } = await probeLedger(DEFECTS_ON);

@@ -1,5 +1,5 @@
 {
-  "name": "@qai/cli",
+  "name": "@specgate/cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -28,7 +28,7 @@
     "bin"
   ],
   "bin": {
-    "qai": "./bin/qai.js"
+    "specgate": "./bin/specgate.js"
   },
   "scripts": {
     "build": "tsup",
@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
-    "@qai/core": "workspace:*",
+    "@specgate/core": "workspace:*",
     "commander": "^15.0.0",
     "picocolors": "^1.1.1"
   }

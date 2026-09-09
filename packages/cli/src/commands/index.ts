@@ -58,7 +58,7 @@ export function registerCommands(
       outcome.code = await runInit({
         cwd: io.cwd,
         // Resolved through the same precedence as everywhere else, so `--config` and
-        // QAI_CONFIG decide where the file lands rather than only where it is read from.
+        // SPECGATE_CONFIG decide where the file lands rather than only where it is read from.
         configPath: resolveConfigPath(flags, io.env).value,
         stdout: io.stdout,
         stderr: io.stderr,

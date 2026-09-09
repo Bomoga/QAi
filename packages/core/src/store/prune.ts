@@ -15,7 +15,7 @@ import type { StoreDatabase } from './schema.ts';
  *
  * **The database cascade is only half the job.** Deleting a run takes its evidence rows
  * with it, because `evidence.run_id` references `runs` with `ON DELETE CASCADE`. The body
- * files under `.qai/evidence/` are not rows and no cascade reaches them, so unlinking
+ * files under `.specgate/evidence/` are not rows and no cascade reaches them, so unlinking
  * them is this file's own work.
  *
  * **A body file is unlinked only when no surviving evidence row still names it.** That is
@@ -95,7 +95,7 @@ interface EvidenceRow {
   readonly body_path: string | null;
 }
 
-/** `.qai/evidence/EV-1.json` is recorded relative to the project, not to the state directory. */
+/** `.specgate/evidence/EV-1.json` is recorded relative to the project, not to the state directory. */
 function bodyFileFor(projectDir: string, bodyPath: string): string {
   return isAbsolute(bodyPath) ? bodyPath : resolve(projectDir, bodyPath);
 }

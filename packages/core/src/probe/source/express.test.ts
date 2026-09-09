@@ -23,7 +23,7 @@ import {
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'qai-express-'));
+  root = mkdtempSync(join(tmpdir(), 'specgate-express-'));
 });
 
 afterEach(() => {

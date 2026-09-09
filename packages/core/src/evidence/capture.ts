@@ -15,7 +15,7 @@ import { redactBody, redactHeaders, type RedactionRules } from './redact.ts';
  * per rule R8.
  */
 
-export const DEFAULT_EVIDENCE_DIR = '.qai/evidence';
+export const DEFAULT_EVIDENCE_DIR = '.specgate/evidence';
 
 /**
  * The shape of the file `response.bodyRef` points at.

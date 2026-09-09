@@ -47,7 +47,7 @@ export function checkDisposability(config: TargetConfig): FixtureRefusal | undef
       kind: 'refused',
       reason: 'not-disposable',
       message:
-        'target.disposable is not true, so fixtures and mutating checks will not run. Set target.disposable: true in qai.config.yaml only for a target whose data you can afford to lose.',
+        'target.disposable is not true, so fixtures and mutating checks will not run. Set target.disposable: true in specgate.config.yaml only for a target whose data you can afford to lose.',
     };
   }
 

@@ -9,14 +9,14 @@ import {
   renderText,
   type RunResult,
   type Store,
-} from '@qai/core';
+} from '@specgate/core';
 
 import { present } from '../errors.ts';
 import type { Stream } from '../reporter.ts';
 import type { Settings } from '../settings.ts';
 
 /**
- * `qai report <runId>`: a stored run, rendered again in any format.
+ * `specgate report <runId>`: a stored run, rendered again in any format.
  *
  * **Nothing is recomputed.** The run is read back exactly as `check` produced it, so a
  * report rendered today and one rendered next week from the same run are the same
@@ -108,7 +108,7 @@ export function noteInapplicableThreshold(
   if (named.length === 0) return;
 
   stderr.write(
-    `note: ${named.join(' and ')} sets the threshold a run fails at, and "qai ${command}" completes no run, so it exits 0 either way. Use "qai check" for an exit code.\n`,
+    `note: ${named.join(' and ')} sets the threshold a run fails at, and "specgate ${command}" completes no run, so it exits 0 either way. Use "specgate check" for an exit code.\n`,
   );
 }
 
@@ -124,9 +124,9 @@ export function runReport(options: ReportOptions): number {
       {
         code: 2,
         summary: 'could not open the run store',
-        where: '.qai/runs.db',
+        where: '.specgate/runs.db',
         reason: error instanceof Error ? error.message : String(error),
-        suggestion: 'Run "qai check" in this directory to create it.',
+        suggestion: 'Run "specgate check" in this directory to create it.',
         cause: error,
       },
       presentTo,
@@ -142,15 +142,15 @@ export function runReport(options: ReportOptions): number {
         {
           code: 2,
           summary: `no run with id ${runId} is stored`,
-          where: '.qai/runs.db',
+          where: '.specgate/runs.db',
           reason:
             known.length === 0
               ? 'the store holds no runs at all'
               : `the store holds ${known.join(', ')}`,
           suggestion:
             known.length === 0
-              ? 'Run "qai check" to record one.'
-              : 'Name one of the runs above, or run "qai check" to record another.',
+              ? 'Run "specgate check" to record one.'
+              : 'Name one of the runs above, or run "specgate check" to record another.',
         },
         presentTo,
       );

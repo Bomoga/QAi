@@ -32,7 +32,7 @@ import {
  * requirements. Reporting a fix as a regression is the worst available way for a delta
  * to be wrong, so the reversal is asserted rather than assumed.
  *
- * The runs come out of `qai check` rather than being assembled here, because a delta
+ * The runs come out of `specgate check` rather than being assembled here, because a delta
  * over hand-built RunResults would only prove `diffRuns` agrees with something this file
  * invented.
  */
@@ -47,7 +47,7 @@ const FIXED_RUN_ID = 'RUN-20260820-000002';
 /** D5, the endpoint nobody specified, as the probe names it. */
 const DEBUG_ENDPOINT = 'GET /api/debug/state';
 
-/** Runs `qai check` against a ledger in the given configuration and returns the result. */
+/** Runs `specgate check` against a ledger in the given configuration and returns the result. */
 async function checkAgainst(defects: Parameters<typeof startLedger>[0]): Promise<RunResult> {
   const dir = workspace();
   workspaces.push(dir);
@@ -64,7 +64,7 @@ async function checkAgainst(defects: Parameters<typeof startLedger>[0]): Promise
 
 /** Saves both runs and reads them back, so the delta is computed over what was stored. */
 function roundTrip(older: RunResult, newer: RunResult): { older: RunResult; newer: RunResult } {
-  const dir = mkdtempSync(join(tmpdir(), 'qai-delta-'));
+  const dir = mkdtempSync(join(tmpdir(), 'specgate-delta-'));
   workspaces.push(dir);
 
   const store = openStore(dir);
@@ -229,7 +229,7 @@ describe('the defective fixture and the fixed one, compared both ways', () => {
 describe('check records the run it produced', () => {
   it('stores the run under the id its own report carries', async () => {
     // Nothing else puts a run in the store, so a check that did not record its result
-    // would leave `qai diff` and `qai report` with nothing to read, which is the sixth
+    // would leave `specgate diff` and `specgate report` with nothing to read, which is the sixth
     // step of the success sequence in the product definition.
     const dir = workspace();
     workspaces.push(dir);
@@ -284,7 +284,7 @@ describe('diff and report through the command surface', () => {
 
   beforeAll(async () => {
     // One directory, two checks, exactly as a user fixing something would do it. Both
-    // runs land in one store, which is what `qai diff` with no arguments reads.
+    // runs land in one store, which is what `specgate diff` with no arguments reads.
     dir = workspace();
     workspaces.push(dir);
     copyFileSync(FIXTURE_SPEC, join(dir, 'spec', 'ledger.spec.yaml'));

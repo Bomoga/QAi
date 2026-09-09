@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { openStore, type RequirementVerdict, type RunDelta, type RunResult } from '@qai/core';
+import { openStore, type RequirementVerdict, type RunDelta, type RunResult } from '@specgate/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { Stream } from '../reporter.ts';
@@ -10,7 +10,7 @@ import { BUILT_IN_DEFAULTS, type Settings } from '../settings.ts';
 import { runDiff } from './diff.ts';
 
 /**
- * `qai diff` over a real store file.
+ * `specgate diff` over a real store file.
  *
  * The assertions that matter are about order and about refusal. `diffRuns(a, b)` reads
  * from `a` to `b`, so a command that picked them the other way round would report every
@@ -21,7 +21,7 @@ import { runDiff } from './diff.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-diff-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-diff-'));
 });
 
 afterEach(() => {
@@ -229,8 +229,8 @@ describe('refusing, and how', () => {
   });
 
   it('exits 2 when the store cannot be opened at all', () => {
-    mkdirSync(join(dir, '.qai'), { recursive: true });
-    writeFileSync(join(dir, '.qai', 'runs.db'), 'this is not a database', 'utf8');
+    mkdirSync(join(dir, '.specgate'), { recursive: true });
+    writeFileSync(join(dir, '.specgate', 'runs.db'), 'this is not a database', 'utf8');
 
     const { code, err } = diff();
 

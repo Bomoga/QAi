@@ -4,13 +4,13 @@ import {
   validateAcceptanceCriteria,
   type LoadDiagnostic,
   type Spec,
-} from '@qai/core';
+} from '@specgate/core';
 
 import { fromDiagnostic, present, presentAll } from '../errors.ts';
 import type { Stream } from '../reporter.ts';
 
 /**
- * `qai validate`: load the specs, say what they contain, and say what is wrong with them.
+ * `specgate validate`: load the specs, say what they contain, and say what is wrong with them.
  *
  * **An error exits 2 and a warning does not.** The two are different things and
  * `diagnostics.ts` says so: an error means no Spec could be produced and no run should
@@ -113,7 +113,7 @@ export function runValidate(options: ValidateOptions): Promise<number> {
             summary: loaded.error.message,
             where: `${requested.join(', ')} under ${cwd}`,
             suggestion:
-              'Pass the spec path explicitly, or run "qai init" to write a starter spec at spec/app.spec.yaml.',
+              'Pass the spec path explicitly, or run "specgate init" to write a starter spec at spec/app.spec.yaml.',
           },
           presentTo,
         ),

@@ -1,6 +1,6 @@
-name: 'QAi'
+name: 'SpecGate'
 description: 'Check that an application does what its spec said it would, and report where they disagree.'
-author: 'QAi'
+author: 'SpecGate'
 
 # A thin composite action: resolve the CLI, run the check, upload the SARIF, set the
 # outputs. It holds no verification logic. Everything it could decide is decided by the
@@ -18,7 +18,7 @@ inputs:
     required: false
     default: ''
   config:
-    description: 'Path to qai.config.yaml.'
+    description: 'Path to specgate.config.yaml.'
     required: false
     default: ''
   fail-on:
@@ -71,7 +71,7 @@ outputs:
     description: 'Path to the SARIF report the run wrote.'
     value: ${{ steps.check.outputs.sarif-file }}
   exit-code:
-    description: 'The code qai check returned: 0, 1, 2, or 3.'
+    description: 'The code specgate check returned: 0, 1, 2, or 3.'
     value: ${{ steps.check.outputs.exit-code }}
 
 runs:
@@ -84,7 +84,7 @@ runs:
       # distributed by checking out the repository that holds it, so `packages/cli`
       # arrives beside `packages/action` and there is nothing to download.
       #
-      # This step used to be `npx --yes qai check`. That resolves `qai` from the public
+      # This step used to be `npx --yes specgate check`. That resolves `specgate` from the public
       # registry, where the name has belonged to somebody else since 2019, so the line
       # would have installed and run a stranger's package in the caller's workspace with
       # nothing prompting. It was inert only because no other repository could reach this
@@ -95,11 +95,11 @@ runs:
       # CLI must say so rather than reach for whatever answers to the same name.
       run: |
         root="${{ github.action_path }}/.."
-        bin="${root}/cli/bin/qai.js"
+        bin="${root}/cli/bin/specgate.js"
         built="${root}/cli/dist/index.js"
 
         if [ ! -f "${bin}" ]; then
-          echo "::error::the qai CLI is not at ${bin}. This action expects to ship beside packages/cli."
+          echo "::error::the specgate CLI is not at ${bin}. This action expects to ship beside packages/cli."
           exit 1
         fi
         if [ ! -f "${built}" ]; then
@@ -109,7 +109,7 @@ runs:
 
         echo "bin=${bin}" >> "$GITHUB_OUTPUT"
 
-    - name: Run qai check
+    - name: Run specgate check
       id: check
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -126,13 +126,13 @@ runs:
           ${{ inputs.fail-on-unverified == 'true' && '--fail-on-unverified' || '' }} \
           --fail-on ${{ inputs.fail-on }} \
           --format sarif \
-          --out qai-results.sarif
+          --out specgate-results.sarif
         code=$?
         set -e
         echo "exit-code=${code}" >> "$GITHUB_OUTPUT"
-        echo "sarif-file=qai-results.sarif" >> "$GITHUB_OUTPUT"
-        if [ ! -f qai-results.sarif ]; then
-          echo "::error::qai check exited ${code} without writing a report. Codes 2 and 3 mean no run happened."
+        echo "sarif-file=specgate-results.sarif" >> "$GITHUB_OUTPUT"
+        if [ ! -f specgate-results.sarif ]; then
+          echo "::error::specgate check exited ${code} without writing a report. Codes 2 and 3 mean no run happened."
           exit "${code}"
         fi
 
@@ -140,14 +140,14 @@ runs:
       id: outputs
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: node "${{ github.action_path }}/dist/index.js" qai-results.sarif
+      run: node "${{ github.action_path }}/dist/index.js" specgate-results.sarif
 
     - name: Upload SARIF
       if: ${{ inputs.upload-sarif == 'true' }}
       uses: github/codeql-action/upload-sarif@v4
       with:
-        sarif_file: ${{ inputs.working-directory }}/qai-results.sarif
-        category: qai
+        sarif_file: ${{ inputs.working-directory }}/specgate-results.sarif
+        category: specgate
 
     - name: Apply the exit code
       shell: bash
@@ -157,6 +157,6 @@ runs:
       run: |
         code="${{ steps.check.outputs.exit-code }}"
         if [ "${code}" != "0" ]; then
-          echo "::error::qai check exited ${code}"
+          echo "::error::specgate check exited ${code}"
           exit "${code}"
         fi

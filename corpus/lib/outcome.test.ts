@@ -25,7 +25,10 @@ describe('what an exit code means to a corpus run', () => {
   it('treats a spec or configuration error as a gap, not a result', () => {
     // 2 is a run that did not happen. There are no findings to review, so it must not
     // read as an application that came back clean.
-    const outcome = classifyCheckExit(2, 'error: no configuration was found\n  at qai.config.yaml');
+    const outcome = classifyCheckExit(
+      2,
+      'error: no configuration was found\n  at specgate.config.yaml',
+    );
 
     expect(outcome.kind).toBe('check-failed');
     expect(outcome.kind === 'check-failed' && outcome.reason).toContain('exited 2');
@@ -48,10 +51,10 @@ describe('what an exit code means to a corpus run', () => {
     // stderr that is empty, or that is only whitespace, still produces a usable sentence
     // rather than one ending in a colon with nothing after it.
     const bare = classifyCheckExit(2);
-    expect(bare.kind === 'check-failed' ? bare.reason : '').toBe('qai check exited 2');
+    expect(bare.kind === 'check-failed' ? bare.reason : '').toBe('specgate check exited 2');
 
     const blank = classifyCheckExit(2, '   \n  \n ');
-    expect(blank.kind === 'check-failed' ? blank.reason : '').toBe('qai check exited 2');
+    expect(blank.kind === 'check-failed' ? blank.reason : '').toBe('specgate check exited 2');
   });
 });
 

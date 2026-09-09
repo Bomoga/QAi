@@ -1,4 +1,4 @@
-name: qai
+name: specgate
 
 # The S6 exit criterion, run as a workflow: a pull request shows findings inline in the
 # GitHub UI, sourced from SARIF, with the run's summary in the check output.
@@ -13,7 +13,7 @@ on:
   pull_request:
 
 concurrency:
-  group: qai-${{ github.ref }}
+  group: specgate-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -58,7 +58,7 @@ jobs:
           done
           curl -sf http://127.0.0.1:3000/health
 
-      - name: Run qai check
+      - name: Run specgate check
         id: check
         # The action, used as an action, which is the whole point of this step.
         #
@@ -88,7 +88,7 @@ jobs:
         # criterion. Coverage is labeled coverage here as everywhere else.
         run: |
           {
-            echo "## QAi"
+            echo "## SpecGate"
             echo ""
             echo "| | |"
             echo "|---|---|"
@@ -100,7 +100,7 @@ jobs:
             echo "| Unverified | ${{ steps.check.outputs.requirements-unverified }} requirement(s) |"
             echo "| Model assisted | ${{ steps.check.outputs.model-assisted-checks }} check(s) |"
             echo ""
-            echo "\`qai check\` exited ${{ steps.check.outputs.exit-code }}."
+            echo "\`specgate check\` exited ${{ steps.check.outputs.exit-code }}."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Confirm the fixture is still broken, and that the action said so

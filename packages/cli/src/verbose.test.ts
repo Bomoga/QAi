@@ -12,13 +12,13 @@ import type { Stream } from './reporter.ts';
  *
  * The rule these are really defending is the same one the reporter tests defend: the
  * resolved configuration is diagnostics, so it goes to stderr. A user running
- * `qai check --format json --verbose | jq` has to get a clean document, and a
+ * `specgate check --format json --verbose | jq` has to get a clean document, and a
  * configuration block on stdout breaks that quietly.
  */
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-verbose-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-verbose-'));
 });
 
 afterEach(() => {
@@ -39,7 +39,7 @@ async function run(
 ): Promise<{ code: number; out: string; err: string }> {
   const out = capture();
   const err = capture();
-  const code = await main(['node', 'qai', ...argv], {
+  const code = await main(['node', 'specgate', ...argv], {
     stdout: out.stream,
     stderr: err.stream,
     env,
@@ -54,7 +54,7 @@ describe('the verbose configuration output', () => {
     const { code, out, err } = await run([]);
 
     expect(code).toBe(0);
-    expect(out).toContain('Usage: qai');
+    expect(out).toContain('Usage: specgate');
     expect(out).not.toContain('Resolved configuration');
     expect(err).toBe('');
   });
@@ -69,32 +69,32 @@ describe('the verbose configuration output', () => {
 
   it('names the layer each value came from', async () => {
     writeFileSync(
-      join(dir, 'qai.config.yaml'),
+      join(dir, 'specgate.config.yaml'),
       'target:\n  baseUrl: http://127.0.0.1:3000\ndefaults:\n  concurrency: 4\n',
       'utf8',
     );
 
-    const { err } = await run(['--verbose', '--format', 'sarif'], { QAI_FAIL_ON: 'medium' });
+    const { err } = await run(['--verbose', '--format', 'sarif'], { SPECGATE_FAIL_ON: 'medium' });
 
     expect(err).toContain('sarif');
     expect(err).toContain('flag');
-    expect(err).toContain('QAI_FAIL_ON');
+    expect(err).toContain('SPECGATE_FAIL_ON');
     expect(err).toContain('config');
   });
 
   it('exits 2 and says why when an environment value is outside its closed set', async () => {
     // Rule R2. A silent fallback would hand somebody a report in a shape their pipeline
     // cannot read, with nothing saying why.
-    const { code, err, out } = await run(['--verbose'], { QAI_FORMAT: 'xml' });
+    const { code, err, out } = await run(['--verbose'], { SPECGATE_FORMAT: 'xml' });
 
     expect(code).toBe(2);
-    expect(err).toContain('QAI_FORMAT');
+    expect(err).toContain('SPECGATE_FORMAT');
     expect(err).toContain('xml');
     expect(out).toBe('');
   });
 
   it('exits 2 when the named config file exists and will not load', async () => {
-    writeFileSync(join(dir, 'qai.config.yaml'), 'target: [not a section]\n', 'utf8');
+    writeFileSync(join(dir, 'specgate.config.yaml'), 'target: [not a section]\n', 'utf8');
 
     const { code, err } = await run([]);
 
@@ -115,22 +115,22 @@ describe('the init command through main', () => {
     const { code, out } = await run(['init']);
 
     expect(code).toBe(0);
-    expect(out).toContain('qai.config.yaml');
-    expect(existsSync(join(dir, 'qai.config.yaml'))).toBe(true);
+    expect(out).toContain('specgate.config.yaml');
+    expect(existsSync(join(dir, 'specgate.config.yaml'))).toBe(true);
     expect(existsSync(join(dir, 'spec/app.spec.yaml'))).toBe(true);
     expect(existsSync(join(dir, '.gitignore'))).toBe(true);
   });
 
   it('honours --config when deciding where to write', async () => {
     // The same precedence that decides where a config is read from decides where init
-    // puts one, or a user who set QAI_CONFIG gets a file their next command ignores.
-    await run(['init', '--config', 'nested/qai.yaml']);
+    // puts one, or a user who set SPECGATE_CONFIG gets a file their next command ignores.
+    await run(['init', '--config', 'nested/specgate.yaml']);
 
-    expect(existsSync(join(dir, 'nested/qai.yaml'))).toBe(true);
+    expect(existsSync(join(dir, 'nested/specgate.yaml'))).toBe(true);
   });
 
-  it('honours QAI_CONFIG when deciding where to write', async () => {
-    await run(['init'], { QAI_CONFIG: 'from-env.yaml' });
+  it('honours SPECGATE_CONFIG when deciding where to write', async () => {
+    await run(['init'], { SPECGATE_CONFIG: 'from-env.yaml' });
 
     expect(existsSync(join(dir, 'from-env.yaml'))).toBe(true);
   });

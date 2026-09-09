@@ -50,7 +50,7 @@ function fixtureSpec(): Spec {
   return result.spec;
 }
 
-/** The routes and seeded records `qai.config.yaml` carries, since no probe runs here. */
+/** The routes and seeded records `specgate.config.yaml` carries, since no probe runs here. */
 const PLANNING: PlanningContext = {
   actorIds: new Set(['owner', 'outsider', 'anonymous', 'impostor']),
   resources: [
@@ -165,7 +165,7 @@ async function runAgainst(defects: DefectSwitches, withProbe = true): Promise<Ru
   // Mutation is permitted the way the M2 gate would permit it: the fixture is disposable
   // and restarted per test, so a criterion that writes runs rather than being refused.
   //
-  // The state actor is named here because `qai.config.yaml` has no field for one. It has
+  // The state actor is named here because `specgate.config.yaml` has no field for one. It has
   // to be an identity that can read the record: the criterion under test acts as
   // `anonymous`, who cannot, which is exactly why persisted state is never read as the
   // acting actor.

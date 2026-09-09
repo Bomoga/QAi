@@ -4,7 +4,7 @@ import { defineConfig } from 'tsup';
  * The CLI is bundled, and it is the only package here that is.
  *
  * **Because a GitHub Action is checked out and never built.** The action runs
- * `packages/cli/bin/qai.js`, which imports this output. Unbundled, that output carries
+ * `packages/cli/bin/specgate.js`, which imports this output. Unbundled, that output carries
  * bare imports for `commander`, `zod`, `yaml`, and the rest, so a consumer would need a
  * `node_modules` tree beside it: 1.3 MB of build output standing on 511 MB of
  * dependencies. Bundled, the file runs on its own.
@@ -12,7 +12,7 @@ import { defineConfig } from 'tsup';
  * `better-sqlite3` is the one exception and cannot be anything else. It is a compiled
  * binary rather than JavaScript, so no bundler can inline it. It stays external and
  * `store/schema.ts` resolves it with `createRequire` at the moment the store is opened,
- * which turns its absence into the warning `qai check` already says it should be: the
+ * which turns its absence into the warning `specgate check` already says it should be: the
  * report is the product, and a run that produced one should not die because it could not
  * also write a history file.
  *
@@ -44,8 +44,8 @@ export default defineConfig({
      * here is enough for it to delegate instead.
      */
     js: [
-      "import { createRequire as __qaiCreateRequire } from 'node:module';",
-      'const require = __qaiCreateRequire(import.meta.url);',
+      "import { createRequire as __specgateCreateRequire } from 'node:module';",
+      'const require = __specgateCreateRequire(import.meta.url);',
     ].join('\n'),
   },
 });

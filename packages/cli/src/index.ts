@@ -8,7 +8,7 @@ import type { Flags } from './settings.ts';
 import type { Stream } from './reporter.ts';
 
 /**
- * Public API of @qai/cli, which is its command surface.
+ * Public API of @specgate/cli, which is its command surface.
  *
  * Present: the program, its global flags, configuration precedence, the reporter
  * `core` is given, and every command in the module's table.
@@ -73,7 +73,7 @@ export {
  *
  * `exitOverride` makes Commander throw for everything, including `--help` and
  * `--version`, which have already printed what the user asked for by the time the throw
- * arrives. Without this list `qai --help` ends in a stack trace.
+ * arrives. Without this list `specgate --help` ends in a stack trace.
  */
 const BENIGN_COMMANDER_CODES = new Set([
   'commander.help',
@@ -186,4 +186,4 @@ export async function main(argv: readonly string[], options: MainOptions = {}): 
   return 0;
 }
 
-export type { Reporter } from '@qai/core';
+export type { Reporter } from '@specgate/core';

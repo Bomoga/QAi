@@ -18,7 +18,7 @@ import {
  */
 const ALL_LAYERS = {
   flags: { format: 'junit' },
-  env: { QAI_FORMAT: 'sarif' },
+  env: { SPECGATE_FORMAT: 'sarif' },
   defaults: { format: 'json' as const },
 };
 
@@ -66,7 +66,7 @@ describe('resolving run settings', () => {
     // pass, as long as the test only ever set that layer.
     const settings = resolved({
       flags: { failOn: 'low', out: 'from-flag.json' },
-      env: { QAI_FAIL_ON: 'medium', QAI_OUT: 'from-env.json', QAI_CONCURRENCY: '8' },
+      env: { SPECGATE_FAIL_ON: 'medium', SPECGATE_OUT: 'from-env.json', SPECGATE_CONCURRENCY: '8' },
       defaults: { failOn: 'high', out: 'from-config.json', concurrency: 2, failOnUnverified: true },
     });
 
@@ -96,11 +96,11 @@ describe('resolving run settings', () => {
   });
 
   it('reads a switch from the environment by its truth, not its presence', () => {
-    // An empty variable is how a shell spells "unset" by accident, and `QAI_X=0` plainly
+    // An empty variable is how a shell spells "unset" by accident, and `SPECGATE_X=0` plainly
     // means off. Treating either as on is the surprise that costs a user a red build.
-    const on = resolved({ flags: {}, env: { QAI_FAIL_ON_UNVERIFIED: 'true' }, defaults: {} });
-    const off = resolved({ flags: {}, env: { QAI_FAIL_ON_UNVERIFIED: '0' }, defaults: {} });
-    const blank = resolved({ flags: {}, env: { QAI_FAIL_ON_UNVERIFIED: '' }, defaults: {} });
+    const on = resolved({ flags: {}, env: { SPECGATE_FAIL_ON_UNVERIFIED: 'true' }, defaults: {} });
+    const off = resolved({ flags: {}, env: { SPECGATE_FAIL_ON_UNVERIFIED: '0' }, defaults: {} });
+    const blank = resolved({ flags: {}, env: { SPECGATE_FAIL_ON_UNVERIFIED: '' }, defaults: {} });
 
     expect(on.failOnUnverified.value).toBe(true);
     expect(off.failOnUnverified.value).toBe(false);
@@ -110,18 +110,22 @@ describe('resolving run settings', () => {
   it('refuses an environment value outside the closed set rather than falling back', () => {
     // Rule R2: every value entering from the environment is validated. A silent fallback
     // would produce a report in a shape the user did not ask for and did not notice.
-    const result = resolveSettings({ flags: {}, env: { QAI_FORMAT: 'xml' }, defaults: {} });
+    const result = resolveSettings({ flags: {}, env: { SPECGATE_FORMAT: 'xml' }, defaults: {} });
 
     expect(isSettingsError(result)).toBe(true);
     if (!isSettingsError(result)) throw new Error('unreachable');
-    expect(result.message).toContain('QAI_FORMAT');
+    expect(result.message).toContain('SPECGATE_FORMAT');
     expect(result.message).toContain('xml');
     expect(result.suggestion).toContain('text');
   });
 
   it('refuses a concurrency that is not a positive whole number', () => {
     for (const value of ['0', '-1', 'four', '2.5', '']) {
-      const result = resolveSettings({ flags: {}, env: { QAI_CONCURRENCY: value }, defaults: {} });
+      const result = resolveSettings({
+        flags: {},
+        env: { SPECGATE_CONCURRENCY: value },
+        defaults: {},
+      });
       if (value === '') {
         // Empty is unset, not invalid.
         expect(isSettingsError(result)).toBe(false);
@@ -131,27 +135,29 @@ describe('resolving run settings', () => {
     }
   });
 
-  it('names every environment variable after the qai token', () => {
+  it('names every environment variable after the specgate token', () => {
     // the naming table says every identifier derives from that one token so a rename stays
     // mechanical.
-    for (const name of Object.values(ENV_NAMES)) expect(name.startsWith('QAI_')).toBe(true);
+    for (const name of Object.values(ENV_NAMES)) expect(name.startsWith('SPECGATE_')).toBe(true);
   });
 
   it('resolves the config path from the flag and the environment only', () => {
     // A file cannot name its own path, so there is no config layer for this one.
-    expect(resolveConfigPath({ config: 'flag.yaml' }, { QAI_CONFIG: 'env.yaml' })).toStrictEqual({
+    expect(
+      resolveConfigPath({ config: 'flag.yaml' }, { SPECGATE_CONFIG: 'env.yaml' }),
+    ).toStrictEqual({
       value: 'flag.yaml',
       source: 'flag',
     });
-    expect(resolveConfigPath({}, { QAI_CONFIG: 'env.yaml' })).toStrictEqual({
+    expect(resolveConfigPath({}, { SPECGATE_CONFIG: 'env.yaml' })).toStrictEqual({
       value: 'env.yaml',
       source: 'environment',
       // Named, so `--verbose` can send the reader to the variable rather than to a file
       // that turns out to say nothing about it.
-      via: 'QAI_CONFIG',
+      via: 'SPECGATE_CONFIG',
     });
     expect(resolveConfigPath({}, {})).toStrictEqual({
-      value: 'qai.config.yaml',
+      value: 'specgate.config.yaml',
       source: 'default',
     });
   });
@@ -164,25 +170,25 @@ describe('printing the resolved configuration', () => {
     const printed = formatSettings(
       resolved({
         flags: { format: 'sarif' },
-        env: { QAI_FAIL_ON: 'low' },
+        env: { SPECGATE_FAIL_ON: 'low' },
         defaults: { concurrency: 4 },
       }),
-      { value: 'qai.config.yaml', source: 'default' },
+      { value: 'specgate.config.yaml', source: 'default' },
     );
 
     expect(printed).toContain('format');
     expect(printed).toContain('sarif');
     expect(printed).toContain('flag');
-    expect(printed).toContain('QAI_FAIL_ON');
+    expect(printed).toContain('SPECGATE_FAIL_ON');
     expect(printed).toContain('config');
-    expect(printed).toContain('qai.config.yaml');
+    expect(printed).toContain('specgate.config.yaml');
   });
 
   it('shows a setting that fell through to its default rather than hiding it', () => {
     // A user reading this is asking why something happened. An omitted line makes them
     // guess whether the setting exists at all.
     const printed = formatSettings(resolved({ flags: {}, env: {}, defaults: {} }), {
-      value: 'qai.config.yaml',
+      value: 'specgate.config.yaml',
       source: 'default',
     });
 
@@ -193,7 +199,7 @@ describe('printing the resolved configuration', () => {
 
   it('contains no em dash', () => {
     const printed = formatSettings(resolved({ flags: {}, env: {}, defaults: {} }), {
-      value: 'qai.config.yaml',
+      value: 'specgate.config.yaml',
       source: 'default',
     });
 

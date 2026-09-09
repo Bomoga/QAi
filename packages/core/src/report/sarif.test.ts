@@ -261,7 +261,7 @@ describe('rendering a run as SARIF', () => {
     // Without this GitHub opens a new alert every run rather than tracking one.
     const result = (firstRun(run({ checks: [failing()] })).results ?? [])[0];
 
-    expect(result?.partialFingerprints).toStrictEqual({ qaiCheckId: 'CHK-a91f2c' });
+    expect(result?.partialFingerprints).toStrictEqual({ specgateCheckId: 'CHK-a91f2c' });
   });
 
   it('orders results by severity and then by requirement id', () => {

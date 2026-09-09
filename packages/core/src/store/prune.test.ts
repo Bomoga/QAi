@@ -16,7 +16,7 @@ let dir: string;
 const stores: Store[] = [];
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-store-prune-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-store-prune-'));
 });
 
 afterEach(() => {
@@ -101,7 +101,7 @@ function startedAt(index: number): string {
  */
 function fill(store: Store, count: number, withEvidence = true): void {
   for (let index = 0; index < count; index += 1) {
-    const bodyRef = `.qai/evidence/EV-${index}.json`;
+    const bodyRef = `.specgate/evidence/EV-${index}.json`;
     if (withEvidence) writeBody(bodyRef);
     store.saveRun(
       run(`RUN-${index.toString().padStart(2, '0')}`, startedAt(index)),
@@ -185,7 +185,7 @@ describe('the retention window', () => {
       bodiesStillReferenced: [],
       runsRetained: 3,
     });
-    expect(existsSync(join(dir, '.qai/evidence/EV-0.json'))).toBe(true);
+    expect(existsSync(join(dir, '.specgate/evidence/EV-0.json'))).toBe(true);
   });
 
   it('reads recency the way listRuns does, not the order runs were written in', () => {
@@ -209,13 +209,13 @@ describe('body files', () => {
     const report = store.pruneEvidence({ keepRuns: 3, keepEvidence: 1 });
 
     expect(report.bodiesDeleted).toStrictEqual([
-      '.qai/evidence/EV-0.json',
-      '.qai/evidence/EV-1.json',
+      '.specgate/evidence/EV-0.json',
+      '.specgate/evidence/EV-1.json',
     ]);
-    expect(existsSync(join(dir, '.qai/evidence/EV-0.json'))).toBe(false);
-    expect(existsSync(join(dir, '.qai/evidence/EV-1.json'))).toBe(false);
+    expect(existsSync(join(dir, '.specgate/evidence/EV-0.json'))).toBe(false);
+    expect(existsSync(join(dir, '.specgate/evidence/EV-1.json'))).toBe(false);
     // The kept run's body is untouched, so this is retention rather than a clear out.
-    expect(existsSync(join(dir, '.qai/evidence/EV-2.json'))).toBe(true);
+    expect(existsSync(join(dir, '.specgate/evidence/EV-2.json'))).toBe(true);
   });
 
   it('leaves a body alone while any surviving evidence row still names it', () => {
@@ -224,7 +224,7 @@ describe('body files', () => {
     // the newer run's evidence, which is the artifact behind a finding somebody is
     // reading right now.
     const store = open();
-    const shared = '.qai/evidence/EV-000001.json';
+    const shared = '.specgate/evidence/EV-000001.json';
     writeBody(shared);
 
     store.saveRun(run('RUN-00', startedAt(0)), [evidence('EV-000001', shared)]);
@@ -242,7 +242,7 @@ describe('body files', () => {
     // The other half of the rule. A guard that never released the file would be
     // indistinguishable from one that worked, until the directory filled up.
     const store = open();
-    const shared = '.qai/evidence/EV-000001.json';
+    const shared = '.specgate/evidence/EV-000001.json';
     writeBody(shared);
 
     store.saveRun(run('RUN-00', startedAt(0)), [evidence('EV-000001', shared)]);
@@ -259,12 +259,12 @@ describe('body files', () => {
     // An absence is not a deletion, and a report that counted it as one would overstate
     // what pruning reclaimed.
     const store = open();
-    store.saveRun(run('RUN-00', startedAt(0)), [evidence('EV-0', '.qai/evidence/EV-0.json')]);
+    store.saveRun(run('RUN-00', startedAt(0)), [evidence('EV-0', '.specgate/evidence/EV-0.json')]);
     store.saveRun(run('RUN-01', startedAt(1)), []);
 
     const report = store.pruneEvidence({ keepRuns: 2, keepEvidence: 1 });
 
-    expect(report.bodiesMissing).toStrictEqual(['.qai/evidence/EV-0.json']);
+    expect(report.bodiesMissing).toStrictEqual(['.specgate/evidence/EV-0.json']);
     expect(report.bodiesDeleted).toStrictEqual([]);
   });
 
@@ -289,25 +289,25 @@ describe('pruning on write', () => {
     // run first, and the run window closes on it later.
     const store = open({ retention: { keepRuns: 2, keepEvidence: 1 } });
 
-    writeBody('.qai/evidence/EV-0.json');
-    store.saveRun(run('RUN-00', startedAt(0)), [evidence('EV-0', '.qai/evidence/EV-0.json')]);
+    writeBody('.specgate/evidence/EV-0.json');
+    store.saveRun(run('RUN-00', startedAt(0)), [evidence('EV-0', '.specgate/evidence/EV-0.json')]);
 
-    writeBody('.qai/evidence/EV-1.json');
+    writeBody('.specgate/evidence/EV-1.json');
     const second = store.saveRun(run('RUN-01', startedAt(1)), [
-      evidence('EV-1', '.qai/evidence/EV-1.json'),
+      evidence('EV-1', '.specgate/evidence/EV-1.json'),
     ]);
 
     expect(second.pruned.runsRemoved).toStrictEqual([]);
     expect(second.pruned.evidenceRemoved.map((one) => one.runId)).toStrictEqual(['RUN-00']);
-    expect(second.pruned.bodiesDeleted).toStrictEqual(['.qai/evidence/EV-0.json']);
+    expect(second.pruned.bodiesDeleted).toStrictEqual(['.specgate/evidence/EV-0.json']);
 
-    writeBody('.qai/evidence/EV-2.json');
+    writeBody('.specgate/evidence/EV-2.json');
     const third = store.saveRun(run('RUN-02', startedAt(2)), [
-      evidence('EV-2', '.qai/evidence/EV-2.json'),
+      evidence('EV-2', '.specgate/evidence/EV-2.json'),
     ]);
 
     expect(third.pruned.runsRemoved).toStrictEqual(['RUN-00']);
-    expect(third.pruned.bodiesDeleted).toStrictEqual(['.qai/evidence/EV-1.json']);
+    expect(third.pruned.bodiesDeleted).toStrictEqual(['.specgate/evidence/EV-1.json']);
     expect(store.listRuns({ limit: 100 }).map((one) => one.runId)).toStrictEqual([
       'RUN-02',
       'RUN-01',
@@ -354,7 +354,7 @@ describe('the policy itself', () => {
     fill(store, 2);
 
     expect(store.listRuns({ limit: 100 })).toHaveLength(2);
-    expect(existsSync(join(dir, '.qai/evidence/EV-1.json'))).toBe(false);
+    expect(existsSync(join(dir, '.specgate/evidence/EV-1.json'))).toBe(false);
   });
 
   it('reports the window it applied, so a summary states it rather than implies it', () => {
@@ -375,8 +375,8 @@ describe('the policy itself', () => {
     expect(report.runsRemoved).toStrictEqual(['RUN-01', 'RUN-00']);
     expect(report.evidenceRemoved.map((one) => one.runId)).toStrictEqual(['RUN-00', 'RUN-01']);
     expect(report.bodiesDeleted).toStrictEqual([
-      '.qai/evidence/EV-0.json',
-      '.qai/evidence/EV-1.json',
+      '.specgate/evidence/EV-0.json',
+      '.specgate/evidence/EV-1.json',
     ]);
   });
 });

@@ -5,7 +5,7 @@ import {
   renderDeltaText,
   type RunResult,
   type Store,
-} from '@qai/core';
+} from '@specgate/core';
 
 import { present } from '../errors.ts';
 import type { Stream } from '../reporter.ts';
@@ -13,7 +13,7 @@ import type { Settings } from '../settings.ts';
 import { emit, knownRuns, noteInapplicableThreshold } from './report.ts';
 
 /**
- * `qai diff [--last 2] [runA runB]`: what changed about the application between two runs.
+ * `specgate diff [--last 2] [runA runB]`: what changed about the application between two runs.
  *
  * **The order is oldest first, and it is the caller's to get right.** `diffRuns(a, b)`
  * reads from `a` to `b`, so naming them the other way round turns a fix into a
@@ -103,9 +103,9 @@ export function runDiff(options: DiffOptions): number {
       {
         code: 2,
         summary: 'could not open the run store',
-        where: '.qai/runs.db',
+        where: '.specgate/runs.db',
         reason: error instanceof Error ? error.message : String(error),
-        suggestion: 'Run "qai check" in this directory to create it.',
+        suggestion: 'Run "specgate check" in this directory to create it.',
         cause: error,
       },
       presentTo,
@@ -130,14 +130,14 @@ export function runDiff(options: DiffOptions): number {
           {
             code: 2,
             summary: `no run with id ${missing.join(' or ')} is stored`,
-            where: '.qai/runs.db',
+            where: '.specgate/runs.db',
             reason:
               known.length === 0
                 ? 'the store holds no runs at all'
                 : `the store holds ${known.join(', ')}`,
             suggestion:
               known.length === 0
-                ? 'Run "qai check" to record one.'
+                ? 'Run "specgate check" to record one.'
                 : 'Name two of the runs above, oldest first.',
           },
           presentTo,
@@ -155,12 +155,12 @@ export function runDiff(options: DiffOptions): number {
           {
             code: 2,
             summary: `--last ${last} needs ${last} stored runs, and ${listed.length} are stored`,
-            where: '.qai/runs.db',
+            where: '.specgate/runs.db',
             reason:
               listed.length === 0
                 ? 'nothing has been recorded here yet'
                 : `the store holds ${listed.map((one) => one.runId).join(', ')}`,
-            suggestion: 'Run "qai check" again to record another run.',
+            suggestion: 'Run "specgate check" again to record another run.',
           },
           presentTo,
         );

@@ -16,7 +16,7 @@ import { createNextAdapter, methodsIn, nextPathFor } from './next.ts';
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'qai-next-'));
+  root = mkdtempSync(join(tmpdir(), 'specgate-next-'));
 });
 
 afterEach(() => {

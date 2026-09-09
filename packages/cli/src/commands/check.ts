@@ -38,7 +38,7 @@ import {
   type RunResult,
   type SaveReport,
   type TargetConfig,
-} from '@qai/core';
+} from '@specgate/core';
 
 import type { Stream } from '../reporter.ts';
 import { fromDiagnostic, present, presentAll } from '../errors.ts';
@@ -47,7 +47,7 @@ import type { Settings } from '../settings.ts';
 import { DEFAULT_SPEC_GLOB } from './validate.ts';
 
 /**
- * `qai check`: the full run, and the only command that produces a RunResult.
+ * `specgate check`: the full run, and the only command that produces a RunResult.
  *
  * **Nothing here decides a verdict.** The module says this package contains no
  * verification logic, so every judgment in this file belongs to `core`: `planAccessChecks`
@@ -65,7 +65,7 @@ import { DEFAULT_SPEC_GLOB } from './validate.ts';
  * no RunResult exists: an invalid spec or configuration, and a target that could not be
  * reached at all.
  *
- * **Every run is recorded.** `qai diff` and `qai report` read runs out of `.qai/runs.db`
+ * **Every run is recorded.** `specgate diff` and `specgate report` read runs out of `.specgate/runs.db`
  * and nothing else puts one there, so a check that did not store its result would leave
  * the sixth step of the success sequence in the product definition unreachable. It is not behind
  * a flag: the command table in the module has no flag for it, and adding one would be a
@@ -75,7 +75,7 @@ import { DEFAULT_SPEC_GLOB } from './validate.ts';
  * it has already been produced by then; turning a completed run into an error because a
  * database file could not be written would report the wrong thing about the application.
  * It is a warning, and a loud one, because a user who never notices will wonder later
- * why `qai diff` has nothing to compare.
+ * why `specgate diff` has nothing to compare.
  */
 
 export interface CheckOptions {
@@ -216,7 +216,7 @@ function store(
     saved = opened.saveRun(result, evidence);
   } catch (error) {
     reporter.warn(
-      `the run was not recorded, so "qai diff" and "qai report" will not see it: ${error instanceof Error ? error.message : String(error)}`,
+      `the run was not recorded, so "specgate diff" and "specgate report" will not see it: ${error instanceof Error ? error.message : String(error)}`,
     );
     return;
   } finally {
@@ -242,7 +242,7 @@ function render(result: RunResult, format: Settings['format']['value'], color: b
   if (format === 'sarif') return renderSarif(result);
   if (format === 'junit') return renderJunit(result);
   // No Observation argument since Q6. The result carries a summary of its own, so the
-  // text report is a projection of a RunResult again and `qai report` renders the same
+  // text report is a projection of a RunResult again and `specgate report` renders the same
   // section from a stored run.
   return renderText(result, { color });
 }
@@ -261,7 +261,7 @@ export async function runCheck(options: CheckOptions): Promise<number> {
         code: 2,
         summary: 'no configuration was found',
         where: options.configPath,
-        suggestion: 'Run "qai init" to write one, or pass --config with the path to yours.',
+        suggestion: 'Run "specgate init" to write one, or pass --config with the path to yours.',
       },
       presentTo,
     );
@@ -276,7 +276,7 @@ export async function runCheck(options: CheckOptions): Promise<number> {
           code: 2,
           summary: loaded.error.message,
           where: requested.join(', '),
-          suggestion: 'Run "qai validate" to see what the loader looked for.',
+          suggestion: 'Run "specgate validate" to see what the loader looked for.',
         },
         presentTo,
       );

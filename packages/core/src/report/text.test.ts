@@ -136,7 +136,7 @@ describe('rendering a run as text', () => {
 
   it('reports the probe mode and the probe notes, which say what was not reached', () => {
     // A probe that stopped early and does not say so reads as an application with
-    // nothing more in it. Carrying the notes on the result is what lets `qai report`
+    // nothing more in it. Carrying the notes on the result is what lets `specgate report`
     // say it too.
     const built = sectionOf(renderText(run({ observation: summary() }), {}), 'What was built');
 

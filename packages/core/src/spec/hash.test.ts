@@ -11,7 +11,7 @@ import type { Spec } from '../contracts/index.ts';
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'qai-hash-'));
+  dir = mkdtempSync(join(tmpdir(), 'specgate-hash-'));
 });
 
 afterEach(() => {

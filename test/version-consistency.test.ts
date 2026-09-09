@@ -14,7 +14,7 @@ import { CLI_VERSION } from '../packages/cli/src/program.ts';
  * `CLI_VERSION` said `0.1.0` because somebody had typed it there. The release went out
  * correctly, and only because the three that mattered happened to agree.
  *
- * `CLI_VERSION` is the one that reaches a user. It is what `qai --version` prints and what
+ * `CLI_VERSION` is the one that reaches a user. It is what `specgate --version` prints and what
  * lands in `toolVersion` on every RunResult and every SARIF document, so a report can name
  * a version no manifest in the repository agrees with, and nothing anywhere would say so.
  *
@@ -56,7 +56,7 @@ describe('every version claim agrees', () => {
   });
 
   it('states that version in CLI_VERSION, which is the one users see', () => {
-    // `qai --version` and `toolVersion` on every report come from here. A constant that
+    // `specgate --version` and `toolVersion` on every report come from here. A constant that
     // drifted from the manifests would put a version in somebody's SARIF that this
     // repository never released.
     expect(CLI_VERSION).toBe(versionOf('package.json'));

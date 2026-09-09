@@ -127,7 +127,7 @@ export const ObservationEndpointSummarySchema = z
  *
  * `ref` alone was the whole of this until then, and three separate consumers needed what
  * was behind it: `renderText` section 2, which had to take the Observation as a caller
- * option and stop being a pure projection of a RunResult; `qai report`, which has only a
+ * option and stop being a pure projection of a RunResult; `specgate report`, which has only a
  * stored run and printed the reference instead of counts; and the half of M6.5's access
  * loosening rule that fires when an endpoint's `authRequired` moves away from `true`,
  * which was never built.

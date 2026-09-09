@@ -110,11 +110,11 @@ describe('the package dependency direction', () => {
 
   it('leaves cli free to import core', async () => {
     const cli = await forbiddenSpecifiersFor('packages/cli/src/index.ts');
-    expect(cli).not.toContain('@qai/core');
+    expect(cli).not.toContain('@specgate/core');
   });
 
   it('leaves action free to import cli', async () => {
     const action = await forbiddenSpecifiersFor('packages/action/src/index.ts');
-    expect(action).not.toContain('@qai/cli');
+    expect(action).not.toContain('@specgate/cli');
   });
 });

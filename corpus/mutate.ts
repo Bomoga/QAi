@@ -38,7 +38,7 @@ import { MUTATIONS, type Mutation } from './mutations.ts';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const APPS_DIR = join(ROOT, 'corpus', 'apps');
 const RESULTS_DIR = join(ROOT, 'corpus', 'results');
-const QAI = join(ROOT, 'packages', 'cli', 'bin', 'qai.js');
+const SPECGATE = join(ROOT, 'packages', 'cli', 'bin', 'specgate.js');
 
 function log(line: string): void {
   process.stdout.write(`${line}\n`);
@@ -59,7 +59,7 @@ async function findingIdsFor(app: CorpusApp, out: string): Promise<Set<string>> 
   try {
     const { code, stderr } = await runCommand(
       process.execPath,
-      [QAI, 'check', '--format', 'json', '--out', out],
+      [SPECGATE, 'check', '--format', 'json', '--out', out],
       { cwd: app.dir, env: app.env, timeoutMs: CHECK_TIMEOUT_MS },
     );
 

@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG_PATH, type DefaultsSection } from '@qai/core';
+import { DEFAULT_CONFIG_PATH, type DefaultsSection } from '@specgate/core';
 
 import { FAIL_ON_SEVERITIES, FORMATS } from './program.ts';
 
@@ -9,11 +9,11 @@ import { FAIL_ON_SEVERITIES, FORMATS } from './program.ts';
  * **Every setting carries where it came from.** The module asks for the resolved
  * configuration under `--verbose` so a confused user can see what was actually used, and
  * the value alone does not answer that. A user staring at `format: sarif` they did not
- * ask for needs to know it came from `QAI_FORMAT` in their shell profile; the value on
+ * ask for needs to know it came from `SPECGATE_FORMAT` in their shell profile; the value on
  * its own sends them to the wrong file.
  *
  * **The environment is validated, not trusted.** Rule R2 says every value entering from
- * outside passes a check, and a bad `QAI_FORMAT` that silently fell back to text would
+ * outside passes a check, and a bad `SPECGATE_FORMAT` that silently fell back to text would
  * hand somebody a report in a shape their pipeline cannot read, with nothing anywhere
  * saying why. It is an error instead.
  *
@@ -42,14 +42,14 @@ export interface Settings {
   readonly concurrency: Setting<number>;
 }
 
-/** Every variable name derives from the `qai` token, per the naming table. */
+/** Every variable name derives from the `specgate` token, per the naming table. */
 export const ENV_NAMES = {
-  config: 'QAI_CONFIG',
-  format: 'QAI_FORMAT',
-  out: 'QAI_OUT',
-  failOn: 'QAI_FAIL_ON',
-  failOnUnverified: 'QAI_FAIL_ON_UNVERIFIED',
-  concurrency: 'QAI_CONCURRENCY',
+  config: 'SPECGATE_CONFIG',
+  format: 'SPECGATE_FORMAT',
+  out: 'SPECGATE_OUT',
+  failOn: 'SPECGATE_FAIL_ON',
+  failOnUnverified: 'SPECGATE_FAIL_ON_UNVERIFIED',
+  concurrency: 'SPECGATE_CONCURRENCY',
 } as const;
 
 /** The built-in layer, which is what a project with no config and no flags gets. */
@@ -116,7 +116,7 @@ function refuse(name: string, value: string, allowed: readonly string[]): Settin
 }
 
 /**
- * `QAI_X=0` plainly means off and `QAI_X=` means nothing was set. Reading either as on is
+ * `SPECGATE_X=0` plainly means off and `SPECGATE_X=` means nothing was set. Reading either as on is
  * the surprise that costs somebody a red build they cannot explain.
  */
 function booleanFromEnv(raw: string): boolean {

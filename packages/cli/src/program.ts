@@ -65,7 +65,7 @@ export function createProgram(): Command {
   const program = new Command();
 
   program
-    .name('qai')
+    .name('specgate')
     .description(
       'Checks that an application does what its spec said it would, and reports where they disagree.',
     )
@@ -78,7 +78,7 @@ export function createProgram(): Command {
     .allowExcessArguments(false);
 
   program
-    .option('--config <path>', 'path to qai.config.yaml')
+    .option('--config <path>', 'path to specgate.config.yaml')
     .addOption(
       new Option('--format <format>', 'output format for the report').choices([...FORMATS]),
     )
@@ -99,7 +99,7 @@ export function createProgram(): Command {
   //
   // Without it, Commander sees a program that has subcommands and no handler, decides
   // the user must have meant to name one, prints help and throws before anything else
-  // runs. That preempts `qai --verbose`, whose whole job is to say what configuration
+  // runs. That preempts `specgate --verbose`, whose whole job is to say what configuration
   // was resolved. What happens when no subcommand is given is decided in `main`, where
   // the resolved configuration is available to decide it with.
   program.action(() => {});

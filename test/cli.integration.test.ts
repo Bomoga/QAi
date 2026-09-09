@@ -39,7 +39,7 @@ describe('init and validate, the first two commands a user runs', () => {
     try {
       const init = await run(dir, ['init']);
       expect(init.code).toBe(0);
-      expect(existsSync(join(dir, 'qai.config.yaml'))).toBe(true);
+      expect(existsSync(join(dir, 'specgate.config.yaml'))).toBe(true);
 
       const validate = await run(dir, ['validate']);
       expect(validate.code).toBe(0);
@@ -114,7 +114,7 @@ describe('check against the fixture, in both configurations', () => {
   });
 
   it('puts the report on stdout and the progress on stderr', async () => {
-    // So `qai check --format json | jq` works. A progress line on stdout breaks every
+    // So `specgate check --format json | jq` works. A progress line on stdout breaks every
     // pipe a user builds, and breaks it quietly.
     const dir = workspace();
     try {
@@ -137,10 +137,16 @@ describe('check against the fixture, in both configurations', () => {
       copyFileSync(FIXTURE_SPEC, join(dir, 'spec', 'ledger.spec.yaml'));
       writeConfig(dir, await startLedger(ALL_DEFECTS_ON));
 
-      const { code } = await run(dir, ['check', '--format', 'sarif', '--out', 'qai-results.sarif']);
+      const { code } = await run(dir, [
+        'check',
+        '--format',
+        'sarif',
+        '--out',
+        'specgate-results.sarif',
+      ]);
 
       expect(code).toBe(1);
-      const report = JSON.parse(readFileSync(join(dir, 'qai-results.sarif'), 'utf8')) as {
+      const report = JSON.parse(readFileSync(join(dir, 'specgate-results.sarif'), 'utf8')) as {
         version: string;
         runs: { results: unknown[] }[];
       };
