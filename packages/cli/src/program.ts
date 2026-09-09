@@ -16,7 +16,7 @@ import { Command, InvalidArgumentError, Option } from 'commander';
  */
 
 /** The version the binary reports. Kept here so the help text and the tests agree. */
-export const CLI_VERSION = '0.1.0';
+export const CLI_VERSION = '0.2.0';
 
 /** The four the emitters in M7 can produce, and nothing else. */
 export const FORMATS = ['text', 'json', 'sarif', 'junit'] as const;

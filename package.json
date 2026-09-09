@@ -1,6 +1,6 @@
 {
   "name": "specgate",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Checks that an application does what its spec said it would.",
