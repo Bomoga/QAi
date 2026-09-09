@@ -5,6 +5,16 @@
   "type": "module",
   "description": "GitHub Action wrapper, annotation upload.",
   "license": "MIT",
+  "author": "Adrian Morton",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bomoga/QAi.git",
+    "directory": "packages/action"
+  },
+  "homepage": "https://github.com/Bomoga/QAi#readme",
+  "bugs": {
+    "url": "https://github.com/Bomoga/QAi/issues"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
