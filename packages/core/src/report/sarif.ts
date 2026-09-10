@@ -59,7 +59,7 @@ const RULES: readonly {
   },
 ];
 
-const TOOL_INFORMATION_URI = 'https://github.com/Bomoga/QAi';
+const TOOL_INFORMATION_URI = 'https://github.com/Bomoga/specgate';
 
 /**
  * Severity to SARIF level, exactly as the module states it: high and medium become

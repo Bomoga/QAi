@@ -22,7 +22,7 @@ import { describe, expect, it } from 'vitest';
  */
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const REPOSITORY = 'https://github.com/Bomoga/QAi';
+const REPOSITORY = 'https://github.com/Bomoga/specgate';
 
 /** The root, then every workspace package by its directory. */
 const MANIFESTS = [
