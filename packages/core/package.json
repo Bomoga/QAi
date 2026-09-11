@@ -8,12 +8,12 @@
   "author": "Adrian Morton",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Bomoga/QAi.git",
+    "url": "git+https://github.com/Bomoga/specgate.git",
     "directory": "packages/core"
   },
-  "homepage": "https://github.com/Bomoga/QAi#readme",
+  "homepage": "https://github.com/Bomoga/specgate#readme",
   "bugs": {
-    "url": "https://github.com/Bomoga/QAi/issues"
+    "url": "https://github.com/Bomoga/specgate/issues"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

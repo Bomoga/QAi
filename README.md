@@ -17,7 +17,7 @@ noticing.
 Three lines, which is the point:
 
 ```yaml
-- uses: Bomoga/QAi/packages/action@v0.1.0
+- uses: Bomoga/specgate/packages/action@v0.1.0
 ```
 
 **No release has been cut yet, so that reference does not resolve.** It names a tag rather
@@ -51,7 +51,7 @@ jobs:
       - run: npm start &
       - run: npx wait-on http://localhost:3000/health
 
-      - uses: Bomoga/QAi/packages/action@v0.1.0
+      - uses: Bomoga/specgate/packages/action@v0.1.0
         with:
           fail-on: high
         env:
